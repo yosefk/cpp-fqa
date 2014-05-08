@@ -1,0 +1,238 @@
+Inheritance -- virtual functions
+{'section':20,'faq-page':'virtual-functions.html'}
+This page is about |virtual| functions - a rare example of a C++ feature which is neither a part of C nor completely self-defeating.
+
+What is a "|virtual| member function"?
+
+FAQ: The most important thing about C++ if you look from an OO perspective.
+
+With |virtual| functions, derived classes can provide new implementations of functions from their base classes.
+When someone calls a |virtual| function of an object of the derived class, this new implementation is called,
+even if the caller uses a pointer to the base class, and doesn't even know about the particular derived class.
+
+The derived class can completely "override" the implementation or "augment" it (by explicitly calling the base class implementation in addition to the new things it does).
+
+FQA: If you are new to OO, using C++ as your first example is not a very good idea. If you
+still want to start learning about OO here, and you feel you didn't really understand the
+very generic statements above, here's an example attempting to show why all this is
+actually /useful/. Note: this FQA is unlikely to be the best OO tutorial on the web.
+
+Suppose you have a program which plays movies in different formats. No matter what the format
+is, you want to have the same interface (a window with a menu), options (resize the window, control the color balance...), etc.
+Now, you can define a class |Movie| with |virtual| functions like |nextFrame(&pixels,&width,&height)|.
+Each format is implemented in a derived class like |MPEGMovie|, |DivXMovie|... The code implementing the interface, the options,
+etc. can then work with |Movie| objects, calling the right |nextFrame| function without having stuff like |if(format==MPEG) { MPEG_nextFrame(...); } else if ...|
+all over the place. The format-independent code is easier to read, and much easier to change when you want to add a new format, in fact
+as easy as it gets: you don't have to change anything.
+
+If this last sentence made you laugh, you've probably seen how representation-specific a supposedly "generic" interface
+turned out to be once someone actually tried to create a second or a third implementation. You can laugh silently, or you
+can do it out loud, to soon find yourself surrounded by newbies cluttering their code with idiotic conditions ("the wizard said that nothing is really generic anyway").
+So let's forget the whole "pseudo-generic" issue for the moment and focus on the C++ flavor of polymorphism instead (to those who didn't know: hordes of languages have something like |virtual|, and normally it's something better).
+
+|virtual| functions have their problems. The keyword itself is obscure, the |=0;| notation is even more so, you can't
+look at a derived class and say which functions are |virtual| (the keyword is optional), and overloading makes it even
+harder to see when a function actually overrides a base class implementation (forget a |const| in the prototype and it becomes an unrelated |virtual| function with the same name).
+Seasoned OO pros might point out the lack of multimethods and invariants\/contracts checking, and have other complaints that I no longer remember, but which
+seemed valid when I did. Oh, and there's the poor RTTI and the non-existing reflection. It goes on and on.
+
+However, compared to other C++ features, |virtual| functions are excellent. They make a very useful thing easy. You get
+to type less compared to C, where you would have to create a "vtable" struct and then do things like |pThis->vptr->f((Base*)pThis, args)|
+instead of the C++ |p->f(args)|. And this brevity does /not/ come at the price C++ makes you to pay so promptly - there's
+no compile time overhead.
+
+Therefore, if you are a practitioner using C++, ignoring the [10.9 "performance-oriented"] brain-washing ("arrays of pointers to objects with virtual methods are soooo slow, arrays of structs with inline functions are soooo fast")
+and using the single C++ feature that has a potential of doing less harm than good is very frequently the right thing to do.
+Of course not using C++ for code characterized by complicated structure and dynamic behavior is an even better idea.
+
+-END
+
+How can C++ achieve dynamic binding yet also static typing?
+
+FAQ: /Static typing/ means that when a function (|virtual| or other) is called, the compiler checks that the function
+call is valid according to the statically defined interfaces.
+
+/Dynamic binding/ means that the code generated from the statically checked function calls may actually call many different
+implementations, and figures out the one to call at run time.
+
+Basically C++ allows many things to be done upon a |virtual| function call, as long as these things follow a specified
+protocol - the base class definition.
+
+FQA: It's important to keep in mind that the compiler can only check whether an implementation follows a protocol to a certain
+extent. It is pretty easy to create a derived class which looks legitimate (it has an |insert| and a |find| method as specified in the base class),
+but in fact it is not (because |insert| doesn't really insert anything to anywhere, and |find| doesn't find anything).
+This will break the code using the derived class via pointers to base class objects
+(this code will |insert| something and then won't |find| it and will crash). That's why the FAQ has a whole section on [21.12 proper inheritance].
+
+The (natural) fact that you can't find all errors with static typing wouldn't be that bad if C++ didn't crash as hard as it does
+(for instance, by doing run time boundary checking), and\/or would support dynamic contract checking, and\/or
+had a clear type system that would make specifying interfaces less of a pain (currently you have a zillion troubles ranging from no built-in string type to the endless kinds of type relationships and conversion rules).
+
+Dynamic binding is a critical feature to build extensible software, and all general-purpose programming languages have some form of it
+(in particular, C has function pointers). Unlike dynamic binding, static typing is not strictly necessary, but it has
+many benefits (the code may be easier for people to read and for compilers to validate and optimize due to the information specified in the types)
+as well as many drawbacks (some things may be hard to model in a static type system, frequently there's more code to read and write, etc.).
+At the language level, C++ doesn't support dynamic /typing/ (as opposed to "binding") at all, and its static type system is [18.2 one of the worst].
+
+Some C++ programmers think (or feel) that their compiler does an incredible service of finding virtually all of their bugs.
+Their hidden motives include the need to rationalize the [9.3 amazingly long build cycles], and to avoid writing test programs
+(more verbose, ugly, boring C++ code - who wants to do that?!). You'll do yourself a favor by not catching their thinking habits.
+
+-END
+
+What's the difference between how |virtual| and non-|virtual| member functions are called?
+
+FAQ: non-|virtual| functions are resolved at compile time. |virtual| functions are resolved at run time.
+
+The compiler must generate some code to do the run-time resolution. This code must be able to look at an object
+and find the version of the function defined by the class of the object. This is usually done by creating a table
+of virtual functions for each class having them (the "vtable"). All objects of the class have an implicitly generated
+member pointer (the "vptr"), initialized to point to the class vtable by all constructors.
+
+To implement a virtual function call, the compiler generates code similar to that it would produce from the C expression
+|(*p->vptr->func_ptr)|. That is, it dereferences the object pointer to fetch the vptr, then fetches the function pointer
+from a fixed offset, then calls the function through the pointer.
+
+The exact cost depends on complicated stuff like page faults, multiple inheritance, etc.
+
+FQA: In practice, the cost is almost never a big deal unless you call |virtual| functions in your "innermost loops"
+(the code processing the most data). I'm not saying the cost should be ignored - a good-looking generic design centered around virtual calls
+in innermost loops is invalid for most practical purposes. I'm just saying that you don't have to think about things like
+page faults to figure out if you can afford |virtual| in this piece of code. The C++ implementation of polymorphism is pretty efficient.
+
+One kind of price you pay for this efficiency is the [7.4 instability] of your interfaces at the binary level. You /can/
+add new derived classes to your system without recompiling old derived classes. But you /can't/ add a virtual function
+to a base class without such recompilation. This rules out straight-forward usage of virtual functions in many situations
+(if you think recompilation has "zero cost", try to get the vendors of your desktop software to recompile it so it runs
+ on a different processor architecture).
+
+Many OO languages avoid these problems. One way to do it is just-in-time compilation - instead of generating code fetching
+the function pointer from a fixed vtable offset, wait until you see all the updated base class definitions at program load time
+and then generate the offsets. Another option is to use less efficient, but more flexible look-up mechanisms, such as
+hash tables - this is typically coupled with the lack of static typing, which has many benefits and drawbacks. Both
+techniques avoid a huge amount of real-life problems with binary interface stability.
+
+If you can't switch to a different OO language with better OO support (think about it - the interface stability is just
+one aspect, you'll probably also get [16.1 garbage collection], [35.12 faster build cycles], and a ton of other useful things), you
+can work around these problems in many ugly ways. For example, you can have a single |virtual| function getting
+a string or a |void*| telling it what to do (a famous example of achieving binary-level stability this way is the |ioctl| system call of Unix-like systems).
+Another approach is to add new classes for the new functions, and have the derived classes implement many different
+abstract base classes (the COM |QueryInterface| function works this way). These things are not pretty, but they are
+better than nothing, which is what |virtual| functions deliver when you need stable interfaces.
+
+Don't be ashamed of yourself if you reach the conclusion that you have to do this. If "performance-aware" people
+squeak something about it, try to get them busy with something else, like implementing |std::valarray| to actually compile
+to fast code using SIMD instructions of the host processor, without creating [13.10 temporary memory objects]. This should give you a couple of centuries long break.
+
+-END
+
+What happens in the hardware when I call a |virtual| function? How many layers of indirection are there? How much overhead is there?
+
+FAQ: There's a lot of code listings explaining the previous answer in detail.
+
+FQA: By "hardware", you probably meant "binary-level software" - for each popular binary instruction encoding there are
+lots of variants of processors implementing it, and the processors are integrated into many different systems with all kinds
+of memory architectures. Even when you write /assembly code/, you can't tell exactly how it's going to be executed,
+so of course you can't with a higher-level language which can be compiled to assembly in many different ways.
+
+As to levels of indirections - typically there are two, one to fetch the vptr from the object and another one to fetch
+the function from the vtable. One other approach could be to save a level of indirection by keeping the vtable
+inside the object "by value" instead of "by pointer" - but that makes the objects larger.
+
+As the proponents of |virtual| methods correctly point out, some overhead is inevitable in the situations where you use
+a |virtual| function, because you don't know what function to call at compile time. Of course different ways to implement
+the decision making can have slightly different performance characteristics on a given platform. If you care about such
+tiny differences though, you probably have to fix it at a higher level (such as moving the decision outside of the innermost loop at the cost of possibly replicating some of the common code).
+Fiddling with the low level - implementing the decision - is lots of boring work (rewrite, measure, rewrite, measure...) with
+little gain.
+
+-END
+
+How can a member function in my derived class call the same function from its base class?
+
+FAQ: For some a reason, a pretty low-level discussion follows. Name mangling, "call-by-name" vs "call-by-slot-number", code listings
+                                          with double underscores...
+
+FQA: In a |class Derived|, in a function |Derived::f()|, you can type |Base::f();| to call the |f| implementation from
+your base class |Base|. The compiler will ignore the actual type of your object (at the low level - vtable and all that),
+and call |Base::f| just the way non-|virtual| functions are normally called.
+
+I think you can do that in every OO language. It's pretty natural.
+
+-END
+
+I have a heterogeneous list of objects, and my code needs to do class-specific things to the objects. Seems like this ought to use dynamic binding but I can't figure it out. What should I do?
+
+FAQ: "It's surprisingly easy", says the FAQ. This statement is followed by a surprisingly long answer.
+
+FQA: I don't know how "surprising" this is - that's the whole (the one and the only) point of polymorphism: to do
+class-specific things to objects, without thinking how heterogeneous they are.
+
+For this to work, have the classes
+of those objects derive from a common base class (not extremely "easy" unless you planned ahead...). Then you can
+run over the elements of |std::list<Base*>|, and call the virtual methods which do the class-specific things without
+thinking about how many different classes the objects actually belong to, etc. For example:
+
+@
+for(std::list<Shape*>::const_iterator p=shapes.begin(), e=shapes.end(); p!=e; ++p) {
+  (*p)->draw(window);
+}
+@
+
+Off-topic: the STL way of saying |foreach p in shapes| is pretty ugly, isn't it?
+
+-END
+
+When should my destructor be |virtual|?
+
+FAQ: The rule of thumb is - when you have a |virtual| function. Strictly speaking, you need it when you want someone to be
+able to derive classes from your class, create objects with |new|, and |delete| them via pointers to a base class.
+
+FQA: The situations when the rule of thumb is not good enough were not reported on our planet. Use this rule of thumb,
+if only to suppress compiler warnings. Too bad the C++ compiler doesn't use the rule silently itself - it could
+                           simply make the destructor |virtual| in these cases.
+
+-END
+
+What is a "|virtual| constructor"?
+
+FAQ: It's an idiom allowing you to have a pointer to a base class and use it to create objects of the right derived class.
+You can implement it by providing |virtual| functions like these:
+
+@
+virtual Base* create() const;
+virtual Base* copy() const;
+@
+
+You implement them like this:
+
+@
+Derived* Derived::create() const { return new Derived; }
+Derived* Derived::copy() const { return new Derived(*this); }
+@
+
+Note that we return |Derived*|, not |Base*| - it's called "Covariant Return Types". Some compilers have it, some don't.
+
+FQA: Other languages have built-in support for these things. This is interesting
+because of the /other/ things they make possible, like serialization (without writing special code for each class). Roughly, this is called "reflection": you can find all
+methods of a class at run-time, including those that are not normally called as |virtual|, such as constructors
+(which can't be |virtual| - you have to create an object /before/ you can dispatch function calls based on its type).
+Another option is to (recursively) get the list of members of a class and create\/copy them. It's hard to imagine
+how useful this is if most of your programming experience comes from working with C++.
+
+Covariant return types are a nice joke (for an admittedly narrow audience though). C++ lets you tighten the specification of return values - which is perfectly
+legitimate: our base class said we should return a |Base*|, and we surely implement the contract if we always return
+a |Derived*|, which is in particular a |Base*|. /But/ C++ doesn't let you /loosen/ the specification of arguments,
+which can be shown to be legitimate for symmetrical reasons.
+
+Why? Because C++ has overloading, so when you declare a |virtual| function which looks just like a function
+from your base class, but has any kind of changes to argument types, C++ thinks you create a new unrelated |virtual| function
+rather than override the one from the base class. Since C++ has no overloading based on the function return type,
+there's no symmetrical problem.
+
+C++ has lots of kinds of static typing, but little consistency between them.
+To be fair, other languages have similar interactions between overloading and dynamic binding, and some probably
+copied them from C++. However, other languages rarely encourage design which depends on the availability of overloading
+to work (like STL), and\/or is based on the microscopic details of overload resolution mechanisms (like some of the boost libraries).
+
+-END

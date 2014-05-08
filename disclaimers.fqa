@@ -1,0 +1,66 @@
+Disclaimers and excuses
+{}
+This page lists a bunch of disclaimers and excuses, in no particular order.
+
+I know C++ better than it deserves, but I could make errors. If you find some, I'd be grateful if you told me.
+
+The same goes for English, except for the "better than it deserves" part.
+
+It is technically possible to write "good" code in C++, for many reasonable definitions of "good".
+Choosing [25.3 not to work on a project] just because it uses C++ may be a dumb decision.
+Criticizing software just because it's written in C++ is not very bright, either.
+
+Throughout the FQA, there are [6.2 places] where the text [7.5 passionately argues] with people
+vaguely defined as "C++ promoters" or the like. This is supposed to be purely rhetorical.
+I can't and shouldn't judge the intentions, the competence or any other personal traits of real people somehow
+related to C++.
+
+It's the same with the criticism of "C++ users". For the record,
+some of my knowledge of C++ was obtained through rather time consuming experimentation, performed
+under the wrong assumption that it /has/ to pay off when I finally plug all the holes.
+The purpose of this confession is to
+show one reason I have to avoid personally offending people desperately trying to make C++ do something useful.
+
+The FQA's answers to the "frequently asked questions" typically argue with the FAQ's answers.
+This only has a chance to be interesting when the FAQ's position represents the opinions
+of a large subset of the C++ devotees out there. Which is probably not always true.
+
+I couldn't directly quote
+the FAQ's answers in order to argue with them (Marshall Cline, the FAQ author, didn't respond to my request regarding this).
+So I summarized the answers instead.
+My summaries had to be biased no matter what I did, so I made the bias fairly explicit.
+I hope the links to
+the original compensate for the loss of information, although I did try to make most
+of my summaries informative, not just biased. I also recommend to check out the original
+answers - some of them can be quite entertaining, and some may do a great job convincing
+you that /something is deeply wrong with the C++ community/.
+I quoted the questions themselves verbatim, under the assumption that they are not
+copyrighted work of any specific person, since they are, after all, asked frequently.
+
+The FQA doesn't show examples of code written in programming languages other than C and C++.
+I believe that for any new project, there's a much better language than C++. Moreover,
+that language can be virtually any of the languages popular today if it's compatible with
+the basic requirements imposed by the problem domain. I didn't want to put any emphasis
+on a particular alternative to C++, because choosing one is largely a matter of taste;
+writing and testing examples in many languages felt like too much work.
+I singled out C as the single explicitly mentioned alternative to C++ because I find
+that its superiority to C++ is pretty funny considering the circumstances.
+However, in many cases I mention "other languages" which have things C doesn't have
+(safe execution, reflection, etc.);
+typically, I refer to Python\/Ruby\/..., Java\/C#\/..., and Lisp\/Scheme\/... families
+of languages in those places. All these languages run in managed environments; if you
+choose to sacrifice safety for performance, check out the D language.
+
+Several FAQ sections are omitted. Some of those don't talk about C++ features, some repeat stuff mentioned
+in other sections, and some deal with things discussing which wouldn't add anything new to the FQA
+(for example, |private| inheritance - the FQA talks quite a lot about [7.4 C++ access control] already).
+On the other hand, the FQA does repeat itself in many places.
+
+The opinions in the FQA are my own, and are not supposed to represent the opinions of
+anybody else.
+
+Finally, the following sentence is only here to attract a certain set of search engine
+users interested in our subject, and should not be interpreted as the summary of my point of view
+on the complicated issues discussed:
+
+C++ SUCKS

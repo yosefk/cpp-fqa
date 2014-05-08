@@ -1,0 +1,80 @@
+Assignment operators
+{'section':12,'faq-page':'assignment-operators.html'}
+This section is about |operator=|. It's rather strange that of all possible things, people only "frequently ask" about self assignment, but those are the only questions listed in the FAQ.
+
+What is "self assignment"?
+
+FAQ: It's assigning the object to itself, directly or indirectly. For example:
+
+@
+void f(C& x, C& y) { x=y; }
+void g(C& x) { f(x,x); }
+@
+
+FQA: The tricky part is that the assignment operator may be overloaded, and you are expected to overload it in the
+classes that "own" resources (most frequently memory obtained with |new|). Incidentally, these are exactly
+the cases when self assignment may lead to trouble, which is why we have the next question. Which will also show
+that the FAQ's definition of "self assignment" is unfortunately too conservative, as "self" is a vague concept.
+
+-END
+
+Why should I worry about "self assignment"?
+
+FAQ: If you don't, your |operator=| will probably misbehave severely upon self-assignment:
+
+@
+YetAnotherSoCalledSmartPointer& YetAnotherSoCalledSmartPointer::operator=(const YetAnotherSoCalledSmartPointer& p)
+{
+  delete _p;
+  _p = new TheThingPointedByTheSmartPointer(*p._p);
+  return *this;
+}
+@
+
+Self assignment will first delete |_p|, and then dereference it, which is nasty. And it is all /your/ fault - you
+should have handled self assignment!
+
+FQA: Oh, so it's my fault, isn't it? Then why isn't this question listed in any other programming language FAQ on the planet?
+I mean, it's the same me all the time, it's the languages that are different. So why don't we lose the feelings of guilt
+and check what it is about C++ that causes the problem?
+
+Most languages daring to call themselves "object-oriented" have garbage collection, so you don't spend your
+time writing stupid functions for deallocating stuff, then copying stuff. These functions are all alike, but
+with C++ you get to write this kind of code over and over again.
+
+C++ doesn't have garbage collection, so a problem arises - if people are creating all those objects,
+how are they going to dispose them, especially if they [13.1 overload operators] and do things like |a+b+c|, without
+even keeping the pointers to the temporary objects created when sub-expressions are evaluated? The C++ answer is to have an "owner" object for
+each chunk of allocated memory, and let |operator=| and the destructor worry about freeing the memory.
+The most common manifestation of this quite unique language design decision is [16.1 unnecessary copying],
+which happens when objects are passed to functions or returned by value or "cut out" from larger
+data structures.
+
+The self assignment problem is another manifestation of this same thing. If objects were passed by pointers\/references
+and garbage-collected automatically, self assignment (setting the pointer to the value of itself) would be harmless.
+And the worst part is that there are actually more cases of self assignment than |x=x|. For example, consider
+|std::vector::push_back()|. What if someone passes an object from the vector itself, as in |v.push_back(v.back())|?
+|push_back| may need to allocate more memory, which may cause it to free the buffer it already uses, destroying
+its argument. [18.2 Where] does the "self" of an object end?
+
+You have to be really smart to get all those smart pointer and container classes right. Too bad it's still worse
+than good containers [6.2 built into a language].
+
+-END
+                                                                                                        
+OK, OK, already; I'll handle self-assignment. How do I do it?                                                         
+
+FAQ: By adding a test like |if(this==&that) { return *this; }| or by copying the members of the input object before deallocating members
+of |this|.
+
+FQA: This avoids the destruction of your function argument via self-destruction in |operator=|.
+However, there are [12.2 other cases when that can happen] - consider |std::vector::push_back()|.
+
+When performance is more important to you than simplicity & generality, one way to deal with this family of
+problems is to document them and pass them on to the user of your code
+("it is illegal to push an element of a vector into that vector, if you need to do it, copy the element explicitly").
+
+When simplicity & generality are more important than performance, you can use a language automatically tracking
+references to objects, guaranteeing that used objects won't get destroyed.
+
+-END

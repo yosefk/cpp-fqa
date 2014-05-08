@@ -1,0 +1,286 @@
+Pointers to member functions
+{'section':33,'faq-page':'pointers-to-members.html'}
+This is basically about the lack of function objects and closures in C++.
+
+Is the type of "pointer-to-member-function" different from "pointer-to-function"?
+
+FAQ: It is.
+
+If you have a non-member function |void f(int)|, then |&f| is of type |void (*)(int)|.
+
+If you have a non-|static| member function |void C::f(int)|, then |&C::f| is of type |void (C::*)(int)|.
+
+FQA: Ahem.
+|::*)(| - line noise creeps in. There's more of it in the rest of this section.
+
+Anyway, the reason the types /should/ be different is that a member function accepts a hidden
+parameter - |this|. And the types of function pointers are derived from the types
+      of the arguments and the return value. Obviously, the self-documenting bit of syntax |C::*|
+      says that the function gets a |this|
+      parameter of type |C|.
+                
+-END
+
+How do I pass a pointer-to-member-function to a signal handler, X event callback, system call that starts a thread\/task, etc?
+
+FAQ: You don't. A member function can't be used without an object of the class, so the whole thing can't work.
+What you can do is write a non-member function wrapping your pointer-to-member-function call.
+
+      For example,
+      thread creation callbacks usually have a |void*| argument. You could pass an object pointer
+      in that argument to the callback (which has to be a non-member). The callback would then cast the |void*| down to the actual type and call
+      the object's method.
+
+Some functions, like |signal|, use callbacks without a |void*| argument or anything similar. In that case, you have
+      no choice but save a pointer to the object in a global variable. The callback can get the object
+      pointer from that global variable and call the method.
+
+|static| member functions /can/ be used in the contexts where a C callback is expected, if
+      they are |extern "C"|. Although on most compilers it would probably work without |extern "C"|,
+      the standard says it doesn't have to work.
+
+FQA: The picture painted by the FAQ isn't very pretty, but the reality can get even worse - that is,
+      more code to write. For example, you may want to call /any/ method of an object - to select
+      the method to call at run time, not compile time. /That/ would really mean
+      that you want to pass a pointer-to-member-function as a callback, which is what the question
+      is all about. In the scenario in the FAQ,
+      your problem is /passing the object pointer/, but there's actually /no pointer to a member function/.
+      
+      Anyway, in this "full-blown" use case, passing just the object pointer via the
+      |void*| argument is not enough. You'd have to wrap the two pointers (the object pointer and the function pointer)
+      in a structure, pass a |void*| to that structure to your callback and unpack the structure in that callback.
+      Simple, but quite verbose. Pretty much like implementing function calls in assembly.
+
+      This illustrates the fact that C++ is a very low-level language. When you have a Python object |obj|
+      with a method |func|, and you want someone expecting a callback to call |obj.func()|, you can create the callback object
+      with the expression |obj.func|. As simple as that. In some high-level languages doing this is equally easy
+      and in some it's more verbose, but /never, ever/ would you have to save a pointer to your
+      object to a global variable (and worry about making it thread-local when relevant, etc.).
+
+    The problem is that in C++, there's no single concept of a "callable object" - instead, there are [33.7 unrelated]
+      low-level mechanisms for calling functions. For example, non-member function pointers work differently
+      from member function pointers. There are ubercompetent people out there who actually think they
+      can get away with casting |void (C::*p)(int)| to type |void (*)(C*,int)|, because, you know,
+      what we need is to pass |this| as the first parameter. This can work with many compilers, until
+      you need to pass a pointer to a |virtual| function. Outsmarting compilers is usually dumb,
+      especially C++ compilers. There really /is/ more than one function call mechanism, and the different
+      kinds of function pointer are not convertible - you have to implement adapters of varying
+      degrees of clumsiness.
+
+      Regarding the |static|-members-as-callbacks issue: if your implementation uses different binary calling conventions for C functions and C++ |static| member
+      functions, call the support and inform them that their developers consume mind-altering chemicals at work.
+
+-END
+
+Why do I keep getting compile errors (type mismatch) when I try to use a member function as an interrupt service routine?
+
+FAQ: This is a special case of the [33.2 previous] question.
+
+FQA: It is. So we'll use the opportunity to - surprise! - point out that handling interrupts in C++ can be done
+      /just as well/ as anything else. /Not much of a compliment/, really, but worth noting.
+
+      One of the problems
+      with C++ is all the /unjustified/ criticism. For example, some people will scream something like
+      "What?! Handling interrupts in C++?!" - possibly followed by (false) claims about C++ being
+      a "high-level language" (yeah, right) and maybe remarks about your mental health and stuff.
+      These people don't know what they're talking about, and can make other people believe that C++
+      only looks like a bad thing if one doesn't know what he's talking about.
+
+Clarifications: of course you shouldn't throw exceptions in interrupt handlers, or call |new|, etc. Of course
+      doing the job in C would be better, but this isn't special to interrupts. Of course
+      many C++ features can do more damage when you [13.3 use them
+      to talk to hardware] than elsewhere. All I'm saying is that when you criticize something,
+you either accompany your claims with some reasoning or you have no chance to convince people
+      (at least not the ones worth the effort).
+
+-END
+
+Why am I having trouble taking the address of a C++ function?
+
+FAQ: Mmmm, you're trying to take the address in order to use it as a C function pointer, aren't you? Well,
+[33.2 don't do that].
+      And don't try to cast your way out of this, it won't work.
+
+FQA: The FAQ didn't answer your question, did it? Instead, it assumed it knew what your problem was,
+ and then answered a different question.
+ Well, you could also ask your original question for a different reason.
+ Specifically, you are already aware of the fact that |&C::f| [33.1 has a different type] than |&f|, but you don't know
+how to spell that type. So you're doing something semantically sensible, but you can't get the syntax right,
+ because C++ has [35.16 so much syntax making so little sense].
+
+ Well, I don't know the type of |&C::f| either, because it depends on the arguments;
+ I only know it's something like |T1 (C::*)(T2,T3,T4)|. So here's a way to find out the type of an arbitrary C++ expression:
+
+@
+ template<class T>
+ void show_type(const T&)
+ {
+   int eat_flaming_death[-1];
+ }
+ void test_func()
+ {
+   show_type(&C::f);  
+ }
+@
+
+The compiler will then say something like |In void show_type<TheTypeYouWantedToFigureOut>(): arrays of negative size are not allowed|.
+In our case, |TheTypeYouWantedToFigureOut| will be substituted with the type of |&C::f|.
+
+Here's the best part: there's a large [http://www.boost.org/doc/html/boost_staticassert.html "compile time assertions"] movement promoting a plethora of arcane macros
+ and templates which,
+ like |show_type|, will cause the compiler to fail with an error message hopefully mentioning something
+ related to the problem. This kind of thing is a /best practice/ in C++. Isn't life amazing?
+
+-END
+
+How can I avoid syntax errors when calling a member function using a pointer-to-member-function?
+
+FAQ: With a |typedef|, making the type name readable, and a |#define| macro, making the |((obj).*(func))| syntax readable.
+ Ewww, macros are [6.15 evil]!
+
+There were /hundreds/ of postings to |comp.lang.c++| about this, says the FAQ. The layer of syntax proposed above
+ could save the traffic.
+
+FQA: The FAQ actually proposes to use the old and oh-so-evil C macros to cover up the brand new syntax introduced in C++. The FQA
+ will avoid further comments on this advice, since the target is too easy.
+
+ The amazing part about the hundreds of messages is not the fact that people can't get the C++ syntax right.
+ The amazing part is the fact that people /wanted to use/ pointers to member functions, despite the fact
+ that they are pretty useless. What you really need quite frequently is "delegates" or "functors" or "closures" - well,
+ anything that represents /both/ the code (a function\/an expression\/...) and the data
+ (an object\/bound local variables\/...). C++
+ [33.10 doesn't] support these things very well. Perhaps the |comp.lang.c++| posters tried to implement
+  something like this on top of C++ object and member function pointers. Maybe even something generic,
+  with templates inheriting from abstract base classes involved. Yeah, that sounds quite like
+  the favorite pass-time of C++ developers.
+
+-END
+
+How do I create and use an array of pointer-to-member-function?
+
+FAQ: First, [33.5 add] a |typedef| and a macro. Then, use |FuncPtrType arr[] = {&C::f, &C::g, &C::h};|
+
+FQA: Hey, why are we using an [6.15 evil] C array? Me not like this. How about:
+
+@
+std::vector<FuncPtrType> arr;
+arr.push_back(&C::f);
+arr.push_back(&C::g);
+arr.push_back(&C::h);
+@
+
+There, it's much better now. Wait till you see the full type name of |arr| in a [35.17 compiler error message].
+
+-END
+
+Can I convert a pointer-to-member-function to a |void*|?
+
+FAQ: No, and if it seems to work on some platform, it doesn't make it legal.
+
+FQA: Listen to the FAQ. This isn't just language lawyer talk - it /really/ isn't going to work.
+  Check out [http://www.codeproject.com/cpp/FastDelegate.asp this article] - it has a lot of material
+  on C++ member function pointers. `<b>WARNING:</b>` this stuff can be used to scare little children.
+
+The bottom line is that unlike a global function pointer,
+ a member function pointer is not just the address of the first instruction of the function in most implementations,
+  apparently with the exception of the compiler by [http://www.digitalmars.com/ Digital Mars]
+  (the company behind [http://www.digitalmars.com/d/index.html the D language]). That compiler generates "thunk code" which handles the differences
+  between various dispatching mechanisms (|virtual| vs. statically dispatched functions, different kinds of inheritance),
+  and uses the address of that thunk code to represent member function pointers. Quote from the article
+  about this implementation: "Why doesn't everyone else do it this way?"
+
+So, really, don't cast these things to |void*| - you can't even sensibly cast them to non-member function pointers.
+
+-END
+
+Can I convert a pointer-to-function to a |void*|?
+
+FAQ: Stop that. No. And don't tell me it worked for you. It's illegal.
+
+FQA: C and C++ strongly separate between code and data (so do many languages and hardware processor implementations).
+  A pointer to a data object is not the same as a pointer to a function. However, in the vast majority of implementations
+  their sizes are going to be the same, so it's possible to convert a function pointer to a |void*|, and
+  then somewhere else convert it back and call the function.
+
+This violates the language rules. So does code assuming 2's complement integers and IEEE floating point.
+  The chance of both kinds of code to actually fail on an interesting platform is low. Admittedly, the
+  code-pointers-are-just-like-data-pointers assumption is less useful than
+  the signed-numbers-can-be-divided-using-right-shift assumption, though.
+  So typically one wouldn't do this kind of cast, after all.
+
+-END
+
+I need something like function-pointers, but with more flexibility and\/or thread-safety; is there another way?
+
+FAQ: A functionoid is what you need.
+
+FQA: "Functionoid" rhymes with [http://foldoc.org/?marketroid "marketroid"], and is a term local to the FAQ,
+  used instead of the standard term
+  [33.10 "functor"].          
+
+-END
+
+What the heck is a functionoid, and why would I use one?
+
+FAQ: It means "a function on steroids", of course. The FAQ goes on to describe a class with a single |virtual| function
+  called |doit|. An object of this class is basically just like a function except you can pass it arguments in its constructor,
+  and it can keep state between calls without thread-unsafe global variables. The discussion is very lengthy and didactic, there are lots of
+  examples. If you didn't say to yourself something like "Oh, yeah, that problem", you can follow the link
+to the real FAQ's answer to see what this is all about.
+
+FQA: A "functionoid"
+(or functor, as it's normally called) is basically a manual emulation of
+ [http://en.wikipedia.org/wiki/Closure_(computer_science) closures]. Closures can save all those little
+ classes people create in order to have a function-pointer-plus-some-context. For example,
+ the following code, which tries to use a higher-order function (|for_each|) in a language without
+ closures (C++), is completely ridiculous:
+
+@
+struct Printer
+{
+  std::ostream& out;
+  Printer(std::ostream& o) : out(o) {}
+  template<class T>
+  void operator()(const T& x) const { out<<x<<std::endl; }
+};
+void print_them(const std::vector<int>& them)
+{
+  std::for_each(them.begin(), them.end(), Printer(std::cout));
+}
+@
+
+Clearly, a |for| loop wouldn't be nearly as bad. However, if we had closures, we could do something like this:
+
+@
+void print_them(const std::vector<int>& them)
+{
+  std::for_each(them.begin(), them.end(), lambda(x) { std::cout << x << std::endl; });
+}
+@
+
+This would still be verbose because of smaller problems (|std::|, mentioning |them| twice),
+ but at least the stupid |Printer| class is now replaced with code generated implicitly by the compiler.
+
+Check out the monstrous [http://www.boost.org/doc/html/lambda.html boost lambda library] designed to work around the lack of closures in C++
+ in a desperate attempt to make higher-level functions of the kind defined at |<algorithm>| not
+ entirely useless. When I tried it, |gcc| wouldn't compile it without |-ftemplate-depth=40|
+ (the default template nesting depth limit, 17, is not enough for this library),
+ and I got /5 screens/ of error messages from /a single line of code using the thing/. See also [http://groups.google.com/group/comp.lang.c++.moderated/browse_thread/thread/100dd325c6d9ef77/a4444dc5dc9d94c0 this thread],
+ especially the part where they explain how |cout << _1 << endl| works
+ but |cout << "\\t" << _1 << endl| doesn't (to get there quick, search for "fails miserably", then continue to the reply).
+
+-END
+
+Can you make functionoids faster than normal function calls?
+
+FAQ: Sure! Instead of |virtual| functions, use |inline| member functions and make the code using the
+ "functionoid" a template.
+
+FQA: This way the "functionoid" will compile slower than "normal function calls" though, not to mention
+ the loss of flexibility at run time.
+ The run time speed impact of the obsolete approach to inlining used by C++ is discussed [9.3 here].
+ The compile time speed impact of C++ templates is discussed [35.12 here].
+ The fact that it's /your/ job to make sure things are inlined properly in this family of scenarios
+ is one problem with the lack of closures in C++ discussed [33.10 above].
+
+-END

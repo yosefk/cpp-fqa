@@ -1,0 +1,269 @@
+Destructors
+{'section':11,'faq-page':'dtors.html'}
+Destructors are one of the many pieces of the puzzle that is the C++ [16.1 memory management].
+
+What's the deal with destructors?
+
+FAQ: A destructor, abbreviated "dtor", is a "you're about to die" member function. It is used to release
+resources, for example, semaphores. Most frequently the resource is memory allocated by |new|;
+the destructor frees it with |delete|.
+
+FQA: Yep, [16.1 C++ has no garbage collection], which makes "memory" a manually managed "resource". Die-hard C++ programmers
+firmly believe that [17.4 RAII] - acquiring resources in constructors and releasing them in destructors - is the silver
+bullet for resource management. The problem with this approach is that many objects can point to the same piece of data,
+but only one of them is the "owner", and when the owner dies, its destructor promptly blows the piece of data
+to even smaller little pieces.
+
+The most common way around this is /copying/. For example, you load a large file representing a 3D object model
+or an XML document or something. You find an interesting leaf on the 3D tree model or in the XML tree or whatever.
+Now you want to release the memory of the whole model so that you can free some space for processing the part.
+You need to either convince the model object that it doesn't own the stuff in your leaf, or you have to copy
+that stuff. The latter is way easier
+(try to convince an owner such as |std::list| to let a couple of nodes go out of its jurisdiction).
+
+Which is one reason that can cause garbage collection to outperform manual memory management. But of course with garbage
+ collection you'll never master your debugging tools to an extent anywhere near the expertise you'll reach with
+ manual memory management
+(you'll have 10 times less bugs to practice on). It's up to you to choose the right tradeoff.
+
+There are two common counter arguments: not all resources are memory, and not all systems can afford garbage collection.
+ Well, surely more than 95% of resources /are/ memory, and surely more than 95% of C++ code runs in systems which /can/ afford garbage collection.
+These arguments are yet another evidence that [6.2 C++ is about theory, not practice]. And the resources which are not memory
+and must be released deterministically usually aren't handled very well be C++ destructors anyway. That's because a C++
+ destructor can't handle errors (it has no return value and [11.13 it can't throw exceptions]).
+
+-END
+ 
+What's the order that local objects are destructed?
+
+FAQ: In reverse order of construction - the stuff declared last is destroyed first.
+
+FQA: Which makes sense, but are you sure you want to write code that depends on this?
+
+-END
+
+What's the order that objects in an array are destructed?
+
+FAQ: In reverse order of construction - the last element is destroyed first.
+
+FQA: Which sort of makes sense, but you /surely/ don't want to write code that depends on that one, do you?
+
+ By the way, don't forget to use |delete[]|, not just |delete|, to free arrays allocated with |new[]|, otherwise the stupid thing
+ [16.12 will not bother] to check the number of elements pointed by your pointer and some of your destructors won't get called
+ (actually, in theory it could be worse - the behavior is undefined).
+
+-END
+
+Can I overload the destructor for my class?
+
+FAQ: No. Destructors never have parameters or return values. And you're not supposed to call destructors explicitly,
+so you couldn't use parameters or return values anyway.
+
+FQA: Why do you want to overload destructors? Do you like C++ overloading? Are you sure? But the lack of return values
+ /is/ a pity - [11.13 no way to handle errors]. Let's hope they won't happen, shall we?
+
+-END
+
+Should I explicitly call a destructor on a local variable?
+
+FAQ: Don't do that! The destructor will be called again at the end of scope. And the second call will do nasty things,
+ like crashing your program or something.
+
+FQA: There are standard questions to ask in these cases, like "if this syntax is never useful, why does it compile"? Anyway, you /can/ call a destructor
+ on a local variable, but you have to make sure you call a constructor after that and before the object goes out of scope.
+ For example:
+
+@
+AMiserableFileClass file("f1.txt");
+\/\/use file... now we want to close it, but there's no close() method, so:
+file.~AMiserableFileClass();
+\/\/open another file
+new (&file) AMiserableFileClass("f2.txt");
+@
+
+|AMiserableFileClass| is a miserable file class because it has no |close| method, so you might feel the need to close it
+ in the ugly way above. Try to avoid this, because most people won't understand it, and they shouldn't, because [6.4 there
+ are better things to do] than [10.19 fiddling with the many ugly bits of C++].
+
+-END
+
+What if I want a local to "die" before the close |}| of the scope in which it was created? Can I call a destructor on a local if I /really/ want to?
+
+FAQ: No, no, no! See the next FAQ for a simple solution. But don't call the destructor!
+
+FQA: If you ever get into the situation of promoting an especially disgusting product, such as the C++ programming language, there are better ways to handle it
+than get all excited. You can try and find a less disgusting product to center your money-making around, or you can
+just relax.
+
+"Don't call the destructor". There has to be /some/ reason for the destructor call to compile, doesn't it? Perhaps
+sharing it with us could help calm down.
+
+-END
+
+OK, OK already; I won't explicitly call the destructor of a local; but how do I handle the above situation?
+
+FAQ: Now you're talking! Here's a tip - you can simply surround the object with an /artificial block/:
+
+@
+{
+  AMiserableFileClass file("f1.txt");
+} \/\/the file object dies here
+@
+
+FQA: Is this ugly code supposed to be better than [11.5 the ugly code] calling a destructor and than a constructor? On a level,
+this version is more cryptic
+(at least it's easy to see what gets called when in that other ugly piece of code). But the truth is that
+for many actual C++ programmers the "artificial blocks" (isn't all code "artificial"?) are more readable.
+
+-END
+
+What if I can't wrap the local in an artificial block?
+
+FAQ: If you absolutely have to, do something like adding a |close| method to |AMiserableFileClass| which closes the file
+ in its destructor. So you can achieve the effect of the destructor call without calling the destructor. Which is a taboo,
+ get it?
+
+ The FAQ also points out how hard it is to write a |close| function so that the destructor doesn't try to close a closed
+ file.
+
+FQA: If you can change |AMiserableFileClass|, it's better than using ugly code to work around its deficiencies. But
+ where's the FAQ's brave new [13.4 reuse-oriented world] now? What about all those classes with stable interfaces
+ you can't change? Seriously, it can happen with classes not available in source form.
+
+I sincerely believe that the not-so-appetizing "call the destructor, then call a constructor" method is legal C++.
+ If this is indeed so, I fail to understand the problem with mentioning it in the answer.
+
+As to the problem of having destructors and close functions respect each other - one way around this is to [10.5 avoid
+non-trivial constructors] and destructors and always use init and close functions. Next, you can replace [7.1 C++ classes]
+ with their [7.4 metaphysical "encapsulation"] with [7.5 forward-declared] C |struct|s, which can actually yield stable binary interfaces
+ and save recompilation. Next, you can replace C++ with C (where execution time matters) or with one of the many sane, safe
+languages (where development time matters). There, doesn't it feel [6.5 much better] now?
+                        
+-END
+
+But can I explicitly call a destructor if I've allocated my object with |new|?
+
+FAQ: You can't, unless the object was allocated with placement |new|. Objects created by |new| must be |delete|d, which
+ does two things (remember them): calls the destructor, then frees the memory.
+
+FQA: Translation: |delete| /is/ a way to explictly call a destructor, but it /also/ deallocates the memory. You can
+also call a destructor without deallocating the memory. It's ugly and useless in most cases,
+ but you can do that.
+
+Questions like "What /exactly/ does |delete| do?" probably cross the fine line separating between the questions everyone claiming to know
+ C++ should be able to answer and the questions identifying people with too much C++-related garbage in their brains.
+People can be quite productive by simply calling
+ |new| and |delete| without thinking too much about the two steps involved, so not knowing about the two steps is probably no big deal.
+ The most interesting thing about the two steps is that the idea of [10.1 having the code using the class managing the memory
+ of its objects] is the main reason C++ code is [7.4 recompiled so frequently].
+
+-END
+
+What is "placement |new|" and why would I use it?
+
+FAQ: There are many uses for placement |new|. For example, you can allocate an object in a particular location,
+ you can pass the pointer to this location to placement |new| like this: |C* p = new(place) C(args);|
+
+Don't use this unless you really care where the object lives (say, you have a memory-mapped hardware device
+ like a timer, and you want to have a |Timer| object at the particular location).
+
+Beware! It is your job to make sure that the address where you allocate the object is properly aligned and that
+you have enough space for the object. You are also responsible for calling the destructor with |p->~C();|.
+
+FQA: Size is relatively easy to deal with because we have |sizeof|, alignment can be more painful. Here's an advice:
+if you care where your objects are allocated, don't make them objects of classes with constructors and destructors and stuff.
+This way, you can create [11.14 memory pools] with code like |C pool[N];|, which takes care of alignment /and/ "type safety".
+But if the class |C| has a constructor, it's going to get called N times by this statement (slow and stupid), and if you want someone to use
+placement |new| with the pool, you'll have to /call the destructors/ after the constructors finish running
+(slow, stupid and cryptic). Or you can use |char pool[N*sizeof(C);]| with platform-specific additions to handle
+alignment, and then you won't be able to easily inspect the pool in a debugger (the object |pool| has the wrong type), etc.
+
+And you have to be /out of your mind/ to call placement |new| when you [13.3 deal with memory-mapped hardware].
+Do you realize that the constructor is going to /directly modify the state of the hardware/?
+Even if you get this right (yes, there are ways to get this wrong, too boring to enumerate here),
+this is one very unmaintainable way to write this kind of code. If you think that's "intuitive", think again.
+What is the constructor doing - "creating" the timer? Come on, it's /hardware/, it was already physically there. Oh, it "initializes" it?
+So why don't use a function with "init" in its name instead of a "constructor"?
+
+You have enough trouble thinking about the semantics
+of the hardware interface, so why would anyone want to add the complexity of C++ to the problem?
+
+At least the FAQ has finally disclosed the [11.5 top secret information] about explicitly calling destructors.
+
+-END
+
+When I write a destructor, do I need to explicitly call the destructors for my member objects?
+
+FAQ: No, they are called implicitly in the reverse order of their declaration in the class.
+
+FQA: Pay attention to the details. If your member is a pointer
+to something allocated with |new|, /the pointer's destructor/, which is a purely metaphysical entity doing nothing
+                                                         physically observable,
+is called, but it's /your/ job to call |delete| on the pointer, which calls the destructor of the pointed object.
+The pointed object is technically /not/ a member of your class (the pointer is). The difference between
+the intuitive feeling that "it's part of the class" and the formal definition of the term "member" is one reason making
+|const| [18.2 less than useful] (is changing the object pointed by a member "changes" the object itself or not?).
+
+Experienced C++ programmers find this natural since the C++ approach to these issues is relatively uniform.
+If you have the tough luck of using C++ a lot, this point is obvious
+(but you wouldn't ask the question in the first place).
+
+There's a nifty thing called [16.1 "garbage collection"] that's been around for nearly half a century. The run time system
+automatically figures out which objects are not pointed by anything and collects this garbage. Check it out, it's quite nice.
+
+-END
+
+When I write a derived class's destructor, do I need to explicitly call the destructor for my base class?
+
+FAQ: No, this is done implicitly, in the reverse order of the appearance of the classes in the inheritance list
+ (but |virtual| inheritance complicates matters), and after the destruction of the class members.
+
+FQA: The FAQ says that if someone is [11.3 relying] on more complicated details of the finalization order, you'll need information outside the scope
+ of the FAQ. The remark probably refers to useful information like locations of mental institutions and drug prescriptions.
+
+Seriously, a Usenet language FAQ is already a place normally visited only by language lawyers. If you need /more/
+obscure information to get your job done, the only legitimate reason is that you're writing a C++ compiler.
+ If that's the case, and you feel miserable, cheer up - it could be worse. For example, imagine the misery of the people who'll /use/ your compiler!
+
+-END
+
+Should my destructor throw an exception when it detects a problem?
+
+FAQ: THAT IS DANGEROUS! Which is discussed in [17.3 a FAQ about exceptions].
+
+FQA: It shouldn't. And you can't return an error code either. However, on many systems you can send an e-mail with the word
+ "BUMMER" to your support e-mail address.
+
+If you want your destructor to detect problems, make it a |close| function.
+
+-END
+ 
+Is there a way to force |new| to allocate memory from a specific memory area?
+
+FAQ: Oh, yessssss! Pools! Pools, pools, pools, pools, pools...
+
+Please forgive me this time. I can't summarize what the FAQ is saying. It's almost as long as
+ /all the previous answers/. And it's totally out of control. If you feel like it, fasten your seat belt,
+ grab a barf bag, follow the link
+ and knock yourself out.
+
+FQA: Oh, nooooooo! Don't do that!
+
+I know that your system has more than one kind of memory and\/or you have real time requirements and
+ you can't use a traditional |malloc| implementation. But trust me, you're going to hate the day you've
+ heard about those pools. Pools have arbitrary size limits (at most 20 objects of this, at most 30 objects of that...).
+ Everybody is going to have a paranoia attack and set the limits to huge values, and then you're out of memory,
+ and then you start thinking about the "right" limits, and it turns out that it's extremely hard to figure that out,
+ because seemingly independent modules have related memory requirements (say, they handle mutually exclusive situations
+                                                                         so you'd like them to use the same memory, but how?),
+ and then you need some hairy logic to compute those values on a per-configuration basis, which means building several
+ versions of the program, and maybe creating scripts for computing the values at build time, and you're going to /hate the day you've
+ heard about those pools/.
+
+If you're absolutely sure you can't create a single allocator managing your memory, at least /don't allocate objects
+of classes with constructors/ from pools, [11.10 use C-like structs instead]. If you refuse to give up and admit that you're
+ doing a pretty low-level thing and instead want to keep pretending that you're [8.6 "programming in the problem domain"],
+ and for some reason you think C++ classes help you with that - go ahead. The punishments for your crime are
+                                                                         discussed throughout the FQA.
+
+-END

@@ -1,0 +1,348 @@
+Constructors
+{'section': 10, 'faq-page': 'ctors.html'}
+This section is about constructors, which create C++ objects, as well as a large number of problems.
+
+What's the deal with constructors?
+
+FAQ: A constructor initializes an object given a chunk of memory having arbitrary (undefined) state, the way "init functions" do. It may acquire resource like memory, files, etc. "Ctor" is a common abbreviation.
+
+FQA: That's right - constructors /initialize/ objects. In particular, constructors /don't/ allocate the chunk of memory used for storing the object. This is done by the code calling a constructor.
+
+The compiler thus has to know the size of a memory chunk needed to store an object of a class
+(this is the value substituted for |sizeof(MyClass)|) at each point where the class is used.
+That means knowing all members (public & private). This is a key reason why changing the /private/ parts of a C++ class
+definition requires [7.5 recompilation of all calling code], effectively making the private members a part of the public
+interface.
+
+This design of C++ constructors is extremely impractical because the smallest change can trigger the largest
+recompilation cycle. This would be less of a problem if C++ compiled fast, and if there was an automatic way to
+detect that code was compiled with an outdated class definition - but it doesn't, and there isn't.
+
+This is one of the many examples where C++ ignores [6.1 practical] considerations in an attempt to achieve
+theoretical [6.2 perfection] ("language features should /never, ever/ impose any performance penalty!"). Compare this to the approach taken in most object-oriented languages, which normally choose
+true decoupling of interface, sacrificing the efficiency of allocation. Some of these languages provide ways to
+optimize the allocation of /public/ data. This lets you improve performance when you actually need it,
+but without the illusion of [7.4 "encapsulation"], and have real encapsulation in the rest of your system.
+
+-END
+
+Is there any difference between |List x;| and |List x();|?
+
+FAQ: Yes, and it's a /big/ one. The first statement declares an object of type |List|, the second declares a function returning an object of type |List|.
+
+FQA: There sure is quite a semantic difference. Too bad it's not accompanied by an equally noticeable syntactic difference. Which is why the question became a frequently asked one.
+
+The problem is that it's hard to tell C++ constructor calls from C\/C++ function declarations. The cases discussed here - constructors without arguments - are a relatively moderate manifestation of this problem. All you have to do is memorize a stupid special case: constructor calls look like function calls except when there are no arguments, in which case parentheses must be omitted. There are tons of weird rules in the C++ grammar, and another one doesn't make much difference.
+
+But when there /are/ arguments, things get /really/ [10.19 hairy]. Consider the statement |A f(B,C);| - this ought to be a function declaration. Why? B and C are surely classes, look at the capital letters. Um, wait, it's just a naming convention. What if they are objects? That makes the statement a constructor call. Let's look up the definition of B and C, that should give us the answer to our question.
+
+Have you ever looked up C++ definitions (manually or using tools such as IDEs)? Check it out, it's fun. You can be sure of one thing: template specialization on integer parameters when the instantiation uses the size of a class defined using multiple inheritance and virtual functions as a parameter value doesn't make definition look-up easy.
+
+When you get an incomprehensible error message from your C++ compiler, be sympathetic. Parsing C++ is a full-blown, industrial strength nightmare.
+
+-END
+
+Can one constructor of a class call another constructor of the same class to initialize the |this| object?
+
+FAQ: No. But you can factor out the common code into a private function. In some cases you can use default parameters to "merge" constructors. Calling placement |new| inside a constructor is very bad, although it can "seem" to do the job in some cases.
+
+FQA: You can't - one of the many good reasons to avoid constructors. And anyway, having more than one constructor may be problematic for another reason: they must all have the same name (that of the class), so in fact you're dealing with overloading, and C++ overload resolution is a huge can of worms.
+
+If you're OK with that, you can surely use the FAQ's advice to factor out common code, unless you follow /another/ [10.6 FAQ's advice] - the one suggesting to use the ugly colon syntax for initializing member variables. You can't move these things to a function.
+
+If you're in a mood for breaking rules and doing clever tricks, this may be the right time to look for a real problem where such skills are really needed. Breaking C++ rules by calling placement |new| is probably a bad idea - not because C++ rules are any /good/, but because they are pretty /bad/ (astonishingly and inconsistently complicated). This is not the kind of rules you can get away with breaking - your maze of hacks is doomed to collapse, and there's enough weight in C++ to bury your entire project when this happens. And anyway, why invest energy into an artificial syntactic problem when there are so many real ones out there?
+
+-END
+
+Is the default constructor for |Fred| always |Fred::Fred()|?
+
+FAQ: No, the default constructor is the one that can be called without arguments - either because it takes none or because it defines default values for them.
+
+FQA: Yep, the rule is that the default constructor is the one that can be called "by default" - that is, when the user of a class didn't specify any parameters.
+
+Another neat thing about default constructors is that they get /generated/ "by default". For example, if the author of class |Fred| didn't write any constructors for it, a C++ compiler will automatically generate a default constructor for it. You don't see a |Fred::Fred|, but it still exists - invisible C++ functions are great for readability and debugging. The same will happen with other things, for example the /copy constructor/. If you think you can use C++ and simply avoid the features you don't like, you're in for a rude awakening: the invisible compiler-generated stuff is lethal when your class acquires resources (most frequently memory). In for a penny - in for a pound: if you want to write C++ classes, you have to learn pretty much everything about them, and there's plenty.
+
+Where's all this code generated? At the caller's side, of course. To generate it near the rest of the class definition, the C++ compiler would have to know where that definition is, and there's no good way to tell (it may be scattered across as many source files as the author damn pleases). C++ is just like C in this respect - there's no way to narrow the search range for a definition of an entity based on its name and\/or namespace; it can be anywhere in the program. In particular, this means that the default constructor will be automatically generated at all points where a class is used, from scratch - yet another reason why C++ code compiles slowly.
+
+And what's needed in order to generate this code? The default constructor generated by default (I hope you follow) calls the default constructors of all class members (which in turn may take auto-generation). Add a private member, and all default constructors generated at the calling code must be regenerated - yet another reason why C++ code must be [7.5 recompiled frequently].
+
+-END
+
+Which constructor gets called when I create an array of |Fred| objects?
+
+FAQ: The default constructor. If there isn't any, your code won't compile. But if you use |std::vector|, you can call any constructor. And you should use |std::vector| anyway since arrays are [6.15 evil]. But sometimes you [6.16 need] them. In that case, you can initialize each element as in |Fred arr[2] = {Fred(3,4), Fred(3,4)};| if you need to call constructors other than the default. And finally you can use placement new - it will take ugly declarations and casts, you should be careful to align the storage right (which can't be done portably), and it's hard to make this exception-safe. See how evil those arrays are? Use |std::vector| - it gets all this complicated stuff right.
+
+FQA: And all you did was asking a simple question! OK, let's start making our way through the pile of rules, exceptions, amendments and excuses.
+
+Given syntax like |MyClass arr[5];| the compiler will generate a loop calling the default constructor of |MyClass|. Pick some time when you have a barf bag handy and look at the generated assembly code. There are two nice things: sometimes compilers will emit a loop even when it's clear that the default constructor has nothing to do; and for automatically generated default constructors, you'll get inline calls to the constructor of each member (for the latter thing you don't really need an array, a single object will do). Bottom line: your program gets bigger and bigger and you don't know why - /you/ didn't do anything.
+
+Syntax like |std::vector<Fred> arr(5,Fred(3,4));| gets translated to 5 calls to the copy constructor (in practice - in theory other things could happen; in general, C++ is excellent in theory). This is functionally equivalent to calling |Fred(3,4)| 5 times. The FAQ doesn't mention that it's normally slower though - typically the numbers 3 and 4 must be fetched from the memory allocated for the copied object instead of being passed in registers or inlined into the assembly code.
+
+Of course |std::vector| of a fixed size known at compile time is less efficient than a built-in array anyway. Which is one reason to prefer a built-in array. Initializing such an array with multiple |Fred(3,4)| objects will force you to replicate the initializer, and will produce the biggest possible initialization code. No, the compiler is not likely to notice that you're doing the same thing over and over again, it will repeat the same code N times. On the other hand, if your class does nothing in the constructor but has an "init function", you can call it in a loop. Another reason to avoid constructors.
+
+The horror stories the FAQ tells you about placement new are all true. However, it doesn't mention that |std::vector| always allocates memory on the free store. And there's no standard container you can use for allocating memory on the stack, for example, so if you want one, you'll have to write it yourself. And placement new is necessary to make such containers work with C++ classes without default constructors. Yet another reason to avoid constructors.
+
+Anyway, saying "use |std::vector| because it gets that horrible placement new stuff right" is a little strange if you consider the following assumptions, one of which must apparently hold:
+
+`<ul>`
+`<li>`C++ guys want people to build their own container classes - then why is placement new, which is required to do this right, so hard to use?`</li>`
+`<li>`C++ guys don't want people to build their own container classes - then why isn't |std::vector| built into the language, so that things like aggregate initialization could work with it, and maybe we could get rid of those oh-so-evil arrays?`</li>`
+`</ul>`
+
+Maybe you can't expect more consistency from the promoters of a language than there is in that language itself.
+
+-END
+
+Should my constructors use "initialization lists" or "assignment"?
+
+FAQ: Initialization lists - that's more efficient, except for built-in types (with initializers, you avoid the construction of an "empty" object and the overhead of cleaning it up at the assignment). And some things can't be initialized using assignment, like member references and const members and things without default constructors. So it's best to always use initialization lists even if you don't have to for the sake of "symmetry". There are exceptions to this rule. There's no need for an exhaustive list of them - search your feelings.
+
+FQA: There are good reasons to avoid initialization lists:
+
+`<ul>`
+`<li>`You can't write most kinds of code in the initialization lists - no local variables to reuse results of computations, no loops... Basically there's C++ and there's this initializer land, where you must speak a crippled dialect without any reward for the effort.`</li>`
+`<li>`You can't [10.3 move initializers to a common function] to reuse initialization code.`</li>`
+`<li>`If you want to pass a pointer to one member to the constructor of another member, you must make sure its constructor is called first, and these constraints can get complicated.`</li>`
+`<li>`To help you manage those constraints, some compilers produce annoying warnings when the order of your initializers differs from the order in which you declare the class members, even when it doesn't matter.`</li>`
+`<li>`The efficiency argument is wrong for a very common case when the default constructor of a member does nothing.`</li>`
+`<li>`Typically compilers attribute all code in initializer lists to the same source code line - for example, the one with the opening brace of the constructor body. When a program crashes inside an initializer, you can't easily tell which one it is using a symbolic debugger.
+`<li>`Not that it's very different from the rest of C++, but the colon syntax is just plain ugly.`</li>`
+`</ul>`
+
+The trouble with initialization lists, like with any duplicate language feature, is that you /can't/ really avoid using it. For example, there are classes without default constructors, or with relatively heavy ones. So "never use initialization lists" is not a very useful rule, and the best answer, as usual, is that there's no good answer.
+
+However, initialization lists are really less than useful, so it's probably good to avoid them unless you can't. In particular, avoiding reference and const members and having lightweight default constructors in your classes may help.
+
+-END
+
+Should you use the |this| pointer in the constructor?
+
+FAQ: Some people think you can't since the object is not fully initialized, but you can if you know the rules. For example, you can always access members inside the constructor body (after the opening brace). But you can never access members of a derived class by calling virtual functions (the function call will [23.5 invoke the implementation of the class defining the constructor], not that of the derived class). Sometimes you can use a member to initialize another member in an initializer list and sometimes you can't - you must know the order in which members are initialized.
+
+FQA: That's right - all problems and questionable scenarios come from tricky C++ things, like initialization lists and virtual function calls from constructors. If you avoid initialization lists and use plain old assignment or initialization function calls in the constructor body, you can be sure all members can be used - you have one problem solved. Use init functions instead of constructors and virtual function calls will [23.6 invoke functions of the derived class] - another problem solved.
+
+An alternative to avoiding the dark corners of C++ is to spend time learning them. For example, you can memorize the rules defining the order of initialization, and rely on them heavily in your code. That way people who need to understand and\/or maintain your code will have to get pretty good at these things, too, so you won't end up being the only one around knowing tons of useless obscure stuff. Or they will have to ask you, which increases your weight in the organization. You win big either way, at least as long as nobody chooses the path of physical aggression to deal with the problems you create.
+
+-END
+
+What is the "Named Constructor Idiom"?
+
+FAQ: It's when you have static functions ("named constructors") returning objects in your class. For example, this way you can have two "constructors" returning 2D point objects: one getting rectangular coordinates (2 |float|s), and another getting polar coordinates (also 2 |float|s). With C++ constructors you couldn't do it because they all have the same name, so that would be ambiguous overloading. And this can be as /fast/ as regular constructors! And you can use a similar technique to enforce an allocation policy, like having all objects allocated with |new|.
+
+FQA: Three cheers! This is almost like C init functions - a step in the right direction. Namely, this way we don't have overloading problems, and we can get rid of the pesky [10.1 separation of allocation from initialization] - client code doesn't really have to [7.5 know about our private members] anymore.
+
+The only thing left to do is to ditch the whole class thing, and use C pointers to incomplete types as object handles - that way we can actually modify private members without recompiling the calling code. Or we can use a real object-oriented language, where the problem doesn't exist in the first place.
+
+-END
+
+Does return-by-value mean extra copies and extra overhead?
+
+FAQ: "Not necessarily". A truly exhausting, though not necessarily exhaustive list of examples follows, with many stories about "virtually all commercial-grade compilers" doing clever things.
+
+FQA: Let's enumerate the possibilities using boring binary logic:
+
+`<ul>`
+`<li>`You care about performance.`</li>`
+`<li>`You don't care about performance.`</li>`
+`</ul>`
+
+In the first case, "not necessarily" is not a good answer for you. You don't want your code to be littered with things like return-by-value and later wonder why your "commercial-grade" compiler emits huge and slow code in some of the performance-critical places. If performance is one of your goals, you're better off writing code in ways making it as easy as possible to predict performance, without knowing an infinite amount of details specific for each of the compilers you use for production code. And if you have experience with optimization, you've probably noticed another thing - most C++ compilers work hard on optimizing the C subset, but are pretty dumb when it comes to C++-specific parts. Compiler writers are probably happy if they can correctly /parse/ C++ code and somehow lower it to C and have the back-end optimize stuff at the C level. Basically to get performance you need C, because that's what today's optimizers are best at, and you're wasting time with C++.
+
+If you don't care about performance, you are /also/ wasting time using C++. There are hordes of programming languages designed for managed environments, so you won't have problems coming from undefined behavior of all kinds. And the vast majority of languages are way simpler and more consistent than C++, so you'll get another huge burden off your back.
+
+Of course our boring binary logic fails to represent the [35.10 developers] who /think/ they care about performance, although they have a very vague idea about the actual performance of their programs. Those are the people who use the von Neumann model ("you access memory using pointers which are actually indexes of individual bytes") to think about computers, and call this "the low level". They are typically less aware of things like instruction caches (which make /big/ programs /slow/), SIMD instruction sets (which can give performance gains /way beyond/ "generic" template implementations of numerical algorithms), assembly language and optimizers in general (for example, how |restrict| helps optimization but |const| [18.14 doesn't]). These people engage in lengthy discussions about complicated high-level optimizations, their ultimate goal being very generic code which can be compiled to a very efficient program by a very smart compiler, which will never exist. These people are welcome to waste as much time thinking about return-by-value optimizations as they wish, as long as it prevents them from causing actual damage.
+
+-END
+
+Why can't I initialize my |static| member data in my constructor's initialization list?
+
+FAQ: Because you must define such data explicitly as in |static MyClass::g_myNum = 5;|.
+
+FQA: Because it's meaningless. |static| members are global variables with respect to allocation and life cycle, the only difference is in the name look-up and access control. So they are instantiated and initialized once per program run. Initialization lists initialize the members of objects which are instantiated with each object, which can happen more or less times than once per program run.
+
+One possible reason making this question frequently asked is that you can /assign/ to static variables in the body of a constructor, as in |g_numObjs++|. People trying to follow the [10.6 advice] to use the crippled C++ subset available in the initialization lists might attempt to translate this statement to initializer-like |g_numObjs(g_numObjs + 1)| or something, which doesn't work.
+
+You can probably look at it both ways - "initializers are used to initialize things instantiated per object" and "the subset of C++ available in initialization lists makes it impossible to do almost anything".
+
+-END
+
+Why are classes with |static| data members getting linker errors?
+
+FAQ: Because you must define such data explicitly as in |static MyClass::g_myNum = 5;|.
+
+FQA: Beyond being annoying, this is quite weird. At the first glance it looks reasonable: after all, C++ is just a thick layer of syntax on top of C, but the basic simpleton mechanisms are the same. For instance, definition look-up is still done using header files holding random declarations and object files holding arbitrary definitions - each function can be declared anywhere (N times) and defined anywhere (1 time).
+
+So the compiler can't let you define something which becomes a global variable at the C\/assembly level in a header file as in |static int g_myNum = 5;| - that way, you'd get multiple definitions (at each file where the class definition is included). Consequently, the C++ syntax is defined in a way forcing you to solve the compiler's problem by choosing a source file and stuffing the definition there (most frequently the choice is trivial since a class is implemented in a single source file, but this is a /convention/, not a rule the compiler can use to simplify definition look-up).
+
+While this explanation doesn't make the syntax and the weird "undefined external" errors any nicer, at least it seems to make sense. Until you realize that there are /tons/ of definitions compiled to C\/assembly globals in C++ that /must/ be placed at header files. Consider [23.10 virtual function tables] and template classes. These definitions are compiled over and over again each time a header file gets included, and then the linker must throw away N-1 copies and keep one (if the copies are different because of different compiler settings and\/or preprocessor flags, it's your problem - it won't bother to check).
+
+It turns out that C++ /can't/ be implemented on top of any linker that supports C - the linker must support the "generate N times and throw away N-1 copies" feature (or is it a documented bug?), instead of issuing a "multiple definition" error. In GNU linkers this is called "linkonce" or something. To support C++, you must add features to the linker. Too bad they didn't think of adding type-safe linkage (checking the consistency of definitions used in different object files) while they were at it.
+
+The conclusion is that there is no technical reason whatsoever, even inside the twisted C++ universe, to make the syntax harder for the user in this case. On the other hand, there's no reason to make the syntax /easier/ either. That would just introduce inconsistency with the rest of the language.
+
+-END
+
+What's the "static initialization order fiasco"?
+
+FAQ: A subtle, frequently misunderstood source of errors, which are hard to catch because they occur before |main| is called. The errors can happen when the constructor of a global object defined in |x.cpp| accesses (directly or indirectly) a global object defined in |y.cpp|. The order of initialization of these objects is undefined, so you'll see the problem in 50% of the cases (an error may be triggered by a rebuild). "It's that simple".
+
+FQA: And it's /that/ stupid. Just look at this:
+
+`<ul>`
+`<li>`C++ doesn't define the order of initialization of global objects.`</li>`
+`<li>`C++ lets you write code that depends on the order of initialization of global objects.`</li>`
+`<li>`C++ doesn't have a mechanism to automatically detect these errors, neither at compile time nor at run time.`</li>`
+`<li>`C++ doesn't make the slightest effort to help you debug the problem (for example, go figure in which actual order the objects were initialized).`</li>`
+`</ul>`
+
+With most duplicate language features, one can't simply say "avoid the new broken C++ features" because the language [10.6 works so hard] to get you in trouble if you do. But in this particular case it's probably a good rule. Consider the reasons to avoid instantiating global objects with non-trivial constructors (ones that do more than nothing), and instead use plain old C aggregate initialization:
+
+`<ul>`
+`<li>`You have to worry about this "fiasco" business, which is quite nasty. With C initializers, once you passed compilation and linkage, there are no problems - the linker creates a snapshot of the initial state of your global variables, and there are no failure modes.`</li>`
+`<li>`You have all this initialization code before |main|, with corresponding clean-up code called after |main|. What if you want to clean up and re-initialize things /without/ exiting |main|? People calling |getenv| or accessing the command line using platform-specific tricks in code called before |main| further improve the life of other people working on the project.`</li>`
+`<li>`Your program contains a huge bulk of slow initialization code. A C statement like |Point p={4,5};| gets translated to 8 bytes representing the integers 4 and 5 in the executable. A C++ statement like |Point p(4,5);| gets translated to /code/ storing 4 and 5 to |p|. What are the benefits except for getting large programs starting up slowly?`</li>`
+`</ul>`
+
+Some people believe that you need non-trivial global constructors, or else you'll have to make your user call an initialization function to work with your module. The fact is that the experienced users /prefer/ to initialize modules explicitly rather than having them autonomously kicking in, possibly crashing the program because of dependency issues, not to mention printing messages and popping up configuration dialogs. All of these implicit things tend to become quite /explicit/ on the day when you least need them to. Quoting the FAQ's favorite expression, just say no.
+
+-END
+
+How do I prevent the "static initialization order fiasco"?
+
+FAQ: By using the "Construct On First Use" idiom, as in
+
+`<pre>`
+MyClass& getMyObj()
+{
+  static MyClass* p = new MyClass;
+  return *p;
+}
+`</pre>`
+
+This solution may "leak". There's another solution working around this problem, but it creates other problems.
+
+FQA: By not instantiating global objects with constructors doing more than nothing. That prevents this and other kinds of "fiasco". The technique in the FAQ, frequently referred to as an implementation of "the singleton design pattern" (BTW, you can put quotes wherever you like in that one, for example the "singleton" "design" "pattern"), has the following problems:
+
+`<ul>`
+`<li>`As mentioned by the FAQ, it leaks memory /and possibly other resources/ (C++ people love to talk about how memory is "just one kind of resource", overlooking the fact that it accounts for 99% of "resources" actually used by a program, so special, "non-generic" things like [16.1 garbage collection] may be appropriate to manage it - but they suddenly forget all about it when it comes to this "construct on first use" business). Practitioners may find it intolerable to have these memory leaks reported by tools designed to detect leaks, even if their platform is capable of disposing the garbage left by a program automatically. People interested in a more theoretical discussion may enjoy the recommendation to violate the C++ rules regarding memory management found in a "standard practice".`</li>`
+`<li>`It is slow, not to mention thread safety. When you have a plain C global initialized by a plain C explicit initialization function, accessing it is quite easy (function arguments may be faster to fetch, or they may be not). In this case, you call a function (which can be inlined - that doesn't necessarily help though) that contains a hidden |if| statement. You don't see it? Well, how do you think the clever function manages to only call |new| once? There's a global boolean (sometimes called "guard variable") which it checks each time. To access a global, you now need to access two globals. If you find it interesting, you can list the symbols of your program (using a program like |nm|), and then filter the output using a C++ name demangler (like |c++filt|). You may find lots of "guard variable of something" kind of names there.`</li>`
+`</ul>`
+
+The C++ global initialization and destruction support is broken. As usual, the "idiom" in the FAQ "solves" the problem by creating worse problems.
+
+-END
+
+Why doesn't the construct-on-first-use idiom use a static object instead of a static pointer?
+
+FAQ: It solves one problem and creates another problem. Namely, you avoid the resource leak, but your program can crash because now you achieved "construct-on-first-use", but not "destroy-after-last-use", so someone can access a dead object (using |new| means "never destroy", which is at least guaranteed to be /after/ last use).
+
+Actually there's a /third/ approach solving /both/ problems (initialization and destruction order), having "non-trivial cost". The FAQ author feels "too lazy and busy" to explain - go buy his "C++ FAQ Book" to read about it.
+
+FQA: The FAQ is right - this variant, known as "the Meyers' singleton", is also broken. And it's probably the hardest to work around, too. At least with the |new| variant you /can/ delete the object with |delete &getMyObj();| - increasingly ugly, but it may yield a working (though unmaintainable) program. With the static variable technique, C++ records a pointer to the destructor in some global array, so you won't be able to control the order of destruction (it's always the order of construction, reversed - and you /didn't/ want to control the order of construction, you wanted it to "just work", right?).
+
+As to other approaches - I do have enough energy and spare time to repeat a /free/ advice: use explicit initialization and clean-up functions, and realize that the initialization and destruction sequences are part of the /design/ of your modules and your program.
+
+If it's hard to get out of the state of mind where you think initialization should somehow work out by itself, as opposed to the really interesting things your program does afterwards (the "steady state"), maybe an analogy with hardware can help. In a simplified model of synchronous hardware design, you have two "trees" of signals (basically wires) reaching almost every place in your system: the /clock/ (which synchronizes things done at the steady state), and the /reset/ (upon which all the initialization is conditioned). A common milestone in hardware design is getting the reset right. When you buy hardware, a large portion of it is devoted to initialization (which is why you can /reboot/ it and it enters a reasonable state - you can't do that with biological "computers" like the human brain).
+
+By the way, I didn't read the C++ FAQ book (I really don't have time for a C++ FQA book at the moment, so why bother?). But I did read "Modern C++ Design", which also offers a solution. So if you buy the FAQ book and find the third "solution" and it involves having your singletons instantiated from a hairy template with a global data structure keeping "priorities" or some such and registering |atexit| callbacks which can in turn call |atexit| which detects dark areas in the C and C++ standards because nobody thought anyone would ever do that - if that's the third way, be sure that the cost is /really/ "non-trivial".
+
+-END
+
+How do I prevent the "|static| initialization order fiasco" for my |static| data members?
+
+FAQ: Using the same techniques [10.14 just described], except for using static member functions instead of global functions. For some reason a long list of examples follows, as well as a discussion on performance.
+
+FQA: There's no difference between static data members and global variables except for name look-up and access control. So you can either use the broken & slow techniques from the FAQ, or you can avoid non-trivial constructors and live happily ever after.
+
+There's no point in having separate discussions on static data members and plain global variables. Well, except for mentioning that static data members are a brand new C++ feature, and it's particularly nice that C++ recommends to wrap its own syntax with another layer of its syntax for "safety". An alternative approach to safety is to use zero layers of C++ syntax.
+
+-END
+
+Do I need to worry about the "|static| initialization order fiasco" for variables of built-in\/intrinsic types?
+
+FAQ: Yes, if you use function calls to initialize them as in |int g = f();| - that way |f| can access |g|, or you can have other dependency problems.
+
+FQA: Exactly - and this code doesn't compile in C. We seem to have a [10.7 pretty clear picture] here, don't we? As a rule of thumb, the answer to the more general version of the question - "Do I need to worry when I use a C++ feature not available in C?" - is also "Yes".
+
+Not that plain C is very safe, mind you. If you [10.9 don't need the performance], you can always switch to a safer, higher-level language. But at least C doesn't pretend to be very high-level, and makes less promises it can't keep (like "go ahead, use whatever code you like to initialize global variables - see how high-level our language is?").
+
+-END
+
+How can I handle a constructor that fails?
+
+FAQ: Throw an exception.
+
+FQA: Right.
+
+Q: What do you do when a ship is on fire?`<br>`
+A: Drown it. The fire will stop immediately.
+
+Seriously, [17.10 C++ exceptions] are a leading candidate for the title "the worst way to handle run time errors ever invented". But constructors can't return values. Even though they /don't/ technically return an object - they merely initialize a chunk of memory they are passed. So they /could/ return status information despite the C\/C++ limitation of at most one return value per function. Which itself has no technical justification. This is [10.5 yet another] reason to avoid constructors that do more than nothing. It's also [10.12 yet another] illustration how [10.6 hard] it is to use only some of C++ features and avoid others ("we want classes, but we don't need exceptions" - until you want to handle an error in a constructor).
+
+It is also notable that the C++ standard library /doesn't/ handle errors in constructors (or overloaded operators, which pose the same problem) using exceptions (for example, consider |ifstream| and |ofstream|).
+
+-END
+
+What is the "Named Parameter Idiom"?
+
+FAQ: A useful application of method chaining. It works around the fact that C & C++ don't have keyword arguments, and it does that better than combining the parameters in a string or a bit mask. It works like this:
+
+`<pre>`
+File f = OpenFile("language-abuse.txt")
+         .useWeirdLineBreakRules(true)
+         .writeLotsOfGoryDetails(true)
+         .averageNumberOfExcuses(ZILLION);
+\/* a sizable implementation with two classes and friends
+   and methods returning *this and what-not omitted *\/
+`</pre>`
+
+And if method calls are inlined, there's no speed overhead (but the code size may "slightly" increase - but that's a long story).
+
+FQA: Let's have a closer look at this Named Parameter Idiocy.
+
+`<ul>`
+`<li>`The implementation in the FAQ pushes these parameters into a temporary structure, which is normally slower than argument passing.`</li>`
+`<li>`And the multiple method calls, inlined or not, are no picnic either. Compare assembly code generated by |printf| and |iostream| calls if you doubt. This way you can compare your notion of "slightly" with that used by the designers of C++.`</li>`
+`<li>`All ways to implement this require the author of the class to write a lot of code ultimately doing nothing. Which is OK because in theory, [13.4 each class is written once and used thousands of times]. In practice most classes keep changing forever and are used in a couple of places. Which doesn't matter as long as you only use C++ in theory where it belongs.`</li>`
+`<li>`But that would be justified to an extent if it made things easier for the user. But it doesn't. Try reading the header file with the |class OpenFile| and figuring out how to open files.`</li>`
+`<li>`And now that we have this |OpenFile| class, people will start storing objects of this class and passing them around. Which could be a good idea in some cases, except that the class has a stupid function-like name, further enhancing readability.`</li>`
+`<li>`Or we could use a different implementation, chaining the methods of |class File| and avoiding the second class. But this way, we can't detect errors easily, because there's no point where we see all of the parameters at once, we get them one by one.`</li>`
+`</ul>`
+
+This syntactic sugar of the bitter kind raises two questions. First, why don't we have keyword arguments in C++? They are much easier to implement in a compiler than virtually any feature C++ added to C, and are way more useful, too. And second, if for some reason you have to work in C++, what's the problem with accepting the fact that it doesn't have keyword arguments, and using a structure of parameters in way at least making it /clear/ that you use a structure of parameters? For example:
+
+`<pre>`
+OpenFileParams params;
+params.useNormalLineBreaks(true);
+params.quitFiddlingWithSyntax(true);
+File file; \/\/trivial constructor
+if(!file.open("grow-up.txt",params)) {
+  \/\/handle errors without the "help" of C++ exceptions
+}
+`</pre>`
+
+This doesn't solve the problems with code speed & size, but at least the code of the class and the code using the class are reasonably readable and writable. And there seem to be no new problems, unless someone considers the fact that our code is now pretty close to C and we no longer rely on C++ method chaining a problem.
+
+Abusing C++ syntax in order to cover up deficiencies of C++ syntax, thus creating real problems in attempts to solve non-problems, is a popular hobby among C++ professionals. Let's check if it makes sense by imagining that someone spent the better part of the day writing all this wrapper code doing trivial things. Let's try to help that someone explain what was accomplished to someone else, and further assume that the other someone has a mind not entirely buried in C++ quirks. "I was writing this... Um, you see, I was opening a file... I wrote this interface of 2 screens of code... And then..." Sheesh, that's embarrassing.
+
+-END
+
+Why am I getting an error after declaring a |Foo| object via |Foo x(Bar())|?
+
+FAQ: This /hurts/. /Sit down/.
+
+The "simple" explanation: this doesn't really declare an object; |Foo x = Foo(Bar());| does. The complete explanation for "those caring about their professional future": this actually declares a function named |x| returning a |Foo|; the single argument of this |x| function is of type "a function with no argument returning a |Bar|".
+
+Don't get all excited about it. Don't "extrapolate from the obscure to the common". Don't "worship consistency". That's not "wise". The FAQ actually says all these quoted things.
+
+FQA: Those who use computers to do any useful work are probably immune to brain-crippled syntax, because there are more painful things, like brain-crippled semantics. So sitting down is only necessary if you find it comfortable. For similar reasons, don't worry about your professional future too much if this looks boring and stupid and you don't feel like understanding it. It really is what you think it is, and programming is not supposed to be about this kind of thing. If someone rejects you in an [6.14 interview] because you don't know the answer to a question like this, you are lucky - you've just escaped a horrible working environment.
+
+Anyway, if for some reason you /are/ curious to find out why this happens, it turns out the FAQ has no answers, it just presents it as an arbitrary rule. It doesn't help to understand anything. The statement is ambiguous - you can read it both as a constructor call and a declaration of a peculiar function. How does the compiler know? Let's try to see.
+
+Apparently the key problem is that in order to tell a function declaration from a constructor call, you need to know whether the things in the parentheses are objects or types. This makes parsing |A f(B);| [10.2 non-trivial]. In our example, things are complicated by the fact that |Bar()| itself presents /the very same problem/ - is it a function declaration or a constructor call? Worse, this time the darn thing accepts no arguments, so you can't use them to figure it out. Well, C++ has an arbitrary rule to help the compiler (but not necessarily the user): things with empty parentheses are function declarations, unless that's entirely impossible (list of special cases follows). That's why |A x();| declares a function but |A x;| defines an object. And that's why |Bar()| is interpreted as a function declaration, which means that it's an argument type, not an object, so the whole statement is actually a function declaration. I think.
+
+The problem with |Foo| and |Bar| is that the C++ grammar is FUBAR. In a language designed in a more orderly way (which is most of them), there are no such ambiguities. A relatively simple way to make sure there are none is to use a formal grammar specification and feed it to a program that generates a parser for the language, checking the consistency of the grammar on the way. |yacc\/bison| is one mature program of this kind; there are newer ones with more features, which can represent more complicated grammars (but AFAIK no generic tool is capable of representing the extremely complicated, inconsistent and actually undecidable C++ grammar).
+
+It could help the users if the people promoting C++ realized that the consistency of a grammar is not something you "worship", but a technical property which is far easier to achieve than it is to deal with the consequences of not having it. This example is just one drop in the ocean of such problems. The complexity of the C++ grammar guarantees that compiler error messages will remain cryptic, debuggers will stay ignorant, and IDEs will be unhelpful compared to those available for other languages forever.
+
+-END

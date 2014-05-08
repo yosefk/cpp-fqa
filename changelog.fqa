@@ -1,0 +1,69 @@
+Change log
+{}
+This is a list of changes in the FQA part of the site done after October 28, 2007. It only mentions "real" changes to the contents,
+not typo fixes and such.
+
+The Q&A sections of the FQA and Defective C++ are probably not going to change much; mostly, I plan to add links
+to corrections on a separate page.
+
+/2009-10-17/
+
+Added a correction about conversions between code and data pointers,
+and a reader's submission regarding a truly mind-numbing error message.
+
+/2008-06-28/
+
+Added a single page version (Defective C++, Q&A, FQA errors, everything else
+left out). Linked to it from the index page. Deleted a sentence from the FQA
+errors page, added a sentence to the FQA FAQ. That kind of stuff.
+
+/2008-05-08/
+
+Added two C++ corrections (regarding |#define private public| and
+multi-dimensional arrays). Slight editing of the FAQ (most notably,
+added a correction about the flat Earth issue). All pages should now
+be [http://tidy.sourceforge.net/ tidy].
+
+The outburst of activity is the result of finally taking control over
+my hateful world-class FQA publishing software, which was, at last, merged,
+fixed,
+and put on a single machine. From now on, fixes should appear instantaneously
+(as opposed to being deferred until I take control over my hateful publishing
+software).
+
+/2008-01-02/
+
+Added the Cat++ link face, at the end of a day of C++ debugging.
+I wonder if it shows in the so-called art.
+
+/2007-11-03/
+
+Added an FQA correction - C++ has |bool|.
+
+Linked to the |comp.lang.c++.moderated| thread from the FQA FAQ.
+
+Added an image with |operator<<| to the link faces page.
+
+/2007-10-31/
+
+Added an item about iostream and internationalization to others' criticism page.
+
+Renamed the "Web vs *" pages since the names started to look annoying to me.
+What was I thinking?
+
+Edited in a correction about EDG selling Java and Fortran front-ends,
+and then removed the whole thing.
+
+/2007-10-30/
+
+Added the Web vs C++ page and the first three issues (implicit conversions and parsing C++ x 2).
+
+Updated the FQA FAQ to mention the corrections page in the present tense, since it now exists,
+and added three braindead, but genuinely frequently asked questions.
+
+/2007-10-29/
+
+Added the Web vs C++ FQA page and the first correction (virtual inheritance).
+
+Gave up on Web 2.0 and asked people to e-mail me if they want to talk about the FQA.
+Updated the FAQ and the main page.

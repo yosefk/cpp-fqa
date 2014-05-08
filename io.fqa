@@ -1,0 +1,360 @@
+Input/output via <iostream> and <cstdio>
+{'section':15,'faq-page':'input-output.html'}
+This section explains the benefits of |iostream| - a /"type-safe"/ I\/O library (which does not mean it will /save/ keystrokes when you /type/ some code).
+
+Why should I use |<iostream>| instead of the traditional |<cstdio>|?
+
+FAQ: There are four reasons:
+
+`<ul>`
+`<li>` /Increase type safety/: with |iostream|, the compiler knows the types of the things you print. |stdio| only figures them out at
+run time from the format string. `</li>`
+`<li>` /Reduce the number of errors/: with |stdio|, the types of objects you pass must be consistent with the format string;
+|iostream| removes this redundancy - there is no format string, so you can't make these errors. `</li>`
+`<li>` /Printing objects of user-defined types/: with |iostream|, you can overload the operators |<<| and |>>| to support
+new types, and the old code won't break. |stdio| won't let you extend the format string syntax, and there seems to be no way
+to support this kind of thing in a way avoiding conflicts between different extensions. `</li>`
+`<li>` /Printing to streams of user-defined types/: you can implement your own stream classes by deriving from the
+base classes provided by |iostream|. |FILE*| can not be extended because "it's not a real class". `</li>`
+`</ul>`
+
+FQA: Why should I do this, why should I do that, you ask. What kind of manners are these? Do what you are told. Assignment Number 1 - convert all your evil
+|printf("0x%08x\n", x)| statements to this:
+    
+@
+std::cout << std::hex << std::setfill('0') << std::setw(8) << x << std::dec << std::endl; 
+@
+
+Even if you commit the environmental crime of namespace pollution, adding a |using namespace std|
+and removing those pesky |std::|, the verbosity is still amazing. This achievement is not accidental.
+It follows from one of the basic flaws in the C++ way of thinking:
+the "everything is a type" axiom. For example, |hex| has a special type which hexes streams, and so does every
+other strange object sent to |cout|.
+
+The FAQ explains why this thinking is good for you. Here's why the FAQ is wrong:
+
+`<ul>`
+`<li>` Why is /type safety/ a good thing here - because we gain performance? The last time I checked, we didn't really gain
+any - your typical iostream implementation is slower and bulkier than your typical stdio implementation. Anyway, isn't I\/O
+the bottleneck here? `</li>`
+`<li>` Oh, now I get it - type safety is supposed to help the compiler /catch errors/. This is very important for people
+who never actually look at what they print. The needs of this population surely justify the 700K of crud that |gcc| gets
+to parse when compiling a C++ "Hello, world" problem, as well as my time spent waiting for it to compile. What's easier
+to fix: a run-time printf problem or a compile-time iostream problem (with the compiler helpfully listing hundreds of [13.1 overloaded] left shift operators)? `</li>`
+`<li>` Maybe "everything is a type" is a good thing because it lets you /print objects of user-defined types/. If you
+believe this, concentrate for 10 seconds - this is your chance to achieve enlightenment. `<b>` What on Earth prevents
+you from printing user-defined objects with printf? `</b>` You write a helper function which gets a pointer to your
+object and prints it. While you're at it, give the function some special name, so that you don't have to shovel through lists of overloads
+anymore. What's that? It's verbose, because function calls are separate statements, unlike the funky left shift operators?
+Well, look at a simple statement printing an integer above if you care about verbosity. `</li>`
+`<li>` What about /printing to streams of user-defined types/? Well, this claim is valid in the sense that there's no way to define custom
+|FILE*|, but it has nothing to do with the fact that "it's not a real class". A "real class" is not a very well-defined
+term; to me, C++ classes look [7.1 pretty surreal] compared to classes defined in almost any other language I've ever seen. Anyway,
+stdio could provide ways to define custom |FILE*|, for instance by providing |read|, |write| and other callbacks.
+The authors just didn't bother. The ability to define custom streams does not justify the problems
+of iostream, nor is it a feature unique to iostream. This ability is achieved in (relatively) sane OO ways, (almost) in the way it's done
+in many languages saner than C++ and I\/O libraries saner than iostream. `</li>`
+`</ul>`
+
+|iostream|. The only thing you'll gain from all this extra typing is extra long build cycles and error messages and extra large
+program image. This is what you get when you shift a file object by an integer.
+
+-END
+
+Why does my program go into an infinite loop when someone enters an invalid input character?
+
+FAQ: Probably you did something like |int i; std::cin >> i;| without checking for an error.
+From now on, all attempts to read stuff from |std::cin| won't actually read anything, because the stream has entered
+an erroneous state. Presumably, you wrote a program that will still keep trying. Use something like |while(std::cin >> i)|
+instead.
+
+FQA: Yep, that's iostream's way to handle input errors. For some reason, it doesn't throw an [17.1 exception] (it's not really
+bad, because what's really bad is C++ exceptions). But it doesn't return an error code, either, because the overloaded operator
+[13.1 has to return its first argument] for the "neat" operator call chaining to work. So it has to set an error bit - the
+dreaded [17.2 "zombie object"] pattern the FAQ condemns so convincingly.
+
+You can then check for errors using |if(std::cin)| or the like because the object has overloaded |operator void*|,
+and |void*| is convertible to |bool|. You
+can also check for end-of-file conditions this way. Actually you can check for error-or-end-of-file conditions. The more
+operator calls you chain, the less details about the error context are left. Simple, safe, efficient and elegant.
+
+Oh, and iostream has other state bits. For example, |std::hex| transfers it to hex mode. People frequently forget
+to undo the effect, which is especially entertaining when they print numbers like |10|, which is as good a decimal
+ten as it is a hexadecimal sixteen. Well, if you found the bug (which for some reason went undetected by the type-safe almighty paranoid C++ compiler),
+you can use |std::dec| to get the stream back to decimal mode. Um, actually, it transfers it to decimal mode, which is not necessarily "back", because
+we don't know which mode it was in before it was hexed. This gets interesting when people print numbers and user-defined
+objects in the same statement, and count on their hexing to maintain its effect after the user-defined object is printed.
+
+-END
+
+How can I get |std::cin| to skip invalid input characters?
+
+FAQ: Here's an example:
+
+@
+   while ((std::cout << "Give me your credit card number now!!") && !(std::cin >> n)) {
+     std::cout << "Don't mess with me, I'm written in C++!!!";
+     std::cin.clear();
+     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');
+   }
+@
+
+FQA: Oops, you forgot to test for end of file. If a brave user hits |Ctrl-D| or whatever it takes to close the standard input
+with the given terminal, your program will enter an infinite loop. Overloaded operators and error handling are not
+very compatible.
+
+|std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');| speaks for itself. You just can't invent it if
+your "use case" is yourself getting any work done.
+
+-END
+
+How does that funky |while (std::cin >> foo)| syntax work?
+
+FAQ: |istream| has overloaded |operator void*|. The compiler calls this operator in boolean contexts (when it expects a condition, for example),
+because |void*| can be converted to a boolean. The operator returns |NULL| when there's nothing left to read, or
+when a format error occurred previously.                                                                                         
+
+FQA: There's nothing "funky" about it.
+It is ugly and boring. It's also scary because many people think this is what programming is all about - using complicated
+syntax to do simple things without even getting them right (how do you tell end-of-file conditions from format errors?).
+
+Why is it |operator void*|, and not |operator bool|? Apparently because the compiler implicitly converts booleans to numbers
+in "numeric contexts" (such as |file1+file2|), and we don't want that to compile, do we?
+
+But wait, there's more! There's an actual book out there, called "Imperfect C++", arguing that |operator void*| is not
+ the way to go, either. Because this way, |delete file| would compile. Surely we don't want it to, do we? I mean,
+ the fact that the statement is completely /moronic/ shouldn't matter. Morones have a right to get an equal opportunity
+ in the exciting world of C++ programming; let's catch of all their errors at compile time. Evil people spread
+ rumors about the problem being undecidable, but we should keep trying.
+
+-END
+
+Why does my input seem to process past the end of file?
+
+FAQ: Because the stream doesn't know that you've reached the end of file until you actually try to read past the end of file.
+For instance, a stream object may read characters which are entered interactively using a keyboard. So it's impossible
+to tell when it's over.
+
+FQA: That's right, and has nothing to do with iostream - except the fact that iostream handles I\/O errors in the silly
+way discussed [15.4 above].
+
+-END
+
+Why is my program ignoring my input request after the first iteration?
+
+FAQ: Because non-digits are left in the input buffer. You can ignore them using calls like |std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\\n');|
+
+FQA: Doesn't the fact that there are [15.2 so] [15.3 many] questions about the handling of input format problems ring a bell?
+This silent treatment of errors is wrong. Stuff like parsing is better handled by languages which have good support
+for [17.1 exceptions] ([6.2 built-in strings and containers] help, too). If you have to live without exceptions, at least the library
+should treat errors reasonably. The iostream interface of operator call chains makes error handling as awkward as it gets.
+
+-END
+
+Should I end my output lines with |std::endl| or |'\\n'|?
+
+FAQ: The former has the additional side-effect of flushing the output buffer. Therefore, the latter will probably work
+faster.
+
+FQA: The latter is also shorter, unless you have a |using namespace std|. Many people probably ask this question because
+they think that |endl| will end the line the way it's normally done at a given platform (say, emit CRLF on Windows and LF
+on Unix). When |endl| behaves that way, so does |'\\n'|. You can [15.12 suppress this behavior] when you open the file
+(pass |ios::binary| with iostream or the |"b"| flag with |fopen|).
+
+-END
+
+How can I provide printing for my |class Fred|?
+
+FAQ: By adding a |friend std::ostream& operator<< (std::ostream& o, const Fred& fred);|. The operator [14.2 can't be a member
+of the class], because we need the object to be the second argument, not the first one.
+
+FQA: Yeah, yeah, C++ and its stupid syntax. Let's forget about it for a moment: the real problem here is semantical, and it
+starts at the question "How can I provide printing /for my class/?". The formulation encourages to give an answer
+in the spirit of [15.1 "everything is a type"], and indeed this is the kind of answer given by the FAQ. Here's /the/ way
+to print /all/ objects of your class.
+
+But was that really your question? What if you want more than a single output format for your class?
+For instance, you might want a textual format for people and a binary format for machines. Or there could be
+several textual formats - even integers can be printed using different bases. Do you really want to develop
+and maintain the layers of syntax needed to make things like |hex| and |dec| sort of work? Why not just define
+named functions for printing?
+
+The |friend| thing is also questionable. With all due respect, you might want to print to several different
+output channels, /without/ creating an adapter class derived from |ostream|. One simple reason for such
+heretical behavior is performance - |ostream| may be too slow for things like real-time logging. Why not create accessors to the data you want to print, so that all
+the different output methods won't need to be part of your class, which may then have a stable interface? [7.4 Encapsulation]? You've already made
+your data public - one can read it by printing to a |stringstream|. Providing accessors violates [7.7 obfuscation],
+not encapsulation.
+
+If you abandon the |friend| part and the |operator| part, the remaining part of the FAQ's answer - create
+a global function accepting some kind of stream object and an object of your class and do the printing there -
+makes a good advice. In particular, it may be better than a method for the same reasons making it better than
+a friend (however, unlike a friend, a method may be polymorphic, which might be useful).
+
+-END
+
+But shouldn't I always use a |printOn()| method rather than a |friend| function?
+
+FAQ: Not "always". A method may be useful for a class hierarchy, for example, but in that case it would
+normally be protected, not public.
+
+Some people think |friend| violates encapsulation, and therefore
+prefer to have their |operator<<| call a public method of the class, even though there's no class hierarchy. Their basic assumption is wrong,
+so they end up writing extra code that doesn't solve any real problems and confuses people.
+
+FQA: Just to make things clear: a |printOn()| method is something like |void Fred::printOn(std::ostream& o) const|.
+
+The FAQ is right about the important thing: creating extra layers of code doing nothing but delegating
+work to other layers of code is a pesky habit. Many people feel that "good design" means "lots of code"
+or "lots of layers". Actually, those are some of the meanings of "bad design".
+
+The fact that |friend| is really needed here to compensate for syntactical limitations of C++,
+as well as the problems with the whole |friend operator| approach, are discussed in [15.8 the previous FAQ]. They are not
+the main theme here. The main theme here is the message to the "designers": listen to the voice
+of C++ overlords who originally inspired you to create N layers with 0 functionality, and stop.
+
+-END
+
+How can I provide input for my |class Fred|?
+
+FAQ: By adding a |friend std::istream& operator>> (std::istream& i, Fred& fred);|
+
+FQA: This defective technique is symmetrical to the |operator<<| thing, which was discussed above.
+We'll use this opportunity to look at some advanced defects of this approach. For beginner's defects, go
+[15.8 two FAQs back].
+
+The complicated problems come from the same source as the simple problems: the idea that for each type,
+we want exactly one output function looking like a bit shift operator. Therefore, to create complicated problems,
+we'll need some complicated types. Luckily, C++ comes with one of the most complicated type systems in the solar system
+(itself an example of a simpler system).
+
+Consider |std::map|. It's standard, and so is iostream. Does this mean that the operators reading and writing
+them are also standard? I think you know [13.6 the answer]. But no matter: you can create a template operator
+printing all kinds of |map|. So can I. We're both happy, unless we have to integrate our code into a single program some
+time later. We both used the same intuitive name - |operator<<| - for our printing functions. Normally we'd rename one of the two,
+but in this special case, this is /really/ going to be ugly - for instance, other templates will break because they
+think everything can be printed with |<<|, and even if there aren't any, |printMap(std::cout << "map: ", myMap) << std::endl|
+is too ugly even for seasoned C++ developers, who do have pretty low standards.
+
+The real fun starts when two people overload (or specialize or whatever they call it) the operators for /special
+cases of types/ in conflicting ways. For instance, I know how to print |std::map<std::string,T>|, and you know how to print |std::map<T,int>|.
+The question is, who gets to print |std::map<std::string,int>|? The compiler is in trouble, and when a C++ compiler
+is in trouble, it immediately empties its bowl, dumping a nice, large, stinky error message right at our faces.
+Happy, happy, joy, joy, dear colleague.
+
+-END
+
+How can I provide printing for an entire hierarchy of classes?
+
+FAQ: You can create a |protected virtual| method that each class will override to do the printing, and call it from
+a |friend operator<<|.
+
+FQA: Fantastic, except for the |protected| and the |friend operator<<| part. Of course you can use a plain |public virtual|
+method instead.
+
+-END
+
+How can I open a stream in binary mode?
+
+FAQ: Open the stream with the |std::ios::binary| flag. That way, the stream will not translate between |'\\n'| and
+the target platform representation of line termination, which may be different (for instance, Windows uses CRLF).
+
+FQA: With |fopen|, pass the |"b"| character in the options string. This whole issue is pretty annoying, especially
+if you work with binary files on a system where |'\\n'| is not actually translated, and forget to open them as binary,
+and everything works, and then you port the program to
+a system where |'\\n'| actually is translated, and then you have to find all those cases and open the files as binary. However, this is
+not the fault of C++. It is the fault of the distributed nature of the human race, which fails to standardize the
+simplest things.
+
+Many programs may screw up your binary files due to this family of issues, for instance, many FTP clients will do so unless
+explicitly told otherwise.
+
+-END
+
+How can I "reopen" |std::cin| and |std::cout| in binary mode?
+
+FAQ: There's no portable way to do it.
+
+FQA: That's probably the fault of all those different incompatible systems rather than C++ or any other programming language.
+                                                                                                       
+-END
+
+How can I write\/read objects of my class to\/from a data file?
+
+FAQ: Read the section about serialization.
+
+FQA: The FQA doesn't have a section about a serialization. Short summary: you're in for a rude awakening. There's no
+standard serialization mechanism in C++. Furthermore, there's no way to define a reasonable custom one since
+there's no reflection (no way to figure out the structure of an arbitrary object given a pointer to it,
+no way to create an object of a class given its name or some other sort of ID, etc.).
+
+However, there are many custom
+packages for serialization (typically thousands of source code lines, requiring you to use hairy macros\/templates for each serialized class member).
+Or you can roll your own, or you can dump the whole snapshot of your process to a file in non-portable ways
+(may be the cheapest thing to do more frequently than it sounds).                                                                                                             
+
+-END
+
+How can I send objects of my class to another computer (e.g., via a socket, TCP\/IP, FTP, email, a wireless link, etc.)?
+
+FAQ: Read the section about serialization.
+
+FQA: [15.14 Keep your expectations low].
+
+-END
+
+Why can't I open a file in a different directory such as |"..\\test.dat"|?
+
+FAQ: Because |\\t| expands to the tab character. Use |\\\\t| to say "backslash followed by t".
+
+FQA: You have to escape certain things somehow, so this is perfectly legitimate - unlike the fact that the C++ standard library has no way to /open a directory/, for example.
+
+-END
+
+How can I tell {if a key, which key} was pressed before the user presses the ENTER key?
+
+FAQ: The C++ standard doesn't even assume your system has a keyboard. So there's no portable way.
+
+FQA: Good for the C++ standard, but is there a reason not to provide a standard interface for systems which do have a keyboard?
+
+-END
+
+How can I make it so keys pressed by users are not echoed on the screen?
+
+FAQ: You can't. See [15.17 above].
+
+FQA: Yep, some systems don't have screens - we sure shouldn't support the ones that do.
+
+Interestingly, the C++ standard assumes that your system has persistent files, and has separate output and error streams. Even more interestingly,
+it assumes that you might need Unicode output and locales. You'd be surprised to find out some of the strange places
+where devices carrying dead code supporting these features live.
+
+-END
+
+How can I move the cursor around on the screen?
+
+FAQ: Using whichever way that works on your system. It's not related to the C++ standard.
+
+FQA: You should have spotted a [15.17 trend] by now.
+
+-END
+
+How can I clear the screen? Is there something like |clrscr()|?
+
+FAQ: There is, but not in the C++ standard. It's system-specific.
+
+FQA: So are windows, sockets and regular expressions. You see, the C++ standard [15.18 doesn't assume you have a screen], a network
+controller or hardware for regular expression matching.
+
+The lame standard library is another one of those things making using C++ a joy.
+
+-END
+
+How can I change the colors on the screen?
+
+FAQ: Depends on your system. The C++ standard doesn't refer to this.
+
+FQA: But there's [http://en.wikipedia.org/wiki/ANSI_escape_code an ANSI standard] that does. There are some ugly character sequences you can send to
+|cout|\/|stdout|; you don't need to call any special functions. Many terminals support this.
+
+-END

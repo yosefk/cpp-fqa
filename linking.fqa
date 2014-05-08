@@ -1,0 +1,158 @@
+Linking to the FQA
+{}
+If you liked the FQA and wish to spread the word, here are some images
+for the link face. If you link to the FQA or just found it interesting,
+I'd be happy if you dropped [http://yosefk.com me] a line.
+`<!-- h2toc -->`
+
+`<h2>Plain vanilla images</h2>`
+
+In this category, we have a /C++ FQA Lite/ image and a /Defective C++/ image in our stock.
+For those suffering from webophobia like myself (I do hope nobody will ever see my publishing software):
+the HTML code below each image can be pasted right into many
+of the Web 2.0 thingies, such as blog update screens.
+
+`<a href="http://yosefk.com/c++fqa">
+<img src="http://yosefk.com/c++fqa/images/fqa.png"
+     alt="[C++ FQA Lite]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/fqa.png"
+     alt="[C++ FQA Lite]" border=0>
+<\/a>
+@
+`<a href="http://yosefk.com/c++fqa/defective.html">
+<img src="http://yosefk.com/c++fqa/images/defective.png"
+     alt="[Defective C++]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa\/defective.html">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/defective.png"
+     alt="[Defective C++]" border=0>
+<\/a>
+@
+
+`<h2>Images with keywords in them</h2>`
+
+Now that's what I call [35.14 "designing keywords"].
+
+`<a href="http://yosefk.com/c++fqa">
+<img src="http://yosefk.com/c++fqa/images/static.png"
+     alt="[C++ gives me static]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/static.png"
+     alt="[C++ gives me static]" border=0>
+<\/a>
+@
+
+`<b>WARNING:</b>` The next image is incomprehensible for people who didn't undergo a prolonged exposure
+to C++. Actually, so are many other things in the FQA... Oh, well.
+
+`<a href="http://yosefk.com/c++fqa">
+<img src="http://yosefk.com/c++fqa/images/overload.png"
+     alt="[C::operator++(int): invalid overload]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/overload.png"
+     alt="[C::operator++(int): invalid overload]" border=0>
+<\/a>
+@
+
+This one is for people who don't like to shift output streams
+to the left (copywriter: Maciej Katafiasz).
+
+`<a href="http://yosefk.com/c++fqa">
+<img src="http://yosefk.com/c++fqa/images/operator.png"
+     alt="[operator<< is not my friend]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/operator.png"
+     alt="[operator<< is not my friend]" border=0>
+<\/a>
+@
+
+`<h2>The Horror. The Horror.</h2>`
+
+The following rendering of a terrifying real-world analogy is especially
+suitable for a blog featuring world-class cat pictures. Cat++, the cat
+with the seven legs and the wing, is a better cat, but also a scalable
+leg-oriented animal, not to mention excellent support for generic limbs.
+
+Upgrade to a modern pet with more features today!
+
+`<a href="http://yosefk.com/c++fqa">
+<img src="http://yosefk.com/c++fqa/images/cat.png"
+     alt="[Cat++, a superset of cat]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/cat.png"
+     alt="[Cat++, a superset of cat]" border=0>
+<\/a>
+@
+
+`<h2>Advertising the infrastructure of your site</h2>`
+
+Remember all those "Powered by |Something|" banners, showing off the inner workings of a site?
+Well, now you can impress the tech-savvy visitors, conveying a strong feeling of reliability and security:
+
+`<a href="http://yosefk.com/c++fqa">
+<img src="http://yosefk.com/c++fqa/images/not-crippled.png"
+     alt="[This site is not crippled by C++]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/not-crippled.png"
+     alt="[This site is not crippled by C++]" border=0>
+<\/a>
+@
+
+What's that? Your site is running software written in C++? Then you can /really/ impress
+people with the exceptional skills of the engineers behind the enterprise, who somehow manage to prevent
+the whole thing from collapsing:
+
+`<a href="http://yosefk.com/c++fqa">
+<img src="http://yosefk.com/c++fqa/images/not-entirely.png"
+     alt="[This site is not entirely crippled by C++]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/not-entirely.png"
+     alt="[This site is not entirely crippled by C++]" border=0>
+<\/a>
+@
+
+`<h2>Exclusively for hardware designers: Say No to SystemC</h2>`
+
+[http://www.systemc.org SystemC] is a hardware description pseudo-language,
+implemented as a C++ [35.1 template] library. Other implementations are possible for
+the "synthesizable subset"; these, of course, defeat the purpose of using C++,
+since the subset is essentially a more verbose version of a real HDL.
+
+SystemC brings the fun experienced daily by millions of software developers
+to the desk of the hardware designer. Well, there is one difference - the software developers are of course at
+a much better position when it comes to dealing with the quirks of C++, such as [13.1 operator overloading].
+But the funniest thing about SystemC is the /name/ - specifically, the lack
+of the two plus signs in it. The pesky plus signs would scare off the embedded
+software engineers who frequently hang out with hardware hackers, so off they went - C++ marketing played backwards!
+Sadly enough, those embedded engineers largely [33.3 didn't do a very good job] explaining
+their attitude towards C++, and the time came to pay for it, watching C++ code invading their world.
+
+Here's a link face for people who don't like the combination of the clarity
+of C++ and the simulation speed of RTL:
+
+`<a href="http://yosefk.com/c++fqa">
+<img src="http://yosefk.com/c++fqa/images/systemc.png"
+     alt="[System C: putting the 'hard' in hardware design]" border=0>
+</a>`
+@
+<a href="http:\/\/yosefk.com\/c++fqa">
+<img src="http:\/\/yosefk.com\/c++fqa\/images\/systemc.png"
+     alt="[System C: putting the 'hard' in hardware design]" border=0>
+<\/a>
+@

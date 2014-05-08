@@ -1,0 +1,326 @@
+The FQA FAQ
+{}
+This page contains answers to Frequently Asked Questions about the C++
+Frequently Questioned Answers. Which is a pretty bad case of having too many levels of indirection.
+The FQA FAQ is based on a semantical histogram of about a couple of hundred messages,
+some of which were supposed to be for me, and some others - for all the happy Web 2.0 users out there.
+Questions that were asked several times made it to the list (there was no lower bound on the quality though).
+
+If you want to question the facts in the FQA, there's a separate page for that.
+[http://yosefk.com Send me e-mail], and if you [http://yosefk.com/c++fqa/web-vs-fqa.html correct a factual error],
+I'll add your stuff.
+
+Most of the questions here manifest negative attitude. Let me assure you that I got plenty of positive
+feedback, too, but, somewhat naturally, it rarely comes in the form of a question.
+And I am not going to add fake FAQs to make the subject look better the way [7.5 C++ FAQ does].
+`<!-- h2toc -->`
+
+`<h2>`It looks like a bunch of random points, what are you trying to say?`</h2>`
+
+Read [http://yosefk.com/c++fqa/defective.html Defective C++] if you're looking
+for a summary. The Q&A sections follow the structure of the C++ FAQ, and talk
+about things on varying scales and of different importance.
+
+`<h2>`I want to ask you something and get an answer, what should I do?`</h2>`
+
+Send me [http://yosefk.com mail].
+
+Here's how it works. Publishing stuff makes sense.
+Face to face conversations and e-mail conversations make sense. Conversations in the form
+of articles replying to other articles make sense some of the time. Comment thread conversations are futile.
+Special case: Usenet conversations are futile. If they are moderated, they are futile and (almost) polite.
+
+An example of a futile, (almost) polite discussion of the C++ FQA can be found in
+[http://groups.google.co.il/group/comp.lang.c++.moderated/browse_frm/thread/870d15c57e831fc5/5868fd6e57f6ae2c?hl=en&tvc=1#5868fd6e57f6ae2c this comp.lang.c++.moderated thread]. For some reason, several people
+well-known in the C++ community decided to have a bunch of off-topic arguments in that thread
+(like how bad it is that some obscure features are going into C++0x and other obscure features aren't).
+Off-topic and futile, but amusing and (almost) polite.
+
+`<h2>Is there any alternative to C++?</h2>`
+
+Yes, there's [6.5 plenty]. And no, there's [25.3 none].
+
+As the C++ FAQ correctly points out, there's a key issue with choosing a programming language -
+availability. That is, stuff that /already exists/ that your project depends upon. For example,
+you may need C++ libraries which have no alternative in other languages
+(today, in practice - not in the future, in theory). The project can already have lots
+of C++ code in it, and rewriting it in another language is most often not an option.
+Note how you can substitute COBOL for C++ in this paragraph and the claims will still hold.
+
+However, if you're asking about the programming language by itself, then C++ is never the best
+choice. In particular, use languages with safe execution and automatic memory management
+whenever possible, because that greatly increases the speed of development and solves
+many practical stability and security problems. There's plenty of languages in that
+family. If you [10.9 really] need the speed badly enough to settle for unsafe execution,
+you still have better options than C++ - for example, D, Objective-C, and plain old
+C, a good snapshot of the language taken before the postfix increment
+(Clarification: I know that many things were back-ported from C++ to ANSI C, you language lawyer).
+You can also mix many programming languages fairly easily.
+
+Of course you are forced to use C++ quite frequently, and in this sense there may
+be no alternative to it. I use C++ a lot. I wouldn't write the FQA if I didn't.
+But since I've stopped using it when I don't have to, many things became really easy.
+/Try it/. Stop being a die-hard C++ weenie that does simple throwaway text processing in C++ and calls
+the compiled programs "scripts". This behaviorial pattern yields suboptimal results.
+And if you really need to use C++, make sure you know its problems, and don't
+blindly trust the recommendations of the C++ overlords.
+
+`<h2>`Can't the problems you mention be solved by proper design \/ project management?`</h2>`
+
+They can. Theoretically. It will still cost more than not having to solve these problems in the first place.
+You may not realize it, because you're fairly good. The thing is that your ability to juggle
+lots and lots of things in your head yields the best results when these things are not entirely
+worthless. Without having to work around C++, you'll get more done. But the bottom line is
+that you can have good C++ code, with most problems of C++ not manifesting themselves.
+/If everybody on the team is really good at C++, and has a practical approach and lots of experience,
+and your schedules aren't too tight/.
+
+This last statement rarely holds, especially for larger projects. The issue with real-world schedules and
+having no time to fight C++ in addition to the real problems is probably clear. The practical
+approach and the experience are relatively obvious, too. People who prefer complicated solutions
+because it demonstrates their skills and\/or try to use their language naively and [7.5 "naturally"] can cause
+lots of damage if their weapon is C++; the FQA has lots of details on that one. The strangest thing for most strong programmers is -
+if someone is not very good at C++ (or whatever your project is written in, for that matter),
+why do you want them on your team anyway?
+
+This is really important, and took me some time to understand - it's one of the several
+things that go against the grain of the training most programmers undergo. Well, let's look at an example.
+We have this guy who is really good at physics, or statistics, or economics, or AI\/machine learning,
+or genetics - whatever your domain is. And he can program. He's not an expert programmer, but he's brilliant,
+and the code turns out pretty neat, at the semantical level, although admittedly he prints
+objects to |cout| with |printSomething| functions - [15.1 pretty lame], that. We can have him on board,
+happily coding away. We can hire him and let a strong programmer talk to him, convert his ideas
+to code and bring back whatever the machine has to say when it runs, iteratively. Or we can
+send the clueless PhD away and hire another [35.11 SFINAE] expert. It's your call. What will it be?
+
+Let's move on. What about the young, bright, responsible but inexperienced type, constantly
+looking for the most urgent problem and rushing to fight it? What about
+the amazing coder, who can only be seen coding if you put a camera in his office and play the recording
+in slow motion - most of the time he's surfing non-productive sites, except somehow
+all that stuff that scares the heck out of other people gets done in no time? What about the super-orderly,
+super-smart person, who can do anything you ask for, precisely and quickly, but just happens
+to be a newbie in your language, and will have no time to become an expert?
+Too bad all these people are not language lawyers, and can wreak havoc in C++. Would you have them on your team,
+or would you send them over to your competitor?
+
+/The programming language is not the main theme in programming./ Therefore, using a language which
+doesn't require expertise from all users can help you utilize your human resources better,
+as [7.4 the business-friendly-looking FAQ] would say.
+
+`<h2>`But I already know C++, and so do many others. Isn't learning new languages hard?`</h2>`
+
+No. And the amazing part is that you'll tell me that /yourself/. Many times I heard something like
+"C'mon, this language is trivial and has nothing new, /why would I invest all that energy
+into learning it/?" Prediction: the next step in the evolution of the brain will be a built-in consistency checker.
+
+Clarification: learning new libraries can take time, and rewriting old code is not a sane option
+in most cases. I'm talking about new code, not old code.
+
+And, you'll be surprised how easy most languages are compared to C++. You can stay
+extremely ignorant about how they work and they won't bite you, for years. I tested this one
+myself since I was very curious. Perhaps I'll write about it some time.
+
+Not only are most languages easier to learn than C++ - they're easier to use, too.
+Especially the higher-level ones. You can get interesting work done in /no time/. You'll think differently about things.
+The meaning of "design" changes. For instance, hardware hackers call /the code/ describing the hardware
+"design". "Compile the design". In C++, they usually call the structure of the definitions
+(classes, functions, templates) "design". At a higher level, you can call the details of how the /functionality/
+is specified "design"; writing the code and connecting the pieces is easy enough to be called "implementation details".
+I'm not really good with this sort of terminology, but it's something like that.
+
+`<h2>`Why are you writing in such an emotional way?`</h2>`
+
+Am not! This is the sanitized, calm and rational version. Do you have any idea how much editing it took?
+
+Seriously, let's examine the breakdown of the potential FQA readers. People who hate C++ will be
+entertained by the rants, which is not the main purpose, but is a good thing. Some of the people who love
+C++ can be offended, but would they really feel otherwise if I used different language? And why do
+they read something having such a title - is this some kind of informational masochism, and
+how am I responsible for it, anyway?
+
+And now we reach the most important subset of the readers - the ones working with C++ and having
+their doubts. What's a bigger risk: to scare them with overly aggressive style, or to put them to sleep?
+Note that the thing that really counts is the information, not the style. Yes, sir, that would be always,
+and you ought to learn this or else you'll go extinct in no time. Therefore some of the people who won't be able
+to extract the information from the text because of the style have critical flaws in their thinking,
+and I don't mind losing this part of the audience. Especially considering the fact that any technical
+document is an excellent cure for insomnia, and the people who entertain themselves reading RFCs
+are a tiny minority of the population I'd like to talk to. So the sleeping risk has to be minimized first.
+This is called risk management, as everybody who was forced to study a braindead Methodology-related
+document during their career will readily tell you.
+
+By the way, /have you seen the FAQ/? The FQA is way more vegetarian in many aspects. In particular,
+the FAQ labels groups of people as [6.5 techie weenies endangering the interests of their employers],
+and in general talks a lot about the (bogus) business aspect of the issues. As if you can [14.3 cut costs]
+by fiddling with syntax and in general have your enterprise thrive by applying a bunch of
+C++ coding tricks. This crosses the red line as far as I'm concerned. As one of my early reviewers
+told me in a private message when I asked about my style, many of the FAQ's claims are
+close to attempts at brainwashing, and therefore my replies are justified.
+I don't know if he's right at the bottom line, but his message has a special place in my heart.
+
+`<h2>`You are not very objective, are you?`</h2>`
+
+No - it's your job. Do stuff, read stuff, think and make up your mind. Have you actually
+selected an entity which you think of as "objective"? This is like having a slave port
+in your brain.
+
+There's plenty of material praising C++ and covering up its deficiencies
+with unbelievable excuses and broken "solutions". There aren't many sources debunking this
+material, and for a good reason - there's no money in it.
+And then the C++ FAQ, which the FQA is based upon, is not at all objective, either.
+
+Can anybody explain me /why/ the FQA should be "objective"? And just what does "objective" mean here?
+Should I list a plethora of broken workarounds for each mentioned C++ misfeature? Or should
+I say that many people don't think it's a problem each time I raise a problem? I sincerely and honestly don't get it.
+
+`<h2>`You don't know C++ very well, do you?`</h2>`
+
+If you have valid counter arguments, shoot. I don't feel like demonstrating my C++ skills,
+or anything else for that matter, to strangers who weren't even taught to be polite.
+
+If this issue is important to you, browse the FQA. You'll find out that I'm aware of
+RAII, SFINAE, C++0x and just about every other idiotic C++-related acronym you wish to inform me about.
+
+`<h2>`You're clearly into "managed environments", who cares what you think about C++, which has different goals?`</h2>`
+
+They've discovered some time ago that you are supposed to refer to whatever the person says,
+not the person, to make a valid argument.
+
+I've done lots of low-level work. Real time, interrupts, context switching and
+process migration, CPUs with small address spaces, 2-digit numbers of processors with shared
+memory and incoherent caches and local memories, locating and working around hardware bugs, these sorts of things. In C++.
+Yes, I also worked with managed environments, that part is based on my personal experience, too.
+
+When I say that safe execution
+is safer than unsafe execution, you can trust me. Do you always prefer credentials to logic?
+Pretty risky, that.
+
+`<h2>`Why do you complain when C++ lets you do bad things? The language is not your nanny.`</h2>`
+
+I don't really complain about that, you probably took something out of a more complicated context. And check the previous answer, tough guy.
+
+`<h2>`C++ is just a tool. Have you hurt yourself with a big nasty hammer, little baby?`</h2>`
+
+C++ isn't just a tool, it's a language. Languages have [25.3 different dynamics] than tools. And I love you, too.
+
+`<h2>`Are you a troll?`</h2>`
+
+No, I'm a Turing-complete mammal just like you. Trolls are a different species. Biologists
+inform us that trolls are characterized by the use of /flame baits/. A dictionary further
+enlightens us, explaining that a bait is "food or other lure placed on a hook or in a trap
+and used in the taking of fish, birds, or other animals".
+
+Now, the key insight is that for a troll to survive, it has to use cost-effective baits.
+That is, the bait should be significantly cheaper than the food, or else the troll will go bankrupt.
+
+Of course, your not-so-well-thought-out emotional response counts
+as a medium-sized piece of a fish, a bird, or some other animal.
+But let me assure you, the FQA is way costlier and thus makes a lousy bait. Try doing something like this,
+and you'll realize that a troll will not pick this path to ensure its survival.
+
+Oh, and I also sign with my real name. Do you do that, too, or is it |cooluser35|?
+Humans don't have names like that, you know. And what's that hair doing on your ears?
+
+`<h2>`Don't you know that C++0x will fix all those problems?`</h2>`
+
+I've seen TR1, and my expectations are low. Anyway, the FQA doesn't discuss the future
+of C++, only its present, and even that is mostly limited to the stuff from the C++ FAQ
+(that's why we don't talk about implicit casting and overload resolution too much here).
+So you'll either have to wait for C++0x to materialize
+(I promise to add a special section when it's adopted), or you can persuade Marshall Cline
+ to add a C++0x section to the FAQ, and I'll see what I can do.
+
+`<h2>`But you could do this to any language. Doesn't it make the whole thing meaningless?`</h2>`
+
+Well, nobody did this to other languages, not on this scale anyhow.
+ The difference in our opinions is that you're saying that I'm special, and I'm saying C++ is special.
+ There are more programmers than there are programming languages, so statistically my argument
+ has better chances to be correct
+ (not; we don't know anything about the distribution of anything, so never mind).
+  
+  Well, your argument is shaky, too. How about getting some empirical data? Try to write
+  this kind of thing about some other popular language, start with something like "Defective C++" and try to show
+  that whatever you're trying to do with this language just doesn't work. I think
+  your argument will fall apart.
+
+Don't try to discuss it with me - you have nothing to say about the actual reasoning in the FQA,
+  so it's all worthless. I'm just trying to trick you into doing some creative writing.
+  Maybe commenters will show up - you'll discover lots of things about yourself at that point.
+
+`<h2>`All those C++ users and overlords can't be wrong, can they? Why should I believe you?`</h2>`
+
+This sort of thinking will get you in trouble, since it's recursive and it has no termination condition.
+  Very large groups of people with the usual subset of those having impressive credentials are known to have been
+  wrong for very long periods of time (the flat Earth issue comes to mind; these people weren't stupid, mind you,
+                                       "wrong" and "stupid" is not the same thing).
+  Supposing you are in a group of people who are wrong right now, how do you plan to find it out
+  using your kind of thinking?
+
+You are not supposed to believe me; you're supposed to believe what I say, or not, depending
+  on whether it makes sense. If you feel an urge to discuss this, keep in mind that I don't really care to convince /you/.
+  I want to talk to people who are likely to start new software projects, with an emphasis on "new".
+  And I don't think you can produce anything "new" in any significant sense before you change
+  your attitude, because new things are by definition not backed up by large groups of supporters,
+  so how would you know what to do?
+
+(/John Millikin:/ Most educated people from Aristotle onward believed Earth to be round, and
+[http://en.wikipedia.org/wiki/Flat_Earth#Classical_Antiquity Eratosthenes measured its circumference] rather accurately.
+Examples in which educated people were wildly incorrect en mass include [http://en.wikipedia.org/wiki/Humorism Humorism]
+ and [http://en.wikipedia.org/wiki/Geocentric_model Geocentrism].)
+
+`<h2>`Do you even realize that C++ was shaped by various goals and trade-offs? How can you judge it otherwise?`</h2>`
+
+I'm [6.2 aware] of the trade-offs and goals. If you identify with the language designer,
+  that's very noble of you. I am a language user. I care about getting work done.
+  In other languages, it's way easier for me than it is in C++, and many people
+  feel that way. Of course you are free to misattribute that to my incompetence in the area of C++,
+  computing in general or whatever, and (independently of that) keep having fun with C++.
+
+  By the way, I don't try to make you stop
+  using C++, and nowhere in the FQA do I say anything derogatory about people who use C++ in general.
+  Do what you like. People who think this is obvious: sorry. We're not alone on this planet.
+
+`<h2>`Why do you use complicated libraries like boost if they don't make your life easier, and isn't it your fault?`</h2>`
+
+What makes you think I use them? I have no idea why they keep asking /that/. It looks like
+  people try to build a model of the personality behind the text instead of a model of what
+  the text says. Is it really that helpful?
+
+If you try to make your C++ code simple and easy to follow, I might even enjoy working with you some day.
+
+`<h2>`Why not quit whining and find a better job where there's no C++?`</h2>`
+
+I find my job very interesting. The programming languages you get to use are not at all the most important
+  part of the job, it's what you get to do that counts.
+
+I do try to minimize my use of C++; I try to only deal with it when I help others out of trouble.
+
+And thanks for your genuine interest in my career! I hope you're all right, too. This whole line
+  of discussion is of course very relevant to the contents of the FQA.
+
+`<h2>`Why don't you get a life?`</h2>`
+
+You typed that at some software weenie Web 2.0 site, didn't you?
+
+`<h2>`C++ is already dead, so isn't the whole purpose of this document to get page views?`</h2>`
+
+/Of course/ I want people to view these pages! People usually write stuff so that other people read it.
+  And what makes your fingers type, may I ask?
+
+Regarding "C++ is dead": if you work on businessy apps, it's possible that you didn't notice that
+  there's a huge market of embedded software. C++ only starts to penetrate it /now/. Also, google
+  for SystemC (hint: it really should have been "SystemC++"). But there's also lots of new code in C++
+  outside of embedded software or the hardware modeling world. If you use the web to approximate reality, your perspective
+  will be invariably skewed by the people who work with the newest \/ obscure \/ most exciting and successful stuff
+  (in random order),
+  since these make the most noise.
+
+  And there's
+  lots of people who do most of their work in C++ everywhere, some of them with half a year
+  of experience, and refuse to learn new languages. There are even young people who will /refuse
+  to take a job/ unless they'll get to work in C++.
+
+I don't think people would read this if C++ was acknowledged as a language that people don't
+  write new code in. Would you chase a link to a COBOL FQA?
+  
+C++ is not dead, it just smells funny.

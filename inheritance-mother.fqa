@@ -1,0 +1,361 @@
+Inheritance -- what your mother never told you
+{'section':23,'faq-page':'strange-inheritance.html'}
+Note: section names are copied verbatim from the FAQ. The document is not based on the assumption that it was your mother who told you the other things about inheritance.
+
+Is it okay for a non-|virtual| function of the base class to call a |virtual| function?
+
+FAQ: Sometimes it is. Suppose you have a class |Animal| with a non-|virtual| |getAwfullyExcited()| method.
+In your system, all animals do it similarly:
+
+@
+void Animal::getAwfullyExcited()
+{
+  makeExcitedNoises(); \/\/ all animals make different noises
+  cout << "And here comes the dance!" << endl; \/\/ all animals always warn people before they dance
+  danceExcitedly(); \/\/ all animals dance differently
+}
+@
+
+So there you have it - an orderly hierarchy of animals, each getting excited according to the standard procedure
+in its own unique way.
+
+FQA: The trouble with this whole thing in C++ is that you can't easily tell which functions can be overridden and which can't,
+and what "override" means.
+
+The default is "can't" - you have to explicitly say |virtual| to enable overriding. Unless you derive
+your class from a base class having |virtual| functions - when you override those functions, the |virtual|
+keyword becomes optional. But even if the function in the base class is /not/ virtual, you still /can/ override it -
+except that [23.8 now] the binding is static: if you call a function through a pointer statically typed as |Base*|,
+the base class implementation is called, but if you call it through a |Derived*|, the derived class implementation
+is called. So it's a different kind of "overriding". And naturally you can have more than one link in the chain of derived classes.
+
+Back to our question, it is generally OK to have a common base class implementation call
+functions defined in the derived classes - in many cases that does exactly what you want.
+However, in the specific case of C++ |virtual| functions it may become hard to figure out which functions
+are |virtual| and which are not.
+
+So it's sometimes better to separate |Animal| (having only pure virtual functions) and |EmotionalBehavior|
+(having methods taking an animal and calling its functions to implement various common rituals).
+No, it's probably /not/ a good idea to add this rule to your local Coding Conventions Document -
+ if the class is relatively small and simple, there's no point in creating more code by splitting it to several classes.
+The thing is that C++ classes with /many/ methods, some virtual and some not, especially when they are part of complex
+ hierarchies with lots of overriding of both kinds, end up making people wonder why this piece of code was called.
+ Why, why, why?..
+
+-END
+
+That last FAQ confuses me. Is it a different strategy from the other ways to use |virtual| functions? What's going on?
+
+FAQ: Yes, there are two different strategies related to the use of |virtual| functions. In the first case,
+ you have a common non-|virtual| method in the base class, but use |virtual| methods to implement the parts which
+ do differ. In the second case, you have |virtual| methods implemented differently in derived classes,
+ but they call common non-|virtual| methods in the base class. These common bits can also be implemented somewhere
+ else - not necessarily in the base class.
+
+Sometimes you use both strategies in the same class - one for some of the methods, the other for other methods.
+ That's OK, too.
+
+FQA: Well, sort of, yeah. Is it just me or did we really learn nothing at all? This lengthy discussion follows
+ quite directly from first principles. |virtual| functions allow different derived classes to implement a method
+ differently. All functions, including non-|virtual|, can be called once or more from various places. Does something
+totally obvious from these rules deserve the pompous name "strategy"?
+
+No, it's not just the FAQ. This is very common in the "software engineering" community, especially in the C++ subculture.
+Let's look at an example. You've probably seen methods that create new objects of classes derived from a common base. Such methods are useful
+ because their caller doesn't have to be aware of the different derived classes. For example, you can have a
+ |createMovieReader(filename)| method that checks the file type and creates an |MPEGReader| or an |AVIReader| or whatever,
+ and whoever calls |createMovieReader| doesn't have to care about the many different kinds of readers.
+ Is this worth a special term
+ accompanied by a whole discussion? Well, it has a term - it's the Factory Method Design Pattern. Sometimes
+ you have an abstract base class with nothing but Factory Methods. This has a name of its own, too - it's the Abstract Factory Design Pattern.
+
+The names used by people reveal a lot about them. For example, the people living close to North Pole have a two-digit
+ number of names for "snow". Clearly, the reason is that their visual diet is composed primarily of snow, so they
+ know a lot about the different kinds of snow and never confuse them. But trees - those they come across once in a lifetime.
+ No point in having many names for trees. A tree, you know, that dark, high thing with messy stuff sticking out.
+
+This tells us something about the intellectual diet of people calling trivial combinations of basic language constructs
+ "strategies" and "patterns". Of course these people love C++ - look at all those different string classes,
+ and all those ways to implement still new ones! So much snow to play with.
+
+Disclaimer: my knowledge of anthropology is approximately zero. Therefore, it's better to consider the North Pole example above to be hypothetical
+ than to make critical decisions assuming it's literally true.
+
+-END
+ 
+Should I use protected virtuals instead of public virtuals?
+
+FAQ: Well, first of all avoid strict rules saying "never do this, always do that". As a rule of thumb, experience
+ tells that most of the time virtual functions are best made public, with two notable exceptions. First, there
+ are functions which are supposed to be called only from the base class, the way described in the previous two FAQs. And second, there's
+ the /Public Overloaded Non-Virtuals Call Protected Non-Overloaded Virtuals/ Idiom:
+
+@
+class Base
+{
+public:
+  void overloadingTotallyRules(int x)   { butWeDontWantToOverloadVirtualFunctions_int(x); }
+  void overloadingTotallyRules(short x) { butWeDontWantToOverloadVirtualFunctions_short(x); }
+protected:
+  virtual void butWeDontWantToOverloadVirtualFunctions_int(int);
+  virtual void butWeDontWantToOverloadVirtualFunctions_short(short);
+};
+@
+ 
+This solves an important problem: overloading totally rules, but we [23.9 don't want] to overload virtual functions. The
+ /Public Overloaded Non-Virtuals Call Protected Non-Overloaded Virtuals/ Idiom makes life easy for class
+ users /and/ the implementors of derived classes! Clearly you, the author of the base class,
+ absolutely /must/ clobber your code with this nonsense to make everyone's life better!
+ Think about the reduced maintenance costs and [13.4 the benefit of the many], you selfish code grinder.
+
+FQA: Here's a simple answer to your question, trivially following from the definitions and without the need to create a taxonomy of
+ rules and exceptions. C++ access control is for clarity: you want to make it clear which parts of the class
+ are supposed to be used and which are just implementation details. This can make it easier to understand
+ your code and prevents people from using the bits that you might want to change later.
+
+ Therefore, if you don't
+ think that anyone outside of the class hierarchy is going to use a |virtual| method, make it |protected|.
+ Otherwise, make it |public|. In particular, you can start with |protected| and change it to |public|
+ if it turns out you were wrong. That's all. Why is any special case of this particularly interesting?
+
+As to the /One Kind Of Function Calls Another Kind Of Function Idiom/ - remember [23.2 the snow example]?
+ Well, now we are deep inside a pile of snow, coining names for each individual snowflake. I wonder if there's a /Function Is Passed A Parameter
+ To Configure Its Operation Idiom/. No, there probably isn't - after all, it's not Object-Oriented.
+
+More importantly, the "idiom" is a non-solution for the problems with overloading.
+All we got is extra layers of code piling up. Ultimately, the people will have to read this code to figure
+ out what the program does, and the layers of indirection adding no functionality at all will confuse them
+ and occupy their short-term memory instead of other, actually useful details. Why not simply
+/avoid/ overloading in this case?
+
+[14.3 Talking] about "reducing maintenance costs" doesn't by itself actually reduce any maintenance costs, you know.
+
+-END
+
+When should someone use private virtuals?
+
+FAQ: Probably never. It confuses people, because they don't think |private| virtuals can't be overridden, but they can.
+
+FQA: The FAQ is right - the behavior of |private virtual| is [21.1 ridiculous]; it compiles, but for [23.5 the wrong reasons]. Note that there are [10.19 many], [35.18 many] more
+ things in C++ that primarily confuse people. One excellent reason to avoid C++ altogether. I'm not joking. Nothing
+ funny about it. Well, maybe it is funny that C++ developers are confused for a living, but that's a cruel kind of humor.
+
+-END
+
+When my base class's constructor calls a |virtual| function on its |this| object, why doesn't my derived class's override of that |virtual| function get invoked?
+
+FAQ: Suppose you have a base class called |Base|, calling a virtual function |f| in its constructor. Then, when objects
+ of a derived class called |Derived| are created, |Base::virt| is called from |Base::Base|, not |Derived::f|.
+
+ The reason is that when |Base::Base| executes, the object is still of type |Base|. It only becomes an object of type
+ |Derived| when the code in |Derived::Derived| is entered. If you wonder why C++ works this way, consider the fact that
+ |Derived::f| could access uninitialized members of the class |Derived| if it could be called from |Base::Base|, which
+ runs before |Derived::Derived| initializes the members of |Derived|.
+
+Luckily, C++ doesn't let this happen, preventing subtle errors!
+
+FQA: Here's what actually happens. |Derived::Derived| calls |Base::Base|, and then it sets the vptr to point to the |Derived|
+ vtable. Setting the vptr before calling |Base::Base| wouldn't work, because |Base::Base| sets the vptr to point to the
+ |Base| vtable. |Base::Base| doesn't know that it's called in order to ultimately initialize a |Derived| object; the code
+ of |Base::Base| and |Derived::Derived| is compiled separately /[corr.1 (correction)]/. That's what "the object is still of type |Base|" really means.
+
+Now, there's a valid argument against describing the mechanisms of the implementation in order to explain the behavior
+ of a system. The system is built by people for other people. Its behavior is supposed to make sense. If it doesn't,
+and can only be explained by looking into the implementation instead of the needs of the user, it's a problem in the system.
+ Sometimes such problems seem to be inevitable. But whenever possible, it's best to discuss why a certain behavior
+is reasonable in the situation as perceived by the user, and  only talk about the implementation when absolutely necessary.
+However, this argument is rarely applicable to C++.
+
+ First, C++ makes very little sense from the user's perspective. It only
+ makes sense from the perspective of the language designer, provided that several axioms of questionable value are
+ added to it
+ (such as "a language must look compatible with C, although it doesn't have to [6.11 really be compatible]",
+"all built-in types [17.6 should] be those found in C, unless they are [33.7 a new kind of pointer]", etc.). For example, it is
+ reasonable that |Base::Base| can't call |Derived::f| (well, sort of - it depends on what you think about the way
+                                                                     C++ handles object construction in general). But is it reasonable that |Base::Base| /can/ call a virtual method |Base::f| by simply saying
+                                                                     |f()|? How often
+ is that what you want? This question is irrelevant, because in C++, if something becomes technically possible as a side-effect
+ of some language mechanism, it tends to be legal. For example, why does |private virtual| from [23.4 the previous FAQ] compile?
+ The answer is simple: why not?
+
+The second reason to describe behavior in terms of implementation is that run time errors cause C++ programs to crash in ways
+ undefined at the semantical specification level. It is theoretically possible to read the entire
+ code of the program and find the semantically illegal code. In practice, you'll have to find the error by looking at the execution of the program
+ (when you are lucky) or at a snapshot of its final state before the death (when you're not), and trying to understand
+how things can behave this way. And you can't do that without understanding the implementation.
+
+-END
+
+Okay, but is there a way to /simulate/ that behavior as /if/ dynamic binding worked on the |this| object within my base class's constructor?
+
+FAQ: Yes. It's an Idiom, of course. Namely, the /Dynamic Binding During Initialization Idiom/.
+
+One option is to have a |virtual init| function to be called after construction. Another option is to have a second
+hierarchy of classes, which doesn't always work, but... (sorry, I couldn't make it through all the code listings.
+If you like lots of hierarchies of classes and find this solution interesting, please follow the link to the FAQ's
+answer).
+
+The first approach has the problem of requiring an extra function call upon initialization. We can rely on the self-discipline
+of the programmers (the self-discipline is especially important when exceptions can be thrown by |init| - make sure you release the allocated object properly),
+or we can wrap the construction and the |init| call in a single |create| function returning a
+pointer to the object. The latter rules out allocation on the stack.
+
+FQA: We seem to be making progress. Let's see: we got rid of [10.1 the allocation on the stack], so we no longer
+need to [7.4 know] the |private| members of classes. And if we had [16.1 garbage collection], [17.1 exception safety] would no longer be a problem,
+either. Too bad C++ classes and memory management can't be changed. Or can they?
+
+How about trying another programming language?
+
+-END
+
+I'm getting the same mess with destructors: calling a |virtual| on my |this| object from my base class's destructor ends up ignoring the override in the derived class; what's going on?
+
+FAQ: Again, you're being protected by the compiler. Protected from yourself! You could access members that were
+already destroyed if the compiler let you do what you want.
+
+When |Base::~Base| is called, the type of the object is changed from |Derived| to |Base|.
+
+FQA: Thanks for the protection. At least the behavior is [23.5 symmetrical].
+
+Protect me from access to destroyed objects through [16.1 dangling references] in /the general case/ next time, will you?
+
+-END
+
+Should a derived class redefine ("override") a member function that is non-|virtual| in a base class?
+
+FAQ: You can do that, but you shouldn't.
+
+Experienced programmers sometimes do that for various reasons. Remember that the user-visible effects of both versions
+of the functions must be identical.
+
+FQA: Here's a trade secret: not so experienced programmers do that, too. For the [23.4 umpteen] time: /why does this compile/?
+This particular case doesn't seem to be [23.5 an unintended side effect]; it's a feature with elaborate design
+(there's all this nonsense with |using| names from the base class shadowed by functions with the same name, etc.).
+
+The redefinition-looking-like-an-override is [13.1 overloading] on [33.10 steroids]: it's even less useful and has even higher
+ obfuscation potential. And it's only one of the zillions of various /name binding rules/ - the bits of C++
+ making it impossible to decipher what code is actually called by |f(x)|.
+
+-END
+                                                                                         
+What's the meaning of, |Warning: Derived::f(char) hides Base::f(double)|?
+
+FAQ: What do you think it means? You're going to die.
+
+It's like this: |Derived::f(char)| doesn't override |Base::f(double)| - it hides it. In other words, it makes it impossible
+ to call |Base::f(double)| via a |Derived*|. At the same time, |Derived::f(char)| can not be called via |Base*|.
+
+FQA: "You're going to die", warns the FAQ. Well, according to a popular theory, all of us are. However, this interesting fact doesn't seem to belong here.
+C++ surely is depressing, but I'm not aware of any data showing a causal relationship between using C++ and suicide
+ or lethal brain damage.
+
+No, really, why is hiding a name /a lethal bug?/ Sure, it makes the program more obscure, but, duh, this is C++.
+ The worst thing that can happen is that someone will call |Base::f| with a |char| and |Base::f(double)|, not |Derived::f(char)|
+ will get called. So what? Similar things happen with overloading without any inheritance involved. Do you really
+ know the implicit conversion rules between different types, and can predict what happens when you pass an |int|
+ to an overloaded |f| function which only has a |char| and a |double| version? I bet you can't do it when things
+ get a little bit more complicated. No normal person can.
+
+C++ overloading is a [13.1 nightmare]. Using it is naive or stupid, depending on one's experience. Many languages, both statically and dynamically typed, don't
+ have compile time overloading based on argument types. Have you ever heard a programmer using such a language
+ complain about it, or become very enthusiastic about C++ overloading? What problem does overloading solve?
+OK, suppose it improves clarity (a /very/ questionable claim). Do you really think that overloading should come together
+ with a ton of implicit conversion rules, and a type system with a ton of special cases
+ (cv-qualifiers, pointers\/arrays\/references, single & multiple inheritance, templates...)?
+ When overloading does come with the extra ton of rules, does it /still/ make the program more clear?
+ What's that? "Compile time polymorphism", you say? You mean [35.1 C++ templates]? I see what you're up to. Happy debugging, pal.
+
+-END
+
+What does it mean that the "virtual table" is an unresolved external?
+
+FAQ: Well, as you know, "unresolved external" means that there's a function or a global variable that your code declares
+ and uses, but never defines. A virtual table is a global variable declared implicitly by a typical C++ implementation
+ for each class with at least one virtual function.
+
+Now, normally when you forget to define a virtual function, you'll get an "unresolved external" error saying that
+ this function is missing. But in many implementations, if you forget the /first/ virtual function, the whole
+ virtual table will become "unresolved". That's because these implementations define the virtual table
+ at the translation unit where the first virtual function is implemented.
+
+FQA: GAAA!! So [10.11 THAT'S] why you have to define |static| class variables explicitly in your .cpp file, but /don't/ have to define vtables
+ explicitly! This is sooo STUPID! I'm shocked. Wait a second. Let me recover.
+
+OK, here's how it works. In C++, there's really no such thing as "a header file defining the class" and "a .cpp file
+ implementing its functions". It's just a convention. According to the rules, the definition of the class members
+ can be spread across several "translation units", and each "translation unit" can in turn be spread across several
+ files |#including| each other. This is inherited from C, and [35.12 interacts badly] with the new features in C++.
+
+For example, consider those virtual functions. You probably [20.3 need a table of those], which is similar to a global
+ C variable. Of course you don't want to have the C++ programmer implement the table manually, the way they'd do it in C - or else what's
+ the point of the |virtual| keyword? But /where/ should the vtable be implemented? In the .cpp file of a class? /Where's that?/
+
+With vtables, there's a "solution". After all, we don't need a vtable unless we have some virtual functions, do we?
+ Well, then, one of these functions has to be the first one. Why not place the vtable near the definition of that function?
+This is a good place, because it won't get |#included| twice (or the user will get a "multiple definition" error anyway).
+
+And then there are the |static| class variables. Where do we stuff those? Well, um, there seems to be no good place at
+ all; a class could consist of a single |static| member. No anchor in the sea of source code floating in the file system.
+ Oh, well, we'll have the user choose a place for a duplicate |Type Class::member_name;| variable definition.
+ A little bit more typing is not that bad.
+
+ I wonder what they do with |virtual| functions implemented in the body of a class though. I always wondered about those.
+ Of course they can generate many vtables and throw away all copies but one the way they do with templates. But that
+ won't work with a linker only supporting C. Maybe they didn't allow to implement non-|inline| functions in the body
+ of a class before the brave decision to add features to the linker. Anyone knowledgeable about the history of the subject
+ is welcome to enlighten me. However, the knowledge of the history of the subject can't possibly make this whole business
+ seem less stupid to a language user.
+
+-END
+
+How can I set up my class so it won't be inherited from?
+
+FAQ: You can have the constructors |private|. The objects will have to be created by |public| functions delegating to
+ the constructor.
+
+Alternatively, you can comment the fact that you don't want the class to be inherited from: |\/\/ if you inherit from
+ this class, I'll hunt you down and kill you|.
+
+There's a third solution (`<b>WARNING</b>` - this one can rot your brain): you can inherit your class from a |private virtual| base class, which has a |private| constructor
+ and declares your class a |friend|. This way, if someone tries to inherit from you, they'll need to [25.12 directly
+ call] the base class of the constructor, which won't compile, since the constructor is |private|. This can add an extra word
+ of memory to the size of your objects though.
+
+FQA: C++ doesn't have |final|. It probably isn't a big deal, especially considering the fact that if it /did/ have
+ |final|, it would be little more than a comment, just like |private| is [7.4 little more than a comment]. So the
+ comment-instead-of-a-keyword is probably the best approach.
+
+ The other approaches yield [35.17 cryptic compile time error messages]. Many people in the C++ community believe that
+ a cryptic compile time error message is [33.4 a good thing]. This is probably reasonable if you only care about
+ theory ("early fault detection is good"), and ignore [6.1 practice] (/easy/ fault detection is good, and running
+a program /should/ be easier than deciphering [13.1 strongly encrypted] C++ compiler error messages, which tend
+to come in large cascades).
+
+ Having no real experience with other languages helps one to stick to this bizarre point of view. C++ compiles [35.12 very
+ slowly], so people who never worked with anything else /don't/ think that running a program is easy. C++
+ code is also hard to debug, so people develop a fear of run time errors.
+
+-END
+
+How can I set up my member function so it won't be overridden in a derived class?
+
+FAQ: Use a |\/* final *\/| comment instead of a |final| keyword. It's not a technical solution - so what?
+ The important thing is that it works.
+
+FQA: So why does C++ have |private|? It's [7.4 nothing but a comment] recognized by the compiler.
+
+The real answer is as follows. If a function is not |virtual|, it shouldn't be overridden, as the FAQ itself has already [23.8 explained].
+So the lack of a |virtual| keyword is effectively equivalent to a |final| keyword. Now if C++ didn't allow to
+ override non-|virtual| methods, and if it would consistently require to use the |virtual| keyword in all virtual function
+ declarations, it would be pretty clear which functions shouldn't be overridden in most cases.
+
+If you look for non-technical solutions to overriding problems, consider banning non-|virtual| overrides
+ in your organization. I didn't give this one a deep thought; quite frequently when you try to "fix" C++ by banning
+ some of its features, but not others, your rules [8.6 backfire]. And I can't know whether coding conventions
+ work in your organization at all (believe me, there are /huge/ and /very disciplined/ organizations
+where coding conventions are /not/ really followed, and their primary effect is programmers feeling anger or guilt;
+                                   another nice option is people mindlessly following "best practices",
+wreaking havoc in an orderly way). All I'm saying is that non-|virtual| override seems both useless
+ and largely independent of the rest of the language at first glance, so not using it looks like a good thing.
+
+-END

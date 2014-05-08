@@ -1,0 +1,175 @@
+Inheritance -- basics
+{'section':19,'faq-page':'basics-of-inheritance.html'}
+This section outlines the C++ "support" for the OO concept of inheritance. Do not confuse C++ and OO.
+
+Is inheritance important to C++?
+
+FAQ: Sure. That's the new thing OO adds on top of the more basic notion of abstract data types.
+
+FQA: It is, but for a slightly different reason. C++ uses inheritance to implement run-time polymorphism -
+allow to use two objects of different classes in the same way. In order for this to work, the classes
+(very roughly) must be inherited from a common base class.
+
+It is also possible to implement polymorphism without inheritance. The system may simply allow you to
+call the methods of an object without knowing its type, and the code will work if and only if the
+object actually has the methods with the right name and arguments. Such systems may still support
+inheritance, but it's less central for them.
+
+OO systems encouraging polymorphism of the former kind are said to be "statically typed" in the sense
+that you use objects through explicitly defined interfaces which are visible at compile time. This
+approach is well-established and has many pros and cons (so does the other approach).
+The C++ choice to use this approach is "legitimate" in the sense that it can yield a relatively usable & consistent result.
+
+However, C++ inheritance is designed to support many other things, leading to a less usable and less
+consistent result. In particular, inheritance complicates the already complicated name look-up
+in many ways unique to C++, and [25.2 multiple inheritance] is quite a mess. On the other hand, many handy
+features are left out, for example, there are no multimethods or dynamic type information allowing
+to list the interfaces supported by a class (the latter is a special case of lacking reflection).
+
+-END
+
+When would I use inheritance?
+
+FAQ: As a tool for specifying the behavior of a system. People think in two dimensions: "is a"
+and "has a". For instance, a cat "is a" mammal and "has a" tail. Aggregation of data into
+abstract data types supports the "has a" dimension. Inheritance adds support for the "is a" dimension.
+
+FQA: /When appropriate/. The FAQ itself does [21.8 a pretty good
+job] listing situations when something "is a" something else on an intuitive level, but using inheritance
+is still wrong. Inheritance is a formal concept, and formal concepts don't map directly to English words.
+
+Nobody knows the number of dimensions people use to think yet. For example, imagine a black cat. Does it
+"have a" black color or "is a" black object? What if it's under a table - does it "have a" table above it
+or "is a" thing under a table? Nobody knows what "thinking" is, and natural language can not be reduced
+to a couple of dimensions. It "has" an unknown number of dimensions. It "is a" thing with an unknown number
+of dimensions. Whatever "dimension" means.
+
+A programming language is a tool people use to /program/ machines. Even if we knew how thinking works, and
+we could build a "thinking machine", we'd still need programming languages for /the other/ machines. The
+ones that are supposed to do what they are told, quickly, reliably and cheaply, as opposed to those
+supposed to be creative thinkers. And a programming language, which must be precise, can not map directly
+to a natural language, which is not.
+
+To use inheritance or any other formal device, you have to understand exactly how it works. Luckily,
+in most programming languages it's reasonably easy. And with C++, you can at least try to restrict
+yourself to the subset you do understand.
+
+-END
+
+How do you express inheritance in C++?
+
+FAQ: By using the |: public| syntax, as in |class Car : public Vehicle { ... };|. |private| and |protected|
+inheritance are different.
+
+FQA: Yeah, very different: replace the |public| keyword with the |private| or |protected| keyword.
+The FAQ probably means that they are different because they are less related to OO semantically.
+
+You may wonder what the colon syntax has to do with the concept of inheritance. Well, the
+connection is obvious: there's no inheritance in C, and adding keywords to C++ reduces the
+[6.11 "compatibility"] with C, because the grammars of these languages prevent you from using keywords
+as identifiers. Once again, punctation comes to the rescue.
+The other technique for retro-fitting features into the grammar is overloading keywords
+(consider |static|).
+
+To be fair, many languages have this problem with their grammar, and it's not a very big deal.
+
+-END
+
+Is it OK to convert a pointer from a derived class to its base class?
+
+FAQ: For public inheritance - yes. By definition, an object of a derived class is an object of the base class.
+
+FQA: Moreover, if you don't think someone is going to do this, or you know it's not going to work
+as expected, [21.6 don't use inheritance]. The whole point of inheritance is to allow exactly that:
+to have code that works with objects of a base class and in fact can be passed objects of
+arbitrary derived classes. If making this possible is not what you want, inheritance doesn't
+really help you and will confuse the users of your classes.
+
+Of course public inheritance is also used for mind numbing template metaprogramming tricks, like having
+a template derive from its own instantiation recursively, or from a template argument. The judgment
+of whether this is a reasonable usage of a language feature is left to the reader.
+
+-END
+
+What's the difference between |public|, |private|, and |protected|?
+
+FAQ: |private| is for class members and friends. |protected| is also for derived classes and their friends. |public| is
+for everybody.
+
+FQA: Exactly. The only part having to do with inheritance is |protected|, and it's useful relatively rarely.
+
+-END
+
+Why can't my derived class access |private| things from my base class?
+
+FAQ: It protects you from changes to the base class by not letting you rely on its implementation details.
+
+FQA: However, it doesn't protect you from recompilation of your derived classes when changes are made to
+the base class (access control keywords are [7.4 little more than comments] in C++). Keep that in mind when
+you design interfaces, especially those which are supposed to be used outside of your team. If you want
+to supply C++ interfaces, which is [6.3 pretty daring] by itself, not exposing any base classes except pure
+abstract ones (those having no data members) may be a good idea.
+
+-END
+
+How can I protect derived classes from breaking when I change the internal parts of the base class?
+
+FAQ: Your class has two interfaces: |public| and |protected|. To protect your users, don't expose
+data members. Similarly, you can protect the derived classes by not having |protected| data members;
+provide |protected inline| accessors instead.
+
+FQA: Dear Design Guru! Listen carefully, and try to understand.
+
+One. Writing get and set function for every member takes
+time, and so does reading them. This time can instead be used to get something done.
+
+Two. If you can get and set a member, it's pretty close to being public.
+Any non-trivial representation change becomes impossible since the ability to set this particular member
+is now a part of the contract.
+
+Three. Having properties in the language - things that look like members
+but are in fact accessors - doesn't hurt. Many languages have it, allowing to use plain members and
+in the 0.1% of the cases when your class becomes very popular /and/ you want to change it /and/ you
+can do it without breaking the contract, you can make the member a property. There's no reason for not
+having this in C++ that's even remotely interesting to a language user.
+
+If you know C++ programmers who are obsessed with useless wrapper code /and/ performance they never measure,
+the |protected inline| part is kinda funny.
+
+-END
+
+I've been told to never use protected data, and instead to always use private data with protected access functions. Is that a good rule?
+
+FAQ: No, no, no - "always" rules don't work in the real world! You don't have time to make life
+easy for everyone. Spend your time making it easy for the important people. People are not equal.
+The important people are called "customers".
+
+FQA: Thanks, that's just what I needed! You know, I was going to make life easier for /everyone/
+by writing hordes of get and set functions. But now I can /prioritize/ and only make life easier
+for the important people.
+
+Please your customers by writing 56% more get and set functions than your competitor using the newest
+Visual Refactoring Tool today!
+
+Actually, the FAQ does mention that you'll probably need more than get and set functions to really
+"protect the derived classes from changes". But the basic assumption that lots of layers
+make life easy when you have time to create all those layers is still ridiculous. There are teams
+out there that actually /have/ lots of time to do a real world job, and turn a 500-line simple, working, fast
+prototype program into 30K-line incomprehensible, broken, slow "product" because they think that
+they are dealing with an /important/ task, so now is the time to write piles of wrapper code.
+
+-END
+
+Okay, so exactly how should I decide whether to build a "protected interface"?
+
+FAQ: There are many useful guidelines, for example: grow up, don't do things that can jeopardize your
+schedules, and only invest time in the things which will ultimately pay off.
+
+FQA: If you find this advice useful, here's more: don't be an idiot, be lucky, and avoid pushing sharp
+objects into your body.
+
+It's rather annoying that the C++ FAQ /dares/ to tell people to be [6.1 "practical"]. Why don't you add a third
+useful built-in type to your language (we already have integers and floats), say, a string or
+a dictionary, and then talk about the difference between theory and the real world?
+
+-END

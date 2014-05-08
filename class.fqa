@@ -1,0 +1,185 @@
+Classes and objects
+{'section':7,'faq-page':'classes-and-objects.html'}
+One of the stated goals of C++ is support for object-oriented programming. This page introduces C++ classes and outlines the tactics they use to defeat their purpose.
+
+What is a class?
+
+FAQ: In OO software, "the fundamental building block".
+
+A class is a type - a representation for a set of states (much like a C |struct|) and a set of operations for
+changing the state (moving from one state to another). Classes are similar to built-in types in this sense
+(for example, an |int| holds a bunch of bits and provides operations like + and *).
+
+FQA: That's a correct theoretical definition. It's equally applicable to all OO languages, but they
+are different when it comes to more specific, practical aspects of their particular implementation of classes.
+
+How do I create objects? And [16.1 what happens] when they are no longer needed? Is it /my/ job to figure out which ones
+are unused and deallocate them? Bad.
+
+[7.2 What happens] if I have bugs? If I have a pointer to an object, can it be invalid (be a random bit pattern, point to a dead object)?
+It can? The program will /crash/ or worse?
+What about arrays of objects and out-of-bounds indexes? Crash or a modification of some other random object?
+You call that encapsulation? Bad.
+
+[7.4 What happens] if I change\/add\/remove a private value, without changing the interface?
+All code using the class has to be /recompiled/? I bet you call that encapsulation, too. Bad.
+
+I don't like C++ classes.
+
+-END
+
+What is an object?
+
+FAQ: A chunk of memory with certain semantics. The semantics are defined by the class of the object.
+
+FQA: They are also defined by the bugs which cause the code to overwrite data of these objects without bothering
+to use the interface defined by the class. People who think that real programmers write code without bugs need
+to upgrade to a human brain.
+
+Still, it sounds interesting: the memory of our C++ program is apparently broken into chunks storing
+objects of various classes, with "defined semantics". Looks very promising, that.
+For example, we could ask a debugger about the kind of object located at such a chunk and inspect its data
+(as in "this is a Point with x=5 and y=6"). We could even take this one step further and implement things like
+garbage collectors, which can check whether an object is used by looking for pointers to it in the places which
+are /supposed/ to store pointers.
+
+Unfortunately, you can't tell the class of a C++ object given a pointer to it at run time. So if you debug
+a crashed C++ program and find a pointer somewhere in its guts, and you don't know its type, you'll have
+to guess that "0000000600000005" is a Point. Which is completely obvious, because that's the way a pair of
+adjacent integers looks like in hexadecimal memory listings of a little endian 32 bit machine. And two adjacent integers might be a Point.
+Or some other two-integer structure. Or a part of a three-integer-and-a-float structure.
+Or they might be two unrelated numbers which just happen to be adjacent.
+
+Which is why you can't automatically collect the garbage of C++ programs.
+
+-END
+
+When is an interface "good"?
+
+FAQ: It is good when it hides details, so that the users see a simpler picture. It should also speak the language
+of the user (a developer, not the customer).
+
+FQA: Um, sometimes you want the interface to expose the many details and speak the language of the machine,
+although it's probably not very common. The generic answer is something like "an interface is good if it gets the user somewhere".
+
+For example, using [http://www.opengl.org OpenGL] you can render nifty 3D stuff at real time frame rates.
+[http://www.fftw.org FFTW] delivers, well, the Fastest Fourier Transform in the West.
+With [http://trolltech.com/products/qt Qt], you can develop cross-platform GUI, and "cross-platform" won't mean
+"looking like an abandoned student project".
+Writing that stuff from scratch is lots of work; using the libraries can save lots of work.
+Apparently learning the interfaces of these libraries is going to pay off
+for many people.
+
+For a negative example, consider |<algorithm>|. Does |std::for_each| get us anywhere compared to a bare |for| loop,
+except that now we need to define a [33.10 functor] class? That's a bad interface, because learning it
+doesn't make it easier to achieve anything useful.
+
+-END
+
+What is encapsulation?
+
+FAQ: The prevention of "unauthorized access" to stuff.
+
+The idea is to separate the implementation (which may be changed) from the interface (which is supposed to be stable).
+Encapsulation will force users to rely on the interface rather than the implementation. That will make changing
+the implementation cheaper, since the code of the users won't need to be changed.
+
+FQA: That's a nice theoretical definition. Let's talk about practice - the properties of the C++ keywords |private|
+and |protected|, which actually implement encapsulation.
+
+These keywords will cause the compiler to produce an error message upon access to a non-public member outside
+of the class. However, they will not cause the compiler to prevent "unauthorized access" by buggy code,
+for example upon buffer overflow. If you debug a crashed or misbehaving C++ program, forget about encapsulation.
+There's just one object now: the memory.
+
+As to the cost of changes to the the private parts - they trigger recompilation of all code that |#include|s your class
+definition. That's typically an order of magnitude more than "code actually using your class", because everything ends
+up including everything.
+"The key money-saving insight", as the business-friendly-looking FAQ puts it, is that /every time you change a class definition,
+you are recompiling the programs using it/. Here's another simple observation: C++ compiles slowly. And what do we get
+now when we put two and two together? That's right, kids - with C++ classes, the developers get paid primarily to wait for
+recompilation.
+
+If you want software that is "easy to change", [7.5 stay away] from C++ classes.
+
+-END
+
+How does C++ help with the tradeoff of safety vs. usability?
+
+FAQ: In C, stuff is either stored in |struct|s (safety problem - no encapsulation), or it is declared |static| at the file
+implementing an interface (usability problem - there is no way to have many instances of that data).
+
+With C++ classes, you can have many instances of the data (many objects) /and/ encapsulation (non-|public| members).
+
+FQA: This is /wildly wrong/, and the chances that the FAQ author didn't know it are /extremely low/.
+That's because you can't use |FILE*| from |<stdio.h>| or |HWND| from |<windows.h>| or in fact any widely used and\/or decent C library
+without noticing that the FAQ's claim is wrong.
+
+When you need multiple instances and encapsulation
+in C, you use a forward declaration of a |struct| in the header file, and define it in the implementation file.
+That's actually /better/ encapsulation than C++ classes - there's still no /run-time/ encapsulation (memory can be accidentally\/maliciously overwritten),
+but at least there's /compile-time/ encapsulation (you don't have to recompile the code using the interface when you change the implementation).
+
+The fact that a crude C technique for approximating classes is better than the support for classes built into the C++ language is really
+/shameful/. Apparently so shameful that the FAQ had to distort the facts in an attempt to save face
+(or else the readers would wonder whether there's any point to C++ classes at all). The FQA hereby declares that it will
+not go down this path. Therefore, we have to mention this: the forward declaration basically makes it impossible for the
+calling code to reserve space for the object at compile time. This means that a |struct| declared in a header file
+or a C++ class can sometimes be allocated more efficiently than a forward-declared |struct|. However, this is really
+ about a /different/ tradeoff - safety vs. /efficiency/, and there's no escape from this tradeoff. Either the caller knows
+ about the details such as the size of an object at compile time - which /breaks/ compile-time encapsulation - or it doesn't,
+ so it can't handle the allocation.
+
+Anyway, here's the real answer to the original question: C++ helps with the tradeoff of safety vs. usability by eliminating both.
+
+C++ is extremely unsafe because every pointer can be used to modify every piece of memory from any point in code.
+C++ is extremely unusable due to cryptic syntax, incomprehensible semantics and endless rebuild cycles.
+Where's your tradeoff now, silly C programmers?
+
+-END
+ 
+How can I prevent other programmers from violating encapsulation by seeing the |private| parts of my class?
+
+FAQ: Don't bother. The fact that a programmer knows about the inner workings of your class isn't a problem. It's
+ a problem if /code/ is written to depend on these inner workings.
+
+FQA: That's right. Besides, people can always access the code if a machine can. Preventing people from "seeing" the code
+ in the sense that they can access it, but not understand it is obfuscation, not encapsulation.
+
+-END
+
+Is Encapsulation a Security device?
+
+FAQ: No. Encapsulation is about error prevention. Security is about preventing purposeful attacks.
+
+FQA: Depends on the kind of "encapsulation". Some managed environments rely on their support for run time encapsulation,
+ which makes it technically impossible for code to access private parts of objects, to implement security mechanisms.
+C++ encapsulation evaporates at run time, and is almost non-existent even at compile time
+ - use |#define private public| before including a header file and there's no more encapsulation /[corr.3 (correction)]/. [7.4 It's hardly
+  "encapsulation" at all], so of course it has no security applications - security is harder than encapsulation.
+
+The capital E and S in the question are very amusing. I wonder whether they are a manifestation of Deep Respect for
+  Business Values or Software Engineering; both options are equally hilarious.
+
+-END
+
+What's the difference between the keywords |struct| and |class|?
+
+FAQ: By default, |struct| members and base classes are |public|. With |class|, the default is |private|. Never rely
+  on these defaults! Otherwise, |class| and |struct| behave identically.
+
+But the important thing is how developers /feel/ about these keywords. |struct| conveys the feeling that its members
+  are supposed to be read and modified by the code using it, and |class| feels like one should use the class
+  methods and not mess with the state directly. This difference is the important one when you decide which keyword to use.
+
+FQA: |struct| is a C keyword. |class| was added to C++ because it is easier than actually making the language object-oriented.
+  And it does a good job when it comes to the /feeling/ of a newbie who heard that "OO is good".
+
+Check out the emotional discussion about which keyword should be used in the FAQ. The more similar two duplicate C++
+  features are, the more heated the argument about the best option to use in each case becomes. Pointers\/references,
+  arrays\/vectors... Yawn.
+
+By the way, [7.5 the forward-declaration-of-struct thing] works in C++, and it's better than a |class| without |virtual|
+  functions most of the time.
+  
+-END

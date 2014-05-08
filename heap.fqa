@@ -1,0 +1,613 @@
+Freestore management
+{'section':16,'faq-page':'freestore-mgmt.html'}
+This page is about one of the most hard, boring and dangerous things C++ forces you to do manually - killing your objects at the right time. One dirty job, that.
+
+Does |delete p| delete the pointer |p|, or the pointed-to-data |*p|?
+
+FAQ: That would be |*p|. The keyword should have been |delete_whatever_is_pointed_by|. Similarly, |free| should have
+been called |free_whatever_is_pointed_by|.
+
+FQA: It really should have been "". That's right, the keyword should have been an empty string. /You/ don't need it. The object should live
+as long as someone can use it, and when it becomes unaccessible and can no longer be used by anyone, it should die. Why is making sure that
+this is what actually happens /your/ job?
+
+Of course [16.26 garbage collection] may be time consuming in the average and\/or worst case.
+Are you sure your implementation of |new| is better in this respect though? At least with garbage collection and
+managed pointers you can do heap compaction. With |new\/delete| and bare pointers, pieces of memory between
+used blocks too small to satisfy an actual allocation request will accumulate, and you'll effectively run out of memory.
+This nice situation is called external memory fragmentation. Try it with your production code that's supposed to have long
+(not to mention "unlimited") uptime - it's fun!
+
+And what if you make a mistake, one single mistake with all these deletions? Either you'll run out of memory, or your
+program will crash, or it will corrupt its own data. Which is why many experienced C++ programmers do everything to avoid explicit
+calls to |new|. Instead, they use [17.4 RAII] - have some constructor do the |new| and the destructor do the |delete|. Which
+eventually leads to lots of [11.1 unnecessary copying] - you can't point to some data inside a data structure since the
+data structure may be about to die, and it will kill all its data whether or not someone points to it. So you have
+to make a copy of that data, and keep believing that manual memory management is what makes your C++ programs so fast.
+
+If managing the life and death of objects is such a big deal, perhaps the language isn't very [6.17 object-oriented] after all,
+is it?
+
+-END
+
+Is it safe to |delete| the same pointer twice?
+
+FAQ: It isn't. Don't do that. Your program may crash or corrupt its own data. If it works in a test, it doesn't mean
+it always works. Don't do that.
+
+FQA: When you |delete| the pointer, it still points to the same place - the only difference is that the place was
+marked as "free" in some system-specific way. The second call to |delete| will probably try to mark it as "free" again.
+Which may be problematic when it's no longer free, actually, because someone has already allocated an object there,
+and you've just wiped it out with your second |delete| call, so now /still other someone/ can allocate an object there
+and overwrite the object you've destroyed so immorally.
+
+There are other ways for this to fail - say, the code marking
+blocks as "free" and assuming they are taken may count on some memory right before the place pointed by the block
+start pointer to contain some meta-data it no longer contains, etc.
+
+Here's what happens in [6.5 managed environments]. First, you don't delete anything: the environment does. Second, it never
+deletes anything unless nobody points to it. So you are never stuck with pointers pointing to graves of dead objects,
+which may already be inhibited by freshly created objects. Which is good, because whatever your project is, memory
+management is not one of its stated goals, is it? It's nice not to do something you don't really want to do.
+
+-END
+
+Can I |free()| pointers allocated with |new|? Can I |delete| pointers allocated with |malloc()|?
+
+FAQ: You can't. Don't do that. Your program may crash or corrupt its own data. If it works in a test, it doesn't mean
+it always works. Don't do that.
+
+FQA: The many [8.6 duplicate C++ facilities], such as |new| and |malloc|, are ugly, but using mismatching functions for allocation
+and deallocation is not less ugly. Why do you want to do that? It's like using an opening parenthesis and a closing bracket.
+How can you count on something like this to work reliably?
+
+-END
+
+Why should I use |new| instead of trustworthy old |malloc()|?
+
+FAQ: |new\/delete| call the constructor\/destructor; |new| is type safe, |malloc| is not; |new| can be overridden by
+a class.
+
+FQA: The virtues of |new| mentioned by the FAQ are not virtues, because [10.1 constructors], [11.1 destructors], and [13.1 operator overloading]
+are garbage (see what happens when you have no garbage collection?), and the type safety issue is really tiny here
+(normally you have to cast the |void*| returned by |malloc| to the right pointer type to assign it to a typed pointer variable, which may be
+ annoying, but far from "unsafe").
+
+Oh, and using trustworthy old |malloc| makes it [16.5 possible] to use the equally trustworthy & old |realloc|. Too bad
+we don't have a shiny new |operator renew| or something.
+
+Still, |new| is not bad enough to justify a deviation from the common style used throughout a language, even when the
+language is C++. In particular, classes with [10.17 non-trivial constructors] will misbehave in fatal ways if you simply |malloc|
+the objects. So why not use |new| throughout the code? People rarely overload |operator new|, so it probably won't
+get in your way too much. And if they do overload |new|, you can always ask them to stop.
+
+-END
+
+Can I use |realloc()| on pointers allocated via |new|?
+
+FAQ: Guess what - you can't. |realloc| may end up copying memory, and C++ objects don't like to have their memory
+copied without getting notified. They like to have their copy constructors and |operator=| handle the copying.
+
+By the way, why do you think |malloc\/realloc\/free| use the same heap as |new\/delete|?
+
+FQA: The fact that there's no |renew| or whatever you'd call it is one of the reasons to use custom allocators
+instead of |new|. You can then allocate uninitialized memory with |malloc| and use placement |new|
+to call constructors. Code doing these things is usually [10.5 as ugly as sin], hard to get right and gets in the way
+of debuggers.
+
+Many C++ objects will live happily ever after they're moved (|realloc|'d). A different set of objects always get broken - those /pointing to the old place/.
+The intersection of these sets is non-empty since objects can keep pointers into themselves. Which is the /special case/
+that's sort of solved by copy constructors and |operator=| (the solution is simply to have /you/ implement the copying
+so that pointers are set up correctly).
+
+However, the /general case/ can't be solved - you can't move a C++ object
+and destroy the old one unless you can prove that no pointers are left to the old location. This can't be proved
+automatically in the general case (the halting problem and all that). Which is why you can't
+do [16.1 automatic heap compaction], which could solve the external fragmentation problem.
+
+If your implementation uses two heaps, one for |malloc| and one for |new|, then it stinks, because sometimes
+you want to somehow replace |malloc| with something else, and it's nice to be able to do it once (for |malloc|), not twice (for |malloc| and |new|),
+and two heaps probably mean more fragmentation, and what's the point of two heaps? I've never seen this done,
+but it actually is legal.
+
+-END
+
+Do I need to check for |NULL| after |p = new Fred()|?
+
+FAQ: No, that would be bad. |new| throws an exception, so you don't have to insert tests all over the place.
+Unless you're using an old compiler (you can still work around it and have an exception thrown).
+
+FQA: C++ exceptions are frequently [17.1 worse] than having your code simply and straight-forwardly crash (at least in the
+latter case, you have a good chance to find the call stack where that happened). Disabling exception support
+at your latest & greatest compiler is sometimes a good idea.
+
+If you really have to write code handling out-of-memory conditions gracefully, that's not as easy a task as simply
+catching a C++ exception. First, you'll probably have to avoid recursion (C++ doesn't throw stack overflow exceptions, you know,
+so the program can't behave gracefully when you're out of /that/ memory).
+Second, what are you going to do when you're out of memory? Take into account that you'll need /memory/ to do it;
+you might need to reserve some in advance.
+
+And there aren't that many choices in most cases. You can exit with an error message instead of "hard" crashing.
+You can show a message saying that there's not enough memory and could the user please close some programs and
+then you'd retry, or maybe the user wants your program to quit? All these can be done without exceptions.
+
+Exceptions can be sort of handy when your approach is to "abort the current operation", but exceptions are not a very good way
+to develop robust code, and if you actually want to deal gracefully with out-of-memory situations
+(you probably noticed that it's rarely done), that's
+way out of their league. The reason is that with exceptions, there are many ways to make subtle errors
+in your error handling code, and when some aspect of your application is important, you're usually better off
+making the handling of that aspect explicit and clear.
+
+-END
+
+How can I convince my (older) compiler to automatically check |new| to see if it returns |NULL|?
+
+FAQ: You can pass a callback function throwing an exception to |std::set_new_handler|. This will work, except for
+ global variables calling |new| before you set your handler. There is no way to make sure your handler is set first -
+ even if you set it in the constructor of a global variable, that variable is not necessarily the first one to be constructed.
+
+FQA: I wonder why you want |new| to throw exceptions. This desire may be the indication of a certain kind of mindset.
+Hmmm, let's conduct a test: are you happy with the FAQ's solution, or are you actually bothered by the fact that /a constructor of a global variable/
+ may run out of memory without throwing an exception?
+
+ If this option scares you, it probably means that you like to do hairy things before |main|
+ in [10.12 undefined order], including throwing and catching exceptions, which confirms my worst fears. I hope you get out of these habits by the time we happen to work
+ on the same project.
+
+ If, on the contrary, you think that global constructors shouldn't get that complicated, your approach is apparently a little bit more practical,
+and now I'm really puzzled. Are you absolutely sure you want |new| to throw exceptions?
+
+-END
+
+Do I need to check for |NULL| before |delete p|?
+
+FAQ: |delete| already does that, so no, you shouldn't! /You could get the test wrong/, and you'll spend time testing
+ both execution paths /as required by testing methodologies/.
+
+FQA: Apparently the FAQ is written for imbeciles that can't test for |NULL|, /and/ they don't test the code after writing
+ it to see if it worked, /but/ they /do/ mechanically test all branches because of /testing methodologies/. If you want
+ to really create a vivid image of a member of the FAQ's target audience in your imagination, think about this: just /how/ does the
+ idiot cover both execution paths? The poor creature must artifically create cases where |p| is |NULL|, without
+ having the rest of the program crash. Which can be tricky enough to be inconsistent with the rest of our data
+ about the mental capabilities of this programmer. And now we get a clear picture: the FAQ
+ is designed for extraterrestrial intelligence struggling with the many difficulties of C++.
+
+Actually, there is no reason to be mean this time. Once in a lifetime those people actually made something easy.
+ Maybe they were inspired by the example of |free|, which also accepts null pointers.
+Pretty inconsistent with the spirit of the language. Which is why I was very surprised when I first found this out.
+
+-END
+
+What are the two steps that happen when I say |delete p|?
+
+FAQ: When |p| is a |T*|, the first step is |p->~T();|, and the second is |operator delete(p);|.
+
+FQA: Ugly syntax, isn't it? Especially the fact that |a+b| is the same as |operator+(a,b)|, but
+ |delete p| is /not at all/ the same as |operator delete(p)|.
+
+The semantics are consistent with the [10.1 decoupling] of /allocation/ (|operator new|) and /construction/ (|T()|).
+ This decoupling breaks [7.4 encapsulation] without admitting it (the caller must know the size of the objects of the class
+at compile time, which means it must know all the |private| members) in order to increase efficiency in straight-forward implementations
+ (which can't do just-in-time compilation with optimization and have to know the size at compile time to optimize allocation).
+Which is why C++ code is recompiled all the time.
+
+-END
+
+In |p = new Fred()|, does the |Fred| memory "leak" if the |Fred| constructor throws an exception?
+
+FAQ: No, because the compiler effectively generates a |try\/catch| block around the constructor call, and when exceptions
+  are thrown, the |catch| part deallocates the memory and rethrows the exception.
+
+FQA: If you throw exceptions in constructors, make sure they are caught when custom allocators are used
+(the kind that looks like this: |new (pool.alloc()) Fred()|).
+
+If you don't throw exceptions, the implicit |try\/catch| around |new| is one illustration of the fact that exceptions
+increase the size of your code even when you don't use them. One good thing is that most compilers have a flag disabling exceptions.
+
+-END
+
+How do I allocate \/ unallocate an array of things?
+
+FAQ: You allocate it with |p = new T[N]| and deallocate with |delete[] p|. Using |delete p| is an error.
+
+FQA: You can only do that if |T| has a [10.5 default constructor] (one that can work without arguments). Which is one more
+  reason to avoid non-trivial constructors. Alternatively, if you'd rather create a problem than solve one,
+  you can replace your [6.15 evil] arrays with |std::vector|.
+
+-END
+
+What if I forget the |[]| when deleting array allocated via |new T[n]|?
+
+FAQ: You'll infect your program with an incurable decease. It will do something like corrupt its data and die.
+
+FQA: If you want to realize the idiocy of this rule in its full glory, consider this. |new| calls |malloc| or some other
+allocator, and it passes it the block size. The allocated pointer is then passed to |delete|, but the size is /not/.
+How does |delete| know to free a block of the right size - not too little, not too much? /It has to store the size
+  somewhere/, doesn't it? But /of course/ it /can't be bothered/ to figure out the number of objects pointed by the
+  pointer (like, divide the stored size by |sizeof(*p)|, making an actual /use/ of "type safety") so it can call the destructors properly.
+
+But wait, there's more! What's the deal with /data corruption/? Shouldn't the worst possible effect be a resource leak
+  due to the fact that some destructors are not called?
+
+Here's the best part. |operator new[]| allocates /a little bit more memory/ than it's asked for in order to /store
+  the number of the frigging objects/ in that place (it can also be done in other ways, but the effect is equivalent). |delete[]| uses it to call the destructors for all the allocated
+  objects. Since |new| doesn't store any number and only allocates the amount of memory it was told to, it becomes
+  clear why mismatching the |new| and |delete| operators will lead to data corruption.
+
+The bottom line is this: C++ stores the number of objects in a block /once/ when |new| is called and /twice/ when |new[]|
+  is called, /and it will rather have you introduce lethal bugs in your program than use the information to help you
+  get it right/. Now that is what I call "hospitality".
+
+-END
+
+Can I drop the |[]| when deleting array of some built-in type (|char|, |int|, etc)?
+
+FAQ: No you can't. You may think that you can, because |int| has a trivial destructor. But it's not just about
+  destructors. For example, what if someone replaces |operator new[]| and |operator delete[]| in a way
+  incompatible with mismatching |new\/delete[]| calls?
+
+FQA: Yeah, did you think about that? And what if you use an array of |Int|, which is a |typedef|, and someone changes the |typedef| to
+|SmartIntClass| instead of plain old |int|? Think about it. That's what your brain is for: thinking about
+exciting, useful things like this.
+
+The serious answer is that if a language has two sets of similar matching operators, than a programmer is better off
+  [16.3 avoiding mismatches] between those operators. The fact that there really should have been [16.12 one] |delete| operator, no, wait,
+make it [16.1 zero], may be a reason to switch to a different language, but not to [10.3 violate the rules] of a language.
+
+-END
+
+After |p = new Fred[n]|, how does the compiler know there are |n| objects to be destructed during |delete[] p|?
+
+FAQ: Sing along: "It's a kind of magic..."
+
+There are two common ways used by our friends the compiler-implementing magicians. One is to allocate extra memory
+  and store the number of objects there. The other one is to use an associative array mapping from pointers to sizes.
+
+FQA: You may wonder why these clever magicians don't rely on |malloc| to do the magic, and have you end up with
+  the block size stored /twice/: you ask |new| for 8 bytes, then |new| asks malloc for 12 bytes, then |malloc|
+  asks |sbrk| or whatever's down its guts for 16 bytes.
+
+  The answer is of course /modularity/. Translation:
+  why should the implementor of the C++ language bother to figure out the details of |malloc| when there's the easier
+  option - leave it to the implementor of the C language and simply and portably implement |new[]| on top of the
+  C runtime? 4 bytes of your memory are surely not a good enough reason.
+
+"Magic". The next thing you know, they'll call exploiting security holes in your OS to utilize some of those unused processor & memory resources "magic".
+
+-END
+
+Is it legal (and moral) for a member function to say |delete this|?
+
+FAQ: You can do this, as long as you are sure the object is allocated with |new|, and the pointer is not used for anything
+  at all after |delete this|.
+
+FQA: This is a bit weird, and it probably causes many people to get alarmed and start anxiously looking for places that
+  /might/ touch the deleted object (as if it were more likely than a less exotic access to a dangling reference).
+  And it forces the user of a class to allocate the objects with |new|, which is against the (misguided) [10.1 spirit of C++]
+  and therefore another source of [8.6 confusion]. At least provide a |static| method that allocates objects with |new| and declare
+  the destructors |private| to document your intent to control the allocation.
+
+Why do you want to do it anyway? If you want to impress people, why not do some real magic - actual functionality, not just
+  yet another syntactic exercise?
+
+-END
+
+How do I allocate multidimensional arrays using |new|?
+
+FAQ: The answer is very long with 3 large code listings.
+
+FQA: There is no |operator new[][]| in C++ - it decided that |new| and |new[]| are sufficient; it had many stupid reasons
+  to decide that way. Anyway, you have two options: allocate a flat array and manage the N-dimensional indexing manually
+  (generating one-dimensional indexes using expressions like |x+y*width|), or you can allocate an array of arrays /[corr.4 (correction)]/.
+  For 2 dimensions, you need to allocate a |new T*[M]| and then in a loop with |M| iterations allocate a |new T[N]|.
+
+With the second way you get more natural-looking indexing, but worse performance (less speed, more space). It may
+  be convenient if you need each one-dimensional array in the two-or-more-dimensional array to have a different length,
+  but even then it's probably better to fake it with a flatter kind of array in ugly ways if you care about
+  performance
+(by the way, if you don't, make the best of it - try a safe language).
+
+-END
+
+But the previous FAQ's code is SOOOO tricky and error prone! Isn't there a simpler way?
+
+FAQ: Sure it is! You can define a |Matrix| class and have it do all the dirty work. Which is good, as should be obvious
+to anyone familiar with /Star Trek 2/ (a reference follows).
+
+FQA: I didn't see /Star Trek/, but moving the dirty work to a single place doesn't make that work "simple".
+Of course it's better than doing that work over and over again, but how many multi-dimensional array classes have you seen,
+ and what happens when someone tries to convert between them? I mean it can't be a "single place" unless that place is the compiler.
+
+By the way, if you need performance, you can't really encapsulate the layout of the multi-dimensional array,
+because you'll need to do things like get one column to the right (with |flat_index+1|) or one row up (with |flat_index+row_width|),
+ instead of computing things like |x+(y+1)*row_width| every time through the innermost loop.
+
+ You can try to define all kinds of functions like
+ |increment_by_row|. If you really believe that it will make it possible to "transparently" change the representation later
+ (thus turning all the optimizations carefully developed for this representation into pessimizations), go ahead and define
+and optimize hordes of such tiny functions and keep lying to yourself about how this makes your code more readable.
+
+Data representation is very important. Too bad so many people believe that the only important thing about /data/
+ is to hide it behind /code/ ([22.1 interfaces]) so that you can "always change the data representation later". While this
+ may be right in the majority of cases, it is likely to be wrong in /the most important/ cases.
+ 
+-END
+
+But the above |Matrix| class is specific to |Fred|! Isn't there a way to make it generic?
+
+FAQ: Of course! You can use templates!
+
+FQA: This way, not only will your code run slowly - it will also compile slowly.
+
+-END
+
+What's another way to build a |Matrix| template?
+
+FAQ: You can use |std::vector| instead of bare pointers!
+
+FQA: You can also use any of the numerous array classes implemented before |std::vector| was introduced into the
+ C++ standard library (which was long after C++ became widely used).
+
+Alternatively, you can also use any of the numerous /matrix/ classes implemented before |std::matrix| was introduced
+ into the C++ standard library... Actually, make that "before |std::matrix| /will be/ introduced into the C++
+ standard library". Can you explain why the C++ standard includes |std::vector| - a class quite similar to built-in
+ arrays, but different - but does not include |std::matrix|, a class that would be quite similar to built-in 2D arrays,
+ but different? Here's a more difficult question: is it good or bad that we don't have |std::matrix|, provided that
+ we /do have/ less than optimal built-in 2D arrays? Before you answer, consider type conversions, dynamic resizing, literal values,
+ telling the size of an array at run time...
+
+ That's what C++ is all about: the development of your ethical judgment. Everybody can tell
+ good from bad; [8.6 choosing] between the ugly and the disgusting takes real wisdom.
+
+-END
+
+Does C++ have arrays whose length can be specified at run-time?
+
+FAQ: That would be yes - there's |std::vector|.
+
+ Actually, it's a no - you can't do it with built-in arrays.
+
+ Wait a minute - you /can/ do it with /the first index/ of a built-in array, for example: |new T[run_time_val][compile_time_val]|.
+
+ You know what? Arrays are [6.15 evil].
+
+FQA: |std::vector| is not an array, it's a class that looks like an array until you try to initialize it with |{1,2,3}|
+ or pass an array to a function expecting a |vector| or get a huge compiler error message.
+ Built-in arrays don't behave like this.
+
+ C++ inherits the following rule about types from C: the size of a type is always known at compile time, and you can
+ get it with |sizeof|. This rule is useful in C because, /together with other rules/ which are violated in C++, it makes it quite easy to
+ mentally map source code to assembly code (sort of) and estimate run time performance. In C++ it's no longer useful,
+ because telling the /meaning/ of C++ code is nearly impossible, not to mention reasoning about its performance.
+
+Anyway, the length of a built-in array is part of its type, so if it could be dynamic, it would violate the ex-useful
+ rule. So it can't. However, built-in /pointers/ can point to an array of length defined at run time. So you can have
+ a |T* p| pointing to |run_time_val| objects, but you can't have an array of type |T[run_time_val]|. Which means that
+ you can't allocate such arrays on the stack (unless the compiler decides to /almost/ violate the ex-useful rule
+ and support it, the way GNU C\/C++ does, for example).
+
+The built-in C++ arrays are inherited from C without changes
+  (well, except for constructor\/destructor calls and |new| in addition to |malloc| and other stuff of this kind), so if you
+  care about details, the best place to look is material about C. This is one of the many examples illustrating that you
+  have to know C in order to really understand C++.
+
+-END
+
+How can I force objects of my class to always be created via |new| rather than as locals or global\/|static| objects?
+
+FAQ: You can define the constructors |private| and provide |public| functions which return pointers to objects allocated
+  with |new|. Which goes by the fancy name of "The Named Constructor Idiom".
+
+FQA: Why do you want to force this? Allocating locals is more efficient than |new|, and you wouldn't have to worry
+  about |delete|, either. The cost is that when you change the |private| members of the class, all code using it
+  gets recompiled.
+
+Wait, is that what you want - to avoid recompilation? In that case, the "Named Constructor Idiom" [10.8 defeats the purpose] - change
+  a |private| member and you still trigger a rebuild.
+  You can either drop C++ classes and store the state in a C |struct|
+  (place a forward declaration in the header file and the full definition in the implementation file), or you can
+  wrap this exact solution with the code of an extra C++ class just because C is evil. The latter
+  way is known as "The Pimpl Idiom" ("pimpl" apparently stands for "pointer to implementation").
+
+Idioms make the world move. Especially the Design Pattern Idiom. Or the Idiom Design Pattern. Or something.
+
+-END
+                                                                       
+How do I do simple reference counting?
+
+FAQ: Two large code listings are given (a quote from these listings: |\/\/ DO NOT CHANGE THE ORDER OF THESE STATEMENTS!|), followed by a bold
+  claim that now you have a way to do simple reference counting.
+
+FQA: You do `<b>`simple`</b>` reference counting by using a language which does reference counting
+  (or garbage collection - you probably don't care if you want it "simple").
+
+You do `<b>`complicated`</b>` and `<b>`broken`</b>` reference counting by using C++, creating smart pointer classes
+   (and smart array classes, and smart multi-dimensional array classes), wrapping your private constructors with
+   public functions returning smart pointers to objects (or smart arrays of objects) to make sure all objects
+   are actually pointed by smart pointers so the reference counting is not entirely worthless.
+
+Congratulations! You've just wasted lots and lots of time to emulate garbage collection on top of C++.
+Well, the code doesn't compile as fast as it would with built-in garbage collection (all those smart pointer templates),
+   and the error messages are a bit cryptic (all those smart pointer templates), and there are those tricky cases
+   like cyclic references you still fail to deal with (despite all those smart pointer templates), and for every class
+   you write extra code wrapping constructors, and the whole thing doesn't play well with existing libraries
+   (which use /different/ smart pointer templates), and...
+
+/Why/ do you want to do reference counting in C++?
+
+-END
+
+How do I provide reference counting with copy-on-write semantics?
+
+FAQ: You can have your class keep all the data in a structure pointed by a member pointer |_data|, and then each method
+   that wants to modify the object has to check the reference count, and if the data is shared by several objects,
+   the data must be cloned before the modification.
+
+FQA: Ultimately, what are you trying to achieve? If you care a lot about efficiency /and/ you care a lot about high
+   level of abstraction /in the same piece of code/, there's probably no easy solution for you. Are you sure
+   it's /the same/ code? Or maybe you want efficiency in some places, and high level of abstraction in other places?
+Then you can use two different languages.
+
+   If it's really the same code, the best solution is probably to write your own little language.
+   It's not as hard as it sounds, and not so strange - think about it: apparently you must write a lot of code
+   (if there wasn't a lot of it, it wouldn't be a problem) in some pretty
+    specific domain, because there's no high level language which supports the right built-in facilities. Or is there?
+   Are you looking for copy-on-write strings or something? /String processing in C++?/ Do yourself a favor and stop right there.
+   Use a language with decent built-in strings.
+
+If there really is no good existing high-level language for your job,
+   basically what you have to do is meta-programming: you want something which is not directly related to the specific meaning
+   of your program - you want objects of pretty much arbitrary classes to behave in a certain way. Which means you want a new language. You can do it with
+   your own compiler or you can do it in a system which supports meta-programming well (the two approaches are really pretty close).
+   C++ meta-programming is a nightmare - the facilities for it are very poor, and there's lots of strange features
+   already in the language that you must interoperate with. You have been warned: this path leads to the gates of madness.
+
+Clarification: I'm not saying that meta-programming is likely to be the solution when you want copy-on-write.
+   On average, that would probably be over-engineering. However, in the cases where it indeed is over-engineering,
+   so is the FAQ's solution; the way to go is probably to have the user code explicitly copy objects upon modifications.
+   And when there's enough code involved to make that tedious, then the C++ solution also gets tedious,
+   and that's when meta-programming could be appropriate.
+                                                                                         
+-END
+
+How do I provide reference counting with copy-on-write semantics for a hierarchy of classes?
+
+FAQ: You do it by writing a lot of code! Like this:
+
+@
+  code;
+  code;
+  code;
+  lots of code;
+  more code;
+  two screens of code;
+  \/\/boy is this FUN!
+  code;
+@
+
+FQA: Here's a solution for another hierarchy of classes (you might have more than one in your project - it happens, and the FAQs
+   "solution" is done on a per-method basis, and /there isn't even a way to iterate over the methods of a class/ in C++,
+   not to mention "transparently instrument the methods of a class with custom logic like copy-on-write"):
+
+@
+  code;
+  code;
+  \/\/why am I doing this?
+  code;
+  code;
+  \/\/help
+  code;
+  \/\/I think I'd rather become a farmer
+@
+
+Seriously, I'm not going to discuss the nightmare that is the FAQ's proposed solution. Follow the link to the FAQ's
+  answer if you want to check it out. What I would like to point out is that it's possible to do all this
+  transparently if your environment has good support for meta-programming. For example, some languages
+  let you write your own code to implement object attribute modification (the simpler option), and\/or automatically
+  generate wrapper classes to intercept methods changing objects (the more complicated option). Either way, you end
+  up with O(1) code to solve the problem instead of O(N), where N is the number of classes involved.
+
+-END
+
+Can you absolutely prevent people from subverting the reference counting mechanism, and if so, /should/ you?
+
+FAQ: You can't, and you /usually/ shouldn't.
+  (Yes, that's pretty much what the FAQ says: sometimes you /should/ do what you /can't/. Just what does "should" mean in its warped universe?)
+                                              
+There are two holes in the armor. First, your |SmartPtr| probably has an |operator*| that returns a bare reference to an object. So you can end up with |Dumb* p = &*smart_p;|.
+  This can be sort of closed using several approaches, each worse than the others in its own unique way. And then
+  there are ways to get the bare pointer with syntax like |smart_p.operator->()|, returning a |Dumb*|.
+
+The second hole is that someone can have dangling references to |SmartPtr|. This can't be prevented even by
+  returning a |SmartPtrPtr| in an overloaded |operator&|, because C++ has /references/ (remember - the new feature you [8.6 should] use instead of the [6.15 evil] pointers),
+  and there's nothing you can overload to prevent someone from taking a reference to your |SmartPtr|.
+
+Use code reviews to figure out what's actually going on with all those smart pointers.
+
+FQA: You can't fake what you don't have (I think the quote is attributed to S. Cray). C++ doesn't have safe memory management. [16.22 Faking]
+  safe memory management leads to still unsafe memory management, with the important bonus of obfuscation.
+
+You can absolutely prevent people from subverting the reference counting mechanism by using a programming language
+  that absolutely prevents people from subverting its built-in memory management mechanisms.
+
+-END
+
+Can I use a garbage collector in C++?
+
+FAQ: Sure you can. Let's compare it to smart pointer techniques. Garbage collection is not as portable, but typically
+  more efficient, and it can handle cyclic references, and it works better with others' libraries because
+  you don't need to explicitly change the pointers from dumb to smart or anything like it. However, sometimes objects
+  can leak - a C++ garbage collector [7.2 can't] tell a pointer from a random bit sequence that just happens to look like
+  a pointer.
+
+FQA: Assuming you live in a free country, what's there to stop you from using a garbage collector in C++? Sure, there
+  are minor obstacles, for example, it doesn't really work, but it's still a free country, isn't it?
+
+Suppose you can use garbage collection, which means that you are not worried about interference with real time
+  requirements. /Why are you using C++?/ Why not use a safe language instead? Look - the C++ FAQ admits that
+  garbage collection is /more efficient/ than C++ "smart pointers" all over the place, and more correct (cyclic references),
+  and the single correctness problem it mentions (random bit patterns) vanishes in a managed environment.
+  So what's the problem?
+
+If you think you need to use C++, deal with the fact that it doesn't have garbage collection, and you must manage
+  memory manually. Or you can deal with the other facts. For example, what happens if two libraries relying on
+  /different/ garbage collectors are supposed to work /in the same program/? What happens if code incompatible
+  with garbage collection (because it does [16.27 "clever"] things with pointers, like |one_based_array = (int*)malloc(arr_size)-1|)?
+  What about destructors? C++ garbage collectors don't know what they're freeing, so you can't have finalization
+  functions. What about all those happy custom allocators C++ programmers [11.14 adore] so much? What if a |malloc|ed object
+  points to an object allocated from such a custom pool? The destructor of the outer object with the pointer is not going to be called - so who is going
+  to deallocate the pointed object from the pool?
+
+C++ does not feel pain. It can't be reasoned with. Starting a fight is a big mistake. If you want to use C++,
+  you must learn to love it the way it is, in particular, manage your memory manually.
+
+-END
+
+What are the two kinds of garbage collectors for C++?
+
+FAQ: There are /conservative/ and /hybrid/ garbage collectors. The conservative ones just look for bit sequences
+  looking like pointers. The hybrid ones require the programmer to specify some layout information explicitly
+  in the code (but they still traverse the call stack conservatively when they look for pointers).
+
+Garbage collectors may cause memory leaks when a bit pattern looking like a pointer is misinterpreted as a proof
+  that the block pointed by this "pointer" is still in use. And some illegal programs may "confuse" garbage collectors
+  (that's the word used by the FAQ) by keeping pointers outside of allocated blocks. Why [12.2 can't] these programmers
+behave [17.10 reasonably]?
+
+FQA: Let's start with a different question: what's the problem with garbage collection in C++? Answer: there is [7.2 no way]
+   to inspect the state of a C++ program and tell which blocks are in use. In environments designed to support garbage
+   collection, you can do that by checking if the program can reach the block using one of the pointers it currently
+   keeps in its memory. But in C++, you can't. First, you don't know where the program keeps pointers
+   (no real run time type information), and second, pointers that don't point into a block can be used to compute
+   pointers that do point into that block (unsafe pointer arithmetics).
+
+   So along come the memory leaks, and the "confusion". And what /happens/ when a garbage collection is "confused"? I'll tell you what happens - it frees an object
+  which is still in use. The result is a crash or a data corruption. Do you think "confused" is a legitimate euphemism
+  in this context? "Oh, I'm so confused! I think I'll kill your program now."
+
+As to the "unreasonable" programmers - well, adjusting a pointer to point before an allocated block is one efficient way
+   to implement one-based (instead of zero-based) arrays, among other things. Of course you can allocate an extra
+   element and avoid violating the rules. But most people don't know these rules, because although they are a part
+   of the language definition, they are not enforced in the widespread implementations, and don't become a part
+   of the mental model developed by programmers as they gain familiarity with the language.
+
+   That is, not only does
+   it /work/ when one implements one-based arrays this way - one /doesn't see a reason for it not to work/: experience
+   consistently tells people that C++ pointers are just a kind of integer. Formally,
+   there are reasons for this to be illegal (like, duh, what happens if you want garbage collection?) - but most people are not language
+   lawyers. In practice, what matters is the de facto standard (that's why it's called "de facto").
+
+-END
+
+Where can I get more info on garbage collectors for C++?
+
+FAQ: `<a href=http://www.iecc.com/gclist/GC-faq.html>`Here`</a>`.
+
+FQA: Don't bother. If garbage collection worked in C++, you would hear about it. C++ has been around for decades, there are hundreds of thousands
+   of C++ programmers, and megatons of C++ code with zillions of memory management bugs. If someone implemented
+   a working solution for this problem, they'd become rich, famous, or both, and the garbage collector(s)
+   would be everywhere.
+
+   [16.26 Why] do you think you don't see too many around?
+
+-END

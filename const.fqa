@@ -1,0 +1,296 @@
+Const correctness
+{'section':18,'faq-page':'const-correctness.html'}
+This is about the |const| keyword, which makes you write your program twice (or more, depending on your luck).
+
+What is "|const| correctness"?
+
+FAQ: Oh, that's a great thing. You declare an object as |const| and prevent it from being modified.
+
+For example, if you pass a |std::string| object to a function by |const| pointer or reference, the function
+won't modify it and it won't be copied the way it happens when the object is passed by value.
+
+FQA: Interesting. What about vector of pointers to objects? Let's see. If the vector itself is declared
+|const| (as in |const std::vector<T*>|), then you can't modify the vector, but you can modify the objects.
+If the pointers are declared |const| (as in |std::vector<const T*>|), then you can modify the vector,
+but not the objects. Now suppose you have a vector of non-|const| objects, and you want to pass them to a function
+that accepts a |const| vector of |const| objects. Oops, can't do that - the vectors are two different unrelated types
+as far as the compiler is concerned (no, C++ weenies, it actually [18.17 doesn't] make sense, think again). You'll have to create a temporary vector of the right type and copy
+the pointers (which will compile just fine since |T*| is silently convertible to |const T*|).
+
+That's what |const| correctness is all about: increasing the readability of your program and protecting
+you from errors without any performance penalties.
+
+By the way, not using |const| in C++ is quite likely /not/ a very good idea. Of all questionable C++ features, |const| probably
+does the most visible damage when avoided. Any piece of code using |const| forces every other piece touching it to use
+|const|, or else you won't be able to work with the objects it gives you. And here's the funny part: every
+piece of code /not/ using |const| forces every other piece touching it /to not use it, either/ - or else you
+won't be able to pass objects to it. So if you have one |const| particle and one anti-|const| particle,
+there's a big shiny explosion of |const_cast| in your code. Since |const| is hard-wired into the
+language (no way to pass a temporary to a function that gets a non-const reference, for example) and the standard library
+(|iterator| and |const_iterator|), using |const| is usually a safer bet than avoiding it.
+
+-END
+
+How is "|const| correctness" related to ordinary type safety?
+
+FAQ: It's one form of type safety. You can think about |const std::string| as an /almost/ separate type that lacks
+certain operations of a string, like assignment. If you find type safety useful, you'll also like |const| correctness.
+
+FQA: It's related to ordinary type safety in a pretty complicated way. |const| and |volatile| are special cases
+in the type system - they are "type qualifiers". The relation between a qualified type and a non-qualified type
+is different from any other relation between types in the language. This is one of the very many complications
+in the implicit conversion and overload resolution rules.
+
+It works smoothly for the simple cases, especially if there are no other complications. It breaks pretty hard
+whenever you have a pointer-like object. Pointers can get /two/ const qualifiers, one for the pointer and one for the pointed values.
+This is awkward and unreadable and when you have pointers to pointers and three const qualifiers, you may need
+cryptic explicit casts, but at least there's syntax for all the levels of constness. With "smart pointers" (the
+things you should stuff into [17.4 every possible hole] because pointers are [6.15 evil]), there's no such syntax. That's why
+we have |iterator| and |const_iterator| - saying |const iterator| says that the iterator is immutable, but not
+what it points to. Exercise: implement a vector-like class that can get the storage pointer from the user,
+in a const-correct way that supports attaching both to constant and mutable storage areas.
+
+And of course a vector of |const| pointers is compiled to a different bulk of (identical) assembly code
+than a vector of mutable pointers. At least here the compiler is writing the same program twice, which is
+better than having to do this yourself. Which also happens - |const_iterator| is one family of examples.
+
+-END
+
+Should I try to get things |const| correct "sooner" or "later"?
+
+FAQ: As soon as possible, because when you add |const| to a piece of code, it triggers changes in every place
+related to it.
+
+FQA: That's right. Since you can't get out of the tar pit, the best strategy is to climb right into the middle
+and make yourself comfortable from the beginning. No kidding, I actually agree with the FAQ.
+See also the advice [18.1 above] about /not/ avoiding |const|.
+
+-END
+
+What does "|const Fred* p|" mean?
+
+FAQ: A pointer to a |const Fred| object. The object can't be changed, for example, you can't call methods not qualified
+as |const|.
+
+FQA: Right. But don't count on it when you debug code. |const| can be cast away in a snap (pretty much like everything
+else in C++), and there's the |mutable| keyword for creating members that can be modified by methods qualified as |const|.
+And of course someone can have /another/, non-const pointer to the same |Fred| object. /And/ the |const|-qualified methods may modify
+data pointed by its member pointers and references or by pointers kept in things pointed by its member pointers, etc.
+
+The pointer aliasing issue is one reason that the compiler /can't/ really optimize code because it sees a pointer declared
+as |const|. And when it /can/ figure out there are no aliases, it /doesn't need/ your const declarations to help it. You
+can explain the difference between data flow analysis and type qualification to the next [10.9 pseudo-performance-aware]
+person who advocates declaring every local integer as |const|. See also a [18.14 correct FAQ answer] to this question below.
+
+-END
+
+What's the difference between "|const Fred* p|", "|Fred* const p|" and "|const Fred* const p|"?
+
+FAQ: In the first example, the object is immutable. In the second example, the pointer is immutable. In the third example,
+both are immutable.
+
+FQA: Um, right. Remember: |const| makes your programs readable.
+
+-END
+
+What does "|const Fred& x|" mean?
+
+FAQ: It's a reference to an immutable Fred object.
+
+FQA: Which is similar to a pointer to an immutable Fred object. However, the FAQ holds the [8.6 "references are NOT pointers"]
+religion (specifically, it belongs to the "pointers are [6.15 evil]" faction), so it dutifully replicates the explanation given
+in the [18.4 answer] about the pointer case, replacing "pointer" with "reference".
+
+-END
+
+Does "|Fred& const x|" make any sense?
+
+FAQ: No. It says that you can change the object, but not the reference. But you can never change a reference anyway, it will
+always refer to a single object.
+
+Don't write such declarations, it confuses people.
+
+FQA: So [25.13 why does this compile]? Wait, I don't really want to know. Whether it's because they didn't bother to disallow it,
+or because some special case of template instantiation (like when you add a |const| to a parameter type which is in fact a reference)
+would fail or anything like that - that's just another lame excuse as far as a language user is concerned.
+
+-END
+
+What does "|Fred const& x|" mean?
+
+FAQ: It's equivalent to "|const Fred& x|". The question is - which form should you use? Nobody can answer this for /your/
+organization without understanding /your/ needs. The are lots of business scenarios, some producing the need for one
+form, others for the other. The discussion takes a full screen of text.
+
+FQA: Yawn. Another [7.8 stupid duplication] in C++.
+
+Come /on/. What "business scenarios" can "produce needs" for a form of a |const| declaration? If your organization employs
+people who can't memorize both forms or check what a declaration means, you have to admit they will drown in
+C++ even if you somehow know for sure that in general they can program. C++ has /megatons/ of syntax.
+
+-END
+
+What does "|Fred const* x|" mean?
+
+FAQ: The FAQ replicates the previous answer, replacing "reference" with "pointer". Probably the same [8.6 religion] thing again.
+
+FQA: Yawn. Another [18.6 stupid duplication] in the C++ FAQ.
+
+-END
+
+What is a "|const| member function"?
+
+FAQ: It's declared by appending |const| to the prototype of a class member function. Only this kind of methods may be
+called when you have a |const| object. Errors are caught at compile time, without any speed or space penalty.
+
+FQA: As discussed above, this [18.2 breaks into little pieces] when your class is similar to a pointer in the sense that
+a user can change both the state of your object and use your object to change some other state. As to the speed
+and space penalty, you may check the symbol table of your program if you want to know how many functions were
+[35.10 generated twice from a single template] because of |const| and non-|const| template parameters. Then you can count
+the functions having identical code except for extra |const| qualifiers in some versions, but not others.
+
+-END
+
+What's the relationship between a return-by-reference and a |const| member function?
+
+FAQ: |const| member functions returning references to class members should use a |const| reference. Many times the compiler
+will catch you when you violate this rule. Sometimes it won't. You have to think.
+
+FQA: /Of course/ you have to think about this complete and utter nonsense! Somebody has to, and the C++ designers didn't.
+
+As usual with |const|, the compiler becomes [18.2 dumb] when levels of indirection appear. For instance, if you keep a member
+reference, the thing it points to is not considered part of the object. It's up to you to decide whether you want
+to return this reference as |const| or non-|const| from your |const| member accessor. Both choices may eventually
+lead to |const_cast|.
+
+-END
+
+What's the deal with "|const|-overloading"?
+
+FAQ: You can have two member functions with a single difference in the prototype - the trailing |const|. The compiler
+will select the function based on whether the |this| argument is |const| or not. For instance, a class with a subscript
+operator may have two versions: one returning mutable objects and one returning |const| objects - in the latter version,
+|this| is also qualified as |const|.
+
+FQA: /Please try to avoid this feature/. In particular, get and set functions having the same name (|const|-overloaded)
+are not a very good idea.
+
+Having to replicate the code of a subscript operator just to add two |const| qualifiers - for the return value and
+the |this| argument - is yet another example of |const| forcing you to write your program twice. Well, most likely
+there are more problems where this one came from. A class with a subscript operator is a "smart array",
+probably not unlike |std::vector|, so you'll end up with much more replicated code - an |iterator| and a
+|const_iterator| or some such.
+
+-END
+
+What do I do if I want a |const| member function to make an "invisible" change to a data member?
+
+FAQ: There are legitimate use cases for this - that would be when a user doesn't see the change using the interface
+of the class. For example, a set class may cache the last look-up to possibly speed up the next look-up.
+
+Use the |mutable| keyword when you declare the members you want to change this way. If your compiler doesn't have
+|mutable|, use |const_cast<Set*>(this)| or the like. However, try to avoid this because it can lead to undefined behavior
+if the object was originally declared as |const|.
+
+FQA: Most compilers probably support |mutable| today, but you may still need |const_cast| because the tweaks to the
+type system supporting |const| [18.2 break in many cases]. Which may be a problem combined with the fact that
+|const_cast| is not designed to work with objects declared as |const| (as opposed to those declared non-constant but passed to a function by |const| reference or pointer).
+
+There are numerous reasons making |const_cast| safer in practice than in theory. People rarely declare objects as |const|.
+Compiler writers are unlikely to add special cases to their compiler to support |const| objects of C++ classes because it's hard work
+that is unlikely to pay off. For example, allocating a global |const| C-style structure with an aggregate initializer in read-only
+memory is easy. Doing the same for a C++ class with a constructor is hard because the constructor must be able to
+write to the object upon initialization. So you'd have to use writable memory you later make readable, which is not
+typically supported by object file formats and operating systems. Or you could translate C++ code to a C-style aggregate
+initializer, spending lots of effort to only handle the cases when the compiler can [9.1 inline] the code of the constructors.
+
+However, there is no simple rule making it "very close to impossible" for a compiler writer to use the opportunity
+provided by the standard and implement |const| objects differently from other objects. In the case of [18.4 optimizing]
+the dereferencing of |const| pointers, such a rule does exist (there might be other, non-|const| pointers to the same location).
+But in the case of objects declared |const|, there /should/ be no such pointers.
+
+The fact that the compiler is allowed
+to work under this assumption could be great if it were more likely to actually yield performance benefits, and
+if |const| worked to an extent making the use of |const_cast| unnecessary. The current state of affairs just
+creates another source of uncertainty for the programmer.
+
+-END
+
+Does |const_cast| mean lost optimization opportunities?
+
+FAQ: Theoretically, yes. In practice, no. If a compiler knows that a value used in a piece of code
+is not modified, it can optimize the access to that value, for example, fetch it to a machine register.
+However, the compiler can't be sure that a value pointed by a |const| pointer is not modified because
+of the aliasing problem: there can be other pointers to the same object, not necessarily constant.
+Proving the opposite is almost always impossible.
+
+And when the compiler can't prove it, it can't speed up the access to the value. For example, if it
+uses the value it fetched to a register after someone modified it in the original memory location,
+the compiler changes the meaning of the program because it uses an outdated value.
+
+FQA: Three cheers to the FAQ! No, really, this time the answer describes the actual state of affairs.
+You understand why I'm so deeply touched if you met some of [18.4 the many C++ users] who
+give a different answer to this question, and know their [10.9 ways] to reason about performance.
+
+I think the answer is "no" in theory, too, because basically the compiler has to figure out which parts of
+the code modify the data, and if it knows the data won't get modified while this piece of code is running, it can use
+this fact, and otherwise it can't, so what difference do your |const|-qualifications make? But let's
+say I'm not really sure, and anyway, it's not the time to argue about the exact phrasing when once in
+a lifetime a realistic statement appears about the performance of C++ code.
+
+The thing that is worth noting is that aliasing problems impede the performance of "generic" libraries, not just compilers.
+For example, consider |vector<T>::push_back()|. The vector will try to append the object to its storage.
+If there's no free space left, it will allocate a larger chunk, copy the old objects, and then append the
+new one. The new object is thus copied once (from wherever it was into the vector storage), right?
+
+But what if the object [12.2 is itself located in the old chunk], and |vector| tries to be efficient and use |realloc|, which
+may or may not free the old memory? The object may be wiped out by |realloc|. Very good, then, |vector|
+creates /another/ copy. Hop 1 - from the parameter to a temporary, hop 2 - from a temporary to the vector storage
+and everyone is happy - after a certain amount of clock cycles.
+
+"Theoretically, yes. In practice, no." Quite a nice summary of C++.
+
+-END
+
+Why does the compiler allow me to change an |int| after I've pointed at it with a |const int*|?
+
+FAQ: Because when you point to something with a |const| pointer, this only means that you can't
+use that pointer to change the object. It doesn't mean the object can't be changed at
+all, because it can be accessible in other ways, not only through this pointer.
+
+FQA: Exactly; it's related to the previous FAQ. Surprisingly for C++, it even makes sense.
+After all, when the object is /declared/, it seems like the right place to say what can be done with it.
+But if anyone can take an existing object
+and point to it and thus redefine what can be done with it, it's just weird, and can't really
+work, because it could be done from many places in incompatible ways.
+
+-END
+
+Does "|const Fred* p|" mean that |*p| can't change?
+
+FAQ: No, for example, it could change through a non-constant |Fred* q| pointing to the same object.
+
+FQA: This question is just like the previous one.
+
+-END
+
+Why am I getting an error converting a |Foo**| to |const Foo**|?
+
+FAQ: It would be "invalid and dangerous"! Suppose |Foo**| points to an array of pointers, which
+can be used to modify the pointed objects. Suppose C++ would allow to pass this array to a function
+which expects |const Foo**| - an array of pointers which /can't/ be used to modify the pointed objects.
+
+Now suppose that this function fills the array with a bunch of pointers to /constant/ objects.
+This looks perfectly good in that context, because that's what the function was passed - an
+array of pointers to constant objects. But what we've got now is an array of pointers which can be used to modify those |const| objects,
+because the declaration of the array does allow such modifications!
+
+It's a good thing we get a compile time error instead. Don't use casts to work around this!
+
+FQA: Wonderful. But why are we discussing evil built-in pointers anyway? Let's talk about the smart
+C++ array classes. Why can't I pass |std::vector<T*>&| to a function expecting
+|const std::vector<const T*>&|? The function clearly says that it's not going to modify /anything/:
+neither the vector nor the pointed objects. Why can't I pass my mutable vector of mutable objects
+to a function that promises not to modify either of those?
+
+-END

@@ -1,0 +1,340 @@
+Inheritance -- multiple and virtual inheritance
+{'section':25,'faq-page':'multiple-inheritance.html'}
+This section is about multiple inheritance. While inheritance and |virtual| functions are among the most useful (that is, [20.1 the least useless]) C++ features, C++ multiple inheritance is at the other end of the spectrum.
+
+How is this section organized?
+
+FAQ: The FAQ section contains both "high-level" issues (the meaning & purpose of the language constructs) and "low-level" issues
+(the detailed semantics & implementation of the language constructs), in that order. Be sure to understand the high-level stuff before
+delving into the low-level stuff.
+
+FQA: This FQA section is organized exactly like the other FQA sections - by copying the structure of the FAQ sections.
+
+The FAQ's note about the two levels of discussion is equally applicable to all C++ features\/programming languages\/software systems\/formal definitions in the world. But it's located here and not elsewhere for a reason. The reason is
+that C++ multiple inheritance makes very little sense even by C++ standards. In other words, the cases where you
+can express a useful high-level idea using the actual features used to implement multiple inheritance in C++ are rare.
+So people end up not using it, or abusing it, but fail to use it "right", because it's unclear what "right" means
+in this context.
+
+The FAQ apparently believes that this situation can be fixed by explaining what "right" means.
+Let's sit back and watch.
+
+-END
+
+I've been told that I should never use multiple inheritance. Is that right?
+
+FAQ: THESE PEOPLE REALLY BOTHER ME!! How can they know what you should do without knowing what you want done?!?!
+
+FQA: This rage may provoke some sympathy. We've all met people who don't seem to be doing anything useful
+themselves and compensate for it by getting in others' way and telling them how to do their job, their ultimate goal apparently being to stop
+any useful work around them. In particular, language features which should really /never/ be used are rare. However,
+language features which should be used really rarely and with careful consideration are [23.12 more common], and C++ multiple
+inheritance is one of them.
+
+There are two kinds of problems with multiple inheritance - "static" and "dynamic".
+
+The "static" problems have to do with
+compile-time name lookup. Suppose you derive a class C from classes A and B, and both have a method called |name|. Which one
+will get called when someone calls |name| using a pointer to a C object? If you override |name| in the class C, did you
+override |A::name|, |B::name| or both? What happens if the two |name| functions accept arguments of the same type?
+What happens if they don't?
+
+The "dynamic" problems have to do with the way objects of the class C are actually built, and the run time effects
+related to it. Basically, a C object will contain an A sub-object, and a B sub-object, and those two will be
+completely unrelated. So if you have a pointer to a C object, and you (silently) upcast it to A*, and write code assuming
+that you get an object which is derived from both A and B, and cast the A* to B*, the program will crash or worse. What you
+should have done is first cast the object to C* and /then/ to B*, since without knowing the definition of C, there's
+[32.8 no way] to figure out the location of the B sub-object given the location of the A sub-object. This is one trap
+even a pretty experienced C++ programmer can fall into.
+
+You can memorize the sharp edges, or you can stay away from the whole thing. Pick your poison.
+
+-END
+
+So there are times when multiple inheritance isn't bad?!??
+
+FAQ: Sure! Sometimes (but not always) using multiple inheritance will lower all kinds of costs. If this is so in your case,
+use it! If it isn't, don't blame multiple inheritance - "good workmen never blame their tools".
+
+FQA: No, there are no such times, it's a poorly designed language feature. But it could be that sometimes the other options
+available in C++ are even worse.
+
+While we're at it, let's clarify the whole blame issue. If you /choose/ to use a tool not suitable for your job,
+you shouldn't blame the tool. Well, actually, you should blame the vendor of the tool if it was advertised
+as something it wasn't. Was C++ ever advertised that way, for example, what about
+[7.1 support for object-oriented programming]?
+
+Well, we don't even need to discuss that, because a programming language is not exactly a tool. It is more accurately
+described, well, as a /language/. The key difference between tools and languages in the context of "blame" is /choice/.
+You probably don't choose to speak English - you do so in order to communicate with all the other people speaking
+English. When a bunch of people do something because other people do it, too, it's called "network effects".
+For example, if you want to work on a project for reasons having nothing to do with computer linguistics,
+and the project uses C++, you'll have to use C++, too. No choice.
+
+So that's the difference between a language and a tool. Still, you wouldn't blame English because it's
+so hard to learn or inconsistent or whatever, would you? Well, the difference between a programming language
+and a natural language is that the latter is, um, natural, so there's nobody to blame, while the former
+was actually designed by someone (well, usually). The other difference is /the cost of an error/. People
+usually recover from bad English, computers tend to be less tolerant.
+
+And this is why you seem to have more ground to "blame the language" than to "blame the tools" in the general case.
+Of course you may not like the whole attitude of "blaming" things, etc.; everybody is free to feel
+any way they feel like or something. But that
+has nothing to do with being a "good workman" (which itself has an irksome sound to it, mind you).
+
+-END
+
+What are some disciplines for using multiple inheritance?
+
+FAQ: There's a long answer saying 3 things. First, you should normally do it to achieve polymorphism, not base class code reuse.
+Second, the classes you multiply inherit from should normally be pure abstract. Third, you should consider using
+the "bridge pattern" or "nested generalization" - alternatives to MI described [25.5 below].
+
+FQA: The guidelines are pretty good, except for maybe "nested generalization", which is really a way to work around the
+deficiencies of the C++ object system rather than a reasonable way to model anything.
+
+If you like "disciplines" without any reasoning having to do with the actual problem at hand, here's some more for you.
+The FAQ's guidelines are a special case of "don't use designs which would only work in one programming language"
+(footnote: /especially/ if that language is C++). Specifically, the FAQ's guidelines pretty much summarize the /rules/ for using
+multiple inheritance in Java, so your design would be implementable in at least two languages, which is a good sign.
+The reasoning behind the avoid-designs-tied-to-one-language rule is that if something is really good, many languages would have it, and if your design
+depends on something only available in one language, it's probably bad because it probably depends on a bad thing.
+This is the point where people loving the unique feature of language X scream that this reasoning is completely
+/moronic/, but we already knew that, because we promised our reasoning wouldn't refer to the specific problem at hand, which isn't very
+bright by itself.
+
+If you're into real reasoning and not just "disciplines", one nice thing about having the base classes pure is that this way,
+you don't have to think about a whole class of questions related to reimplementation of methods. For example, if you
+inherit a |RectangularWindow| from a |Rectangle| and a |Window|, and |Rectangle| isn't pure and it has a perfectly
+good |resize| method, is this method still good for |RectangularWindow| or do you want it to resize the window, which
+the implementation in the base class obviously won't do? And what if you can't [23.8 really] override the |Rectangle::resize|
+method because it isn't |virtual|? The problem with reusing code from the base class is that
+multiple inheritance frequently breaks that code.
+
+However, following these guidelines won't necessarily eliminate the problems with multiple inheritance mentioned [25.2 above].
+
+-END
+
+Can you provide an example that demonstrates the above guidelines?
+
+FAQ: There's a very long discussion of an example with different kinds of vehicles having different kinds of engines.
+The FAQ proposes to use MI, or the "bridge pattern" or "nested generalization". "Bridge pattern" means that vehicle objects keep pointers to engine objects,
+and users can pass many different kinds of engine to an object of the same vehicle class. "Nested generalization"
+means that you have many classes derived from |Vehicle| (like |Plane|), and then for each such derived class there's a bunch of
+classes derived from it to represent the different kinds of engine (like |OilPoweredPlane|). Trade-offs are discussed
+in great detail.
+
+FQA: The "bridge pattern" ([23.2 a fancy name] for the special case of aggregation when your member object has |virtual| functions) looks good here, since, um,
+a vehicle has an engine and stuff. And hence multiple inheritance looks wrong, since an |OilPoweredPlane| isn't a kind
+of an |OilPoweredEngine|.
+
+I don't feel like arguing with the FAQ's lengthy statements, since the issue isn't worth it. The cases when you deal with the definition of
+non-trivial object models are relatively rare. And when you do it, you have enough time to consider what stuff you
+really want the model to support, and then think about the different possibilities to define the model and check if each possibility really supports that stuff.
+I think that trying to memorize special cases (call them "patterns" or whatever) of object models is basically like
+trying to formalize common sense, which doesn't really work.
+
+Are you still with me after this blasphemy? Then let's look at one non-problem mentioned by the FAQ - the fact that with
+aggregation ("bridge pattern"), you can't specialize algorithms such that a specific combination of vehicle and engine
+exhibits a special behavior. In languages which support multimethods, doing that is trivial (multimethods are like |virtual|
+functions, but they are dispatched at run time based on the types of all arguments, not just the first argument).
+And in C++, you can emulate multimethods using double dispatching (ugly, especially when it becomes triple, quadruple
+                                                                   and other such kinds of dispatching, but still possible).
+
+-END
+
+Is there a simple way to visualize all these tradeoffs?
+
+FAQ: Here's a matrix with cute smilies for ya. Just don't apply it naively.
+
+/Cute matrix omitted to avoid copyright problems, as well as cuteness problems/
+
+FQA: `<b>WARNING:</b>` there's no known way to represent common sense in a tabular form at the time of writing.
+Therefore, if you choose to store the cute matrix anywhere in your brain, you do it at your own risk.
+
+-END
+
+Can you give another example to illustrate the above disciplines?
+
+FAQ: Yes - consider the case with land & water vehicles, when you also need to support amphibious vehicles. This case
+is more "symmetric" than the [25.5 previous] example, so multiple inheritance becomes more preferable. Still,
+you have to make sure you really want it by asking various questions (for the list of questions, follow the link to the FAQ).
+
+FQA: Um, "symmetry" is an interesting aspect of this to focus on, but anyway, an amphibious vehicle is both a land vehicle
+and a water vehicle, while an oiled powered plane is a plane, but is [25.5 not] an oil powered engine. So yes, multiple
+inheritance seems more appropriate, and yes, it's wise to think about the things you ultimately want your object
+model to support before defining it.
+
+We'll use the opportunity to show how to model this problem effectively using multiple inheritance
+(implementation of multiple interfaces by the same class) without really using C++ multiple inheritance
+(and thus avoiding some of its [25.2 problems]). I'm not saying that this always better
+ than real C++ multiple inheritance, just that it sometimes can be.
+
+@
+class AmphibiousVehicle {
+  class WaterVehicleImpl : public WaterVehicle {
+    WaterVehicleImpl(AmphibiousVehicle* p) { \/* save p *\/ }
+    ...
+  };
+  \/\/ similarly, there's a LandVehicleImpl class derived from WaterVehicle
+  WaterVehicleImpl _water;
+  LandVehicleImpl _land;
+public:
+  AmphibiousVehicle() : _water(this), _land(this) {}
+  WaterVehicle& getWaterVehicleIF() { return _water; }
+  LandVehicle& getLandVehicleIF() { return _land; }
+};
+@
+
+This way, you write more code than with multiple inheritance, which is bad.
+It gets even uglier if you want to simulate [25.9 virtual inheritance],
+which is bad if |WaterVehicle| and |LandVehicle| inherit from a non-abstract base class |Vehicle|
+ ([25.4 not necessarily recommended] by itself).
+ And you have to call |get| functions
+ instead of implicit upcasts, which may be considered good or bad.
+ And there are no problems such as collisions
+ between names of the members of the base classes (which is good).
+
+-END
+
+What is the "dreaded diamond"?
+
+FAQ: It's when there are circles in the inheritance graph. Here's the simplest case: |Derived1| and |Derived2| are
+ inherited from |Base|, and |Join| is inherited from both |Derived1| and |Derived2|. The circle in the graph may look
+ like a diamond if your imagination works that way.
+
+The problem is that |Join| objects have /two/ |Base| sub-objects, so each data member is kept twice. Which is why
+ the diamond is called "dreaded".
+
+The resulting ambiguities can be resolved. For example, when you have a |Join| object and refer to its |_x| variable inherited from |Base|,
+ you can tell the compiler which one you mean using |Derived1::_x| or |Derived2_::x|. When you upcast from |Join*|
+ to |Base*|, you can pick one of the two |Base| sub-objects by first casting the pointer to |Derived1*| or |Derived2*|.
+ But this is almost always not the right thing to do. The right thing to do is usually to
+ [25.9 tell the compiler to keep a single sub-object].                                     
+
+FQA: Most C++ programmers out there don't understand why would anyone say |(Derived1*)pJoin| in a context where
+ a |Base*| is expected. This by itself is a good reason to avoid having two sub-objects of |Base| in |Join|.
+
+If you feel that things are getting pointlessly complicated at this point, it may be an indication of good taste.
+
+-END
+
+Where in a hierarchy should I use virtual inheritance?
+
+FAQ: At the top of the dreaded diamond - when you derive from |Base|, you should say:
+
+@
+class Derived1 : public virtual Base { ... };
+class Derived2 : public virtual Base { ... };
+@
+
+Note: when you define |Join|, you can't convince the compiler to keep a single |Base| sub-object - it will
+ do whatever the definitions of |Derived1| and |Derived2| tell it to do. That is, when you define the
+ classes derived from |Base|, you must plan ahead to support circles in the inheritance graph.
+
+FQA: Let's put aside the question whether the support for both options - one and two |Base| sub-objects -
+ is a good thing, and concentrate on the way C++ gives you to choose between these options. Doing it
+ "at the top of the diamond" is annoying, because you have to think about the entire hierarchy when you
+ define the classes close to its top. That is, either /all/ derived classes will have several |Base| sub-objects or
+ /all/ of them will have one (forcing the [25.13 users] and the [25.12 implementers] of derived classes to deal with the problems of virtual inheritance).
+
+ In general, it is a special case of the generic C++ principles of specifying everything in terms
+ of [15.1 types and their attributes], as well as having the user [32.8 deal with the low-level details]
+ related to underlying language feature implementation.
+
+-END
+
+What does it mean to "delegate to a sister class" via virtual inheritance?
+
+FAQ: If you have a [25.9 diamond-like hierarchy with virtual inheritance], and |Base| has two virtual functions f and g,
+ then |Derived1| can implement f, |Derived2| can implement g and |Derived1::f| can call |Derived2::g| by simply
+ saying |g();| or (more verbosely and equivalently) |Base::g();| - that is, without knowing anything about
+ the existence of |Derived2|.
+
+ This is a "powerful technique".
+
+FQA: "Powerful". What exactly can you do this way that can't be done equally well or better in ways more clear
+ to the average developer?
+
+What's that? You say that you only care about the enlightened wizards (variant: the set of wizards consists of a single person - yourself),
+ not the mediocre droids from the rank-and-file? Well, I'll leave the interesting discussion of your personality aside.
+ I'll leave it aside in order to point out that some of the people whose programming abilities I admire can't be bothered to
+ learn the quirks of C++ anywhere near my level. My level, in turn, isn't itself anywhere near "complete" knowledge
+ of this wonderful language.
+
+-END
+
+What special considerations do I need to know about when I use virtual inheritance?
+
+FAQ: Usually virtual inheritance is a good idea only if the virtual base class and classes derived from it have little
+ or no data.
+
+ BTW, even if they have no data at all, using virtual inheritance can still be better than non-virtual inheritance.
+ For example, if you have two |Base| sub-objects (with no members), you can end up with two pointers to the
+ different sub-objects, and comparing them would tell you that these are two different objects, which they aren't,
+ at some level. Quote: "Just be careful - very careful".
+
+FQA: Yeah. Be vewy, vewy caweful...
+
+ The FAQ's advice is a special case of its [25.4 other] advice about inheritance - data in base classes
+ interacts badly with MI. And as the FAQ correctly points out, not having data in base classes
+ doesn't solve all of the problems.
+
+-END
+
+What special considerations do I need to know about when I inherit from a class that uses virtual inheritance?
+
+FAQ: Derived classes call the constructors of their virtual base classes directly. In particular, when a virtual
+ base class has no default constructor, you have to call its constructor explicitly in the initialization
+ lists of the constructors of the derived class.
+
+If the base class follows [25.11 the FAQ's advice] about not having data in virtual base classes, then the base class probably has a trivial default
+ constructor and you don't have to care about the issue when you define derived classes.
+
+FQA: If the base class follows
+[10.6 the FQA's advice] to avoid non-trivial constructors and use
+initialization functions when needed, you don't have to worry about initialization of derived classes
+with virtual base classes, either.
+
+-END
+
+What special considerations do I need to know about when I use a class that uses virtual inheritance?
+                                
+FAQ: Don't use downcasts using the C-like syntax |(Derived*)pBase|. Use |dynamic_cast<Derived*>(pBase)|.
+
+The answer is unfinished according to a "TODO" remark in it.
+
+FQA: The problem seems to be that with virtual inheritance, the offset that must be added to |pBase| to make
+ it |pDerived| depends on the classes /derived from Derived/
+ (like the |Join| class from the [25.8 "dreaded diamond"] example). So the compiler can't generate code
+ adding a constant offset, which is what C-style casts do when it comes to class hierarchies (upcasting and downcasting).
+
+ Why does the code silently compile to a wrong program, despite the fact that C++
+ [25.9 already forced us] to inform the compiler that we have virtual inheritance at the definitions of
+ the classes involved in the cast operation
+ (not the definition of the |Join| class which isn't necessarily visible at the context where the cast operation is compiled)?
+Why doesn't the compiler produce an error message or generates correct code as if we used |dynamic_cast|?
+
+The answer is simple: in C++, the compiler compiles random meaningless things because it
+[23.5 can't be bothered] not to.
+
+-END
+
+One more time: what is the exact order of constructors in a multiple and\/or virtual inheritance situation?
+
+FAQ: So and so.
+
+FQA: I don't want to summarize it, because why would anyone want to know that? Well, except maybe to suppress
+ stupid compiler warnings about the orders of things in initialization lists not matching the actual order of construction.
+
+Well, [25.12 why] would you use initialization lists?
+
+-END
+
+What is the exact order of destructors in a multiple and\/or virtual inheritance situation?
+
+FAQ: The reverse order of construction.
+
+FQA: Right. But you probably shouldn't write code that depends on these things. Your colleagues may get annoyed.
+
+-END

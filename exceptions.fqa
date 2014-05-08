@@ -1,0 +1,320 @@
+Exceptions and error handling
+{'section':17,'faq-page':'exceptions.html'}
+This page is about C++ exceptions - an error handling facility which may be worse than dereferencing a null pointer upon error.
+
+What are some ways |try \/ catch \/ throw| can improve software quality?
+
+FAQ: You'll have less |if| statements in your code: you won't have to check for errors
+each time you call a function. Conditional statements are known to contain
+more bugs than other statements. With less |if| tests, you'll ship a better product, faster.
+
+FQA: This is `<a href=http://en.wikipedia.org/wiki/Cargo_cult>cargo cult</a>` programming. Conditional
+statements are error-prone because they are used to handle complicated scenarios, where an action
+can result in many different outcomes, which affect the next actions. In order to make errors less probable, one has to simplify
+the model of the desired behavior of the software. The problem is the complexity that leads to |if|
+statements, not the |if| keyword, and using different keywords is not going to solve the problem by itself.
+
+Exceptions are supposed to simplify the error handling model based on the assumption that in most cases,
+a function that detected an error can't handle it, and has to propagate it to the caller. Finally,
+a "high-level" enough caller is reached and actually makes a decision (pops up an error message, tries a different
+action, etc.).
+
+Despite its promises, this approach has inherent problems. There's a "social" problem -
+with exceptions, people are not aware of the different errors that may happen in the code because most
+of the code doesn't deal with errors. And when people rarely think about a particular aspect of an application,
+ultimately this aspect is unlikely to be handled well. There's a more "technical" problem - functions essentially
+doing nothing upon error except for propagating errors to the caller still can't be completely unaware of errors.
+That's because they may need to release the resources they acquired before returning to the caller, which
+may lead to /more/ errors, which must also be handled. Finally, in practice exception support has run-time overhead, and very
+significant code size overhead, even if exceptions are never raised at run time, and even if they are /not mentioned/ in your code.
+C++ devotees may claim otherwise; you can check by compiling your code with and without exception support (if your compiler
+doesn't have such a flag, compile code as C and as C++ instead). This is unacceptable in resource-constrained systems.
+
+Still, in many cases, the benefits of exceptions are more important than their problems. For example, if your
+language manages memory automatically, the problem of releasing acquired resources becomes a small one (you only
+have to care about files, etc., which are a tiny part of the "resources" used by a program - most of the
+"resources" are memory). If your language throws exceptions when you violate its rules (for example, upon
+out-of-bounds array access), these exceptions will help you find lots of bugs, especially if you can get the call stack
+from an exception. If the purpose of an application is automated testing, and\/or it's used as a quick-and-dirty
+internal tool as opposed to a product for an end user, this kind of exceptions is all you need to handle errors of
+almost all kinds. In some languages, you can even resume the execution from the point where the exception was
+raised after fixing the problem at the point where it was caught.
+
+C++ exceptions offer none of these features. "Exception-safe" C++ code [17.3 can't handle errors] which happen
+when it tries to release resources; "exception-unsafe" C++ code will [16.1 leak] resources, most frequently memory; and once you throw
+an exception, the call stack is [17.7 lost]. This means that even separating your code to several processes and executing
+code like |*(int*)0 = 0;| upon error is a better way to handle errors than C++ exceptions: at least the memory
+is going to be reclaimed by the operating system, and you can typically have it save a snapshot of the process,
+so that you can open it in a debugger and see where the error happened. A recommendation to "ban" exceptions
+is probably over the edge, but think /a lot/ before using C++ exceptions, /or/ a feature that implicitly depends
+on them, such as [17.2 constructors] and [13.1 overloaded operators], which have no other way to report an error. What C++ calls
+"exceptions" is as unlikely to give you the benefits people get from exceptions in other languages as what
+C++ calls "classes" is [7.1 unlikely] to give you the benefits of OO.
+
+-END
+
+How can I handle a constructor that fails?
+
+FAQ: As you'd guess from the location of this question in the FAQ, the answer is "by throwing an exception". Alternatively,
+you can mark the object as a "zombie" by using some kind of validity flag. You can then check that flag in the
+calling code and maybe in the member functions of the object. The latter solution tends to "get ugly".
+
+FQA: The inability to gracefully handle errors in C++ constructors is one good reason to [10.17 avoid] constructors
+that do more than nothing, and use initialization functions instead. And C++ exceptions are not a graceful way to
+handle errors, /especially/ in constructors. If your member object constructor throws an exception,
+and you want to catch it in your constructor, the normally [10.6 ugly] colon syntax gets much uglier.
+
+By the way, the C++ standard library doesn't throw exceptions in constructors (except for the ones thrown by
+|operator new|). For example, you are supposed to test whether |ofstream| objects are zombies when you pass
+them a filename in the constructor.
+
+-END
+
+How can I handle a destructor that fails?
+
+FAQ: Actually you can't - not beyond logging the problem to a file or the like. In particular, /do not/ throw an exception.
+The problem is that destructors are called when exceptions are thrown so that functions propagating errors to their
+callers can clean up resources. Your destructor can also be called in such a situation. And when an exception is already
+thrown, throwing another one will result in a call to |terminate()|, killing your process. Because you see, what else could C++ do?
+There's an ambiguity: which exception out of the two do you want caught now?
+
+Strictly speaking, you can make that "do not throw exceptions in a destructor unless you are sure that it won't be called
+as a result of an exception already thrown", but you can rarely be sure of that.
+
+FQA: That's right, |terminate()|. Solomon-style conflict resolution carried to the end.
+See? Exceptions are not a graceful way to handle errors.
+
+And "don't throw exceptions in destructors" actually means "don't call functions in destructors unless you
+are sure they don't throw an exception". The C++ compiler won't check for you, because it can't: the language
+doesn't force a function to declare whether it throws exceptions.
+
+This is one good reason to avoid destructors
+doing more than nothing: like constructors and operators, they can't handle errors.
+
+-END
+
+How should I handle resources if my constructors may throw exceptions?
+
+FAQ: Well, the destructor of your class will not get called, but the destructors of the successfully constructed
+sub-objects will get called. Conclusion: you should have all the resources allocated by your constructors
+assigned to sub-objects. For example, if you call |new| in a constructor, don't use a bare member pointer to hold
+the result - use a smart pointer, like |std::auto_ptr|. You can also define your own smart pointer classes to
+point to things like [13.3 disk records]! Groovy!
+
+And you can use |typedef| to make the syntax of using smart pointers easier.
+
+FQA: `<b>WARNING</b>` - cyclic dependency between C++ features detected! You see, exceptions are a must in this language
+so that you can handle errors in all the functions which fail to look like functions, such as constructors & operators.
+Then it turns out that you need /constructors/ to work with /exceptions/ - unless each and every piece of memory
+you acquire is not immediately assigned to some smart pointer, your code is not exception safe. This is known
+as "Resource Allocation Is Initialization" (RAII) in the C++ community; it's supposed to be a /good/ thing.
+
+And smart pointers are no picnic, as are virtually all automatic devices with something like "smart", "simple" or
+"fast" in their name. Sure, you can use |typedef| to simplify the syntax. So can someone else; you'll end up with
+many different type names for the same thing. This may annoy people, but it's perfectly OK with the compiler -
+when it spits an [35.17 error message], it simply substitutes the full type names for all |typedef| names. But you can write a program to filter
+the error messages...
+
+Seriously, the syntax of smart pointers is the small problem. The big problem is their semantics. When you see
+a bare pointer, you know how it works. But a smart pointer can work in /a lot/ of ways. The [http://boost.org boost] libraries allow
+you to instantiate hundreds of different smart pointer classes from a single template (which made it to TR1, so we're going to see it in the next version of the C++ standard). How are you going to
+figure out whether your program manages resources correctly or not when it's littered with smart pointers of different kinds,
+especially in case there's any non-trivial scenario there, like the cases when "ownership" (the right & duty to dispose a resource)
+is passed from object to object, or there are cyclic references in your code, or whatever?
+
+When every single piece of software is "smart", and you can't trust things like |*p| and |p->x|, the software
+becomes unmanageable.
+
+-END
+
+How do I change the string-length of an array of |char| to prevent memory leaks even if\/when someone throws an exception?
+
+FAQ: If you want to work with strings, use something like |std::string| instead of |char*|. Otherwise, there's lots
+of exceptions to catch, and lots of code to manage memory.
+
+FQA: The FAQ is right about one thing - |char*| is a nasty kind of string, and using it for text processing is very
+tedious. If you're doing anything not entirely trivial with strings, |std::string| is better than |char*|; using
+a different language than C++ for text processing, one with a good built-in string type, is still better.
+
+However, the part with exceptions really comes from |operator new|, not from |char*|. You can use |malloc| instead, or
+configure your compiler to disable exceptions.
+
+-END
+
+What should I throw?
+
+FAQ: C++ allows you to throw objects of arbitrary types; however, you probably shouldn't throw objects of built-in
+types. For example, you can derive all your exception classes from |std::exception|, and throw temporary objects
+of your classes.
+
+FQA: Yep, C++ allows to throw anything. Too bad you can't really /catch/ it later. The only way to catch an arbitrary exception
+is to use |catch(...)|, which doesn't let you find out what was thrown from where, and will even catch
+/illegal memory access/ on some systems. This makes finding code like |throw "C++ is so grand - you can throw anything!!";|
+a lot of fun (you have to find it on occasions when the uncaught exception crashes your program).
+
+The FAQ's advice is thus a good one, as opposed to the language decision to allow to throw anything - a typical example
+of the twisted notion of "generality" used throughout the language design. This decision is completely incomprehensible
+unless you realize that there's a basic axiom in C++: the language must not force the compiler writer to treat any class
+specially. For example, having a common base class for all user-defined classes which have at least one |virtual| function could
+be quite handy, but it's incompatible with this implicit axiom. What did the C++ designers gain from following this
+bizarre rule? Apparently nothing, except for an illusion of "generality", whatever that means.
+
+-END
+
+What does |throw;| (without an exception object after the |throw| keyword) mean? Where would I use it?
+
+FAQ: It means "throw the last caught exception". It may be handy to catch an exception object, add some context information
+and rethrow it; this way you get something like a stack trace. This feature also allows you to factor out several exception
+handlers into a function called from a |catch(...)| block. Inside the function, you list the handlers for various special
+cases and prefix them with |try { throw; }|.
+
+FQA: Rethrowing the last exception is a useful feature, and many languages have it. It would be equally useful in C++ if C++
+exceptions were any good. In particular, having to use this kind of feature throughout the code to get a /call stack/
+is an insult to the language user. Unless it's some kind of "logical" call stack (context information not equivalent to
+the list of C++ functions you'd see in a debugger at the point where the exception was thrown), call stacks should be
+provided by the language.
+
+If you are using C++ and want to figure out the current call stack, it may be better to
+rely on platform-specific tricks (reading the frame pointer using inline assembly and traversing the linked list pointed
+by it, then translating the instruction pointers using a symbol table) than to litter your code with statements
+duplicating the information that's already there.
+
+-END
+
+How do I throw polymorphically?
+
+FAQ: Suppose you have a |BaseEx| exception class and a |DerivedEx| exception class, which is inherited from |BaseEx|.
+Than the following code might not work as you expect:
+
+@
+void f(BaseEx& e)
+{
+  throw e;
+}
+void g()
+{
+  DerivedEx e;
+  try {
+    f(e);
+  }
+  catch(DerivedEx&) {
+    std::cout << "derived exception caught" << std::endl;
+  }
+}
+@
+
+The program will /not/ enter the |catch| block because you didn't throw polymorphically. That is, the statement |throw e;|
+throws the object |e| as a |BaseEx|, because that's the type of |e| in that context; once an object is thrown as a
+|BaseEx|, it will not get caught as a |DerivedEx|. If you prefer the other behavior, you can "easily get it" by having a
+|virtual void raise() { throw *this; }| in your base class /and/ your derived class, and calling |e.raise();| instead of
+|throw e;|. This way |DerivedEx::raise()| is called, and in the context of that function |e| is of type |DerivedEx|.
+
+FQA: Let's see. You use C++ exceptions. Moreover, you have a hierarchy of exception classes. Moreover, you /pass exception
+objects to functions/, in a way relying on an /implicit upcast/. Looks like you have lots of confidence in your knowledge of
+C++ features. But along comes C++ and beats your common sense once again. The startling inconsistency of the language is
+almost a virtue: maybe this time you will learn the value of simplicity and write something readable.
+
+The behavior of |throw|, which looks at the static type of its argument expression, is somewhat surprising considering the
+behavior of |catch|, which does "respect" inheritance (to the extent made possible by |throw|). In practice, it is probably
+better to remove some of the complexity in the example rather than add more complexity by mixing the dynamic binding
+of |virtual| with the static binding of |throw|. A human might need to understand the code, you know.
+
+If you do want
+to memorize the quirks of C++, try to warp your mind to think in terms used by the compiler construction peanut gallery.
+From this perspective, the behavior of |throw| and |catch| /is/ consistent: both only look at things known at compile time
+(the relationships between classes), and ignore things only known at run time (the actual type of an object). Basically
+all of C++ behaves this way except for |virtual|, |dynamic_cast| and |typeid|. I think.
+
+-END
+
+When I throw this object, how many times will it be copied?
+
+FAQ: Zero or more. There's no universal answer. The compiler has to make sure a thrown object provides a copy constructor,
+even if it doesn't actually copy anything.
+
+FQA: If you care about performance, C++ exceptions are probably no good for you. Exception support translates to a huge
+mountain of code in your executable, and slows down function calls throughout your program. If you didn't care about
+performance, you wouldn't ask this question. If you /think/ that you [10.9 care] about performance, but never actually measure
+it or look at the performance implications of the techniques you use in your code, feel free to entertain yourself with
+any fake answer that suits your emotional needs.
+
+-END
+
+Exception handling seems to make my life more difficult; clearly /I'm/ not the problem, am I??
+
+FAQ: /Of course/ you can be the problem!
+
+Here are some habits that may prevent you from utilizing the power of C++ exception handling:
+
+`<ul>`
+`<li>` /Return codes style/: people may put try blocks around every function call as if exceptions were error codes. `</li>`
+`<li>` /The Java style/: using try\/finally instead of RAII, cluttering the code with clean-up statements. `</li>`
+`<li>` /Organizing exceptions around the location of the error rather than its reason/: this way you need to handle
+the same error many times and convert between types of exceptions. `</li>`
+`<li>` /Categorizing errors using data members of exception classes rather than types/: this way you catch more errors
+than you can handle in the given |catch| blocks, and rethrow exceptions after a test. `</li>`
+`<li>` /Using different exception classes in different subsystems/: the FAQ decides to repeat the point before
+previous, probably to create an impression that there are so many wrong mindsets out there. `</li>`
+`<li>` /Using bare pointers instead of smart pointer classes/: a special case of avoiding RAII, admits the FAQ, but
+it can't fight the temptation to list yet another "wrong mindset". `</li>`
+`<li>` /Confusing bugs with run time errors/: if someone passes a null pointer to a function when that's illegal,
+the code must be fixed. Throwing an exception without fixing the calling code doesn't solve the problem. `</li>`
+`</ul>`
+
+There are other wrong mindsets as well.
+
+FQA: Yeah, you know how it is with those humans. They always [12.2 fail to realize] /they/ are the problem, and keep asking the
+wrong questions. You give them a helpful and powerful language, and all they do is shooting themselves in the feet. Clearly
+it's their flawed minds that must be fixed.
+
+Let's look a little closer at the impressive list of "wrong mindsets" compiled by the FAQ:
+
+`<ul>`
+`<li>` /Return codes style/ is surely a wrong way to use exceptions, but it's one of the best ways to use /C++ exceptions/,
+because otherwise the chance to manage resources correctly is not very high. Of course using real return codes is somewhat
+cleaner, but what if exceptions are thrown by third-party libraries? `</li>`
+`<li>` /The Java style/ is suited quite well to a managed environment like Java, because most of the so-called resources
+are in fact /memory/, and you only need try\/finally blocks for stuff like files, of which there are few. This style
+is problematic in C++ which [16.1 lacks garbage collection], but so is [17.4 RAII] which forces you to wrap everything with
+"smart pointers" in a language which
+only has built-in dumb pointers. The truth is that with C++ exceptions, you can't win. `</li>`
+`<li>` /Organizing exceptions around the location of the error rather than its reason/: suppose you have 2 parsers in
+your system. Would you prefer a single |ParseError| exception, or 2 separate classes, |HtmlParseError| and
+|ConfigFileParseError|? Two different modules may raise exceptions for /similar/ reasons, but rarely /the same/ reason -
+or else why are they different modules? An obvious exception to this rule are errors detected at the language level,
+things like |ArrayIndexOutOfBoundsException|. Luckily, the C++ language run time environment does not detect errors,
+so we don't need to discuss this kind of thing. `</li>`
+`<li>` /Categorizing errors using data members of exception classes rather than types/ is not necessarily bad. C++ is
+centered around the [15.1 assumption] that you can represent almost anything using types (class hierarchies or template "pattern matching")
+more than any other popular statically typed language. However, this assumption is frequently refuted by reality,
+and sticking to it is counter-productive in many cases. For instance, if a subsystem throws exceptions of a single class,
+and you figure out the kind of error from looking at the object members or even inspecting error strings, you may end
+up with less problems compared to the case where you have several dozens of classes in your exception inheritance tree.
+This is a special case where modeling an aspect of your program using the language static type system may or may not be
+optimal. `</li>`
+`<li>` /Using different exception classes in different subsystems/: WOW, this is so /nasty/! Of course all subsystems
+should share exception classes and other important common types. All subsystems of all systems in the world should be written
+in close coordination between the implementers. This way, we'll finish the Tower of Babel in no time! That's why a
+language should have no good way to pass an object of arbitrary type through a "subsystem".
+Trust us: we are the people advocating a language without a /common string type/.
+We sure know a thing or two about the issue.
+`<li>` /Using bare pointers instead of smart pointer classes/: how about staring with the language and the standard
+library? When |operator new| returns a smart pointer, and |"abc"| has the type |std::string|, we'll have something
+to discuss. Until then, why should anyone manually emulate a high-level language on top of a low-level one throughout
+one's code? `</li>`
+`<li>` /Confusing bugs with run time errors/: this has absolutely nothing to do with exceptions. It's equally applicable
+to any run time error handling strategy. Unless, of course, your environment throws exceptions upon events like null pointer dereferencing,
+which C++ doesn't. `</li>`
+`</ul>`
+
+-END
+
+I have too many try blocks; what can I do about it?
+
+FAQ: Maybe you have a "return codes mindset" even though syntactically you use exceptions. There are many special cases
+of this problem in which you can organize the code differently to reduce the amount of try blocks (the FAQ lists several cases).
+If you can't solve the problem yourself, get a mentor.
+
+FQA: Alternatively, you can stop throwing C++ exceptions so you won't have to catch them.
+
+-END

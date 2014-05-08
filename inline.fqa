@@ -1,0 +1,226 @@
+Inline functions
+{'section':9,'faq-page':'inline-functions.html'}
+Inline functions are a pet feature of [10.9 people] who think they care about performance, but don't bother to measure it.
+
+What's the deal with inline functions?
+
+FAQ: Inlining a function call means that the compiler inserts the code of the function into the calling code
+(which is technically different, but logically similar to the expansion of |#define| macros). This may
+ improve performance, because the compiler optimizes the callee code in the context of the calling code
+ instead of implementing a function call. However, the performance impact depends on lots of things.
+
+There's more than one way to say that a function should be inline, some of which use the |inline|
+ keyword and some don't. No matter what way you use, the compiler might actually inline the function
+ and it might not - you're just giving it a "hint". Sounds vague? It is - and it is /good/: it lets
+ the compiler generate better and\/or more debuggable code.
+
+FQA: To summarize: the compiler has the right to inline or not inline any function, whether it's declared
+ inline in any of the several ways or not. Doesn't this make "inline functions" a meaningless term?
+
+It's impossible to make any sense of this without [23.5 discussing the history of actual implementations]
+ of the C language tool chain - compilers, assemblers and linkers. A straight-forward C implementation
+ (which originally /all/ of them were) works like this. First, a compiler generates assembly code from
+ each source file, /separately/ (without looking at other source files). Then the assembler converts
+ the assembly code to an "object file", where "object" means "a sequence of bytes" (talk about "object oriented").
+ For example, a function
+ is one kind of "object" - the bytes encode the machine instructions the compiler used to implement it.
+
+ The values of the bytes making up these "objects" are almost completely finalized at this stage.
+ The only kind of "unknowns" is addresses of "objects" - when an "object" refers to an address of another "object"
+ (say, a function calls another function), the assembler can't compute the actual values of the bytes making up
+ the function call instructions.
+ This is done by the linker, which allocates the "objects" (basically by concatenating them).
+ The linker then resolves the references (such as function calls) to the addresses of the "objects".
+
+What this means is that the /only/ way to inline functions is to |#include| their definition in the header file -
+otherwise, the compiler doesn't see the code of the function, and the linker can't do inlining, because all it
+ sees is byte sequences, and it would have to /decompile/ them first. Which explains why you need to
+ include the source code of inline functions in header files, but doesn't explain why you need an |inline|
+ keyword and other ways to explicitly declare a function as "inline". After all, the compiler is free to ignore
+ these hints, so what's their point?
+
+Well, the point is that the compiler can't tell an |#include|d function from one written in your source file, because
+ that's how C preprocessing works - the compiler only sees one large file of code. So unless you explicitly declare the
+ |#include|d functions "inline", it will generate their code like it does with normal functions. Then the linker
+ will complain about multiple definitions.
+
+Here's how code is compiled by many modern compilers, including some C and C++ compilers. The compiler transforms
+ the source code to an intermediate representation, "lower" than the source language but "higher" than assembly language.
+ This makes it possible to do inlining at link time, either on a per-library or a whole-program basis. The machine
+ code is only generated as the final linkage step, or it can even be delayed until run time (the so called "just in time compilation").
+This way, you don't have to split your functions to "inline" (those that /can/ be inlined, but the compiler gets to decide if they actually /are/ inlined) and the rest (those that just /can't/ be inlined).
+Instead, you let the compiler make the decision for /all/ functions. Unfortunately, the meaning of C and C++ is defined with
+the old sort of implementation in mind, and having newer, more sophisticated implementations around can't change it.
+
+-END
+
+What's a simple example of procedural integration?
+
+FAQ: There's an example of a function calling another function and how inlining may save you copying the parameters
+when you pass them to a function and copying the result it returns and stuff. There's also a disclaimer saying that
+it's just an example and many different things can happen.
+
+FQA: Basically, code may be portable, but /performance/ is typically not. For example, inlining a function may make code faster
+or slower, depending on lots of things discussed in the next FAQs. This is one reason to leave the decision to
+a compiler, because "it understands the target platform better". This is also a reason to leave the decision to a human,
+because compilers /don't/ really know the target platform very well (they know the target processor but not the entire system),
+and because they don't understand the problem you are solving /at all/ (so they can't tell how many times each piece
+of code is likely to run, etc.).
+
+Anyway, the problem of "helping the compiler to optimize code" by adding "hints" to the code,
+especially portable code, is quite hard. There are many things similar to inlining in this respect (for example, loop unrolling).
+Which is why there's no |unroll| keyword forcing loop unrolling. And the |inline| keyword only exists
+because there's [9.1 no better way] to /enable/ (as opposed to "force") inlining in C\/C++.
+
+-END
+
+Do |inline| functions improve performance?
+
+FAQ: Sometimes they do, sometimes they don't. There's no simple answer.
+
+Inlining can make code faster by eliminating function call overhead, or slower by generating too much code, causing
+instruction cache misses. It may make it larger by replicating all that callee code, or smaller by saving the
+instructions used to implement function calls. It may inflate the code of an innermost loop, causing repeated
+cache misses, or it may improve the locality of reference in the loop, by compiling all relevant code at adjacent
+addresses. It may also be irrelevant for performance, because your system is not CPU-bound.
+
+See? Told you there was no simple answer.
+
+FQA: However, there /is/ a relatively simple answer to the legitimate question: "Why do we need this language feature
+if its effect is undefined?". See [9.1 the first FAQ] in the section. There's also a relatively simple & useful rule saying that
+functions which have short code and\/or are typically called with compile time constant arguments so that most of their code
+computes a constant are typically good candidates for inlining. Long functions are typically worse candidates for inlining,
+because the function call overhead is negligible compared to the things the functions actually do, and the main problem with
+inlining - large code size - becomes dominant.
+
+It's usually a good idea to only explicitly enable the inlining of very short functions, and performance considerations
+are not the only reason. In C++ you have to place the code in header files to enable inlining. While the run time performance may or may not improve, the /compile time/ performance is guaranteed
+to drop. Which means changing code becomes hard, which means you'll do your best to /not/ change it, which means you'll
+leave wrong things unfixed. And debuggers handle inlined code pretty poorly (typically
+                                                                          you can't inspect the local variables
+of inlined functions or even step through their source code lines),
+so debugging the optimized (production) build becomes harder. And debugging a special "debug" build is not always possible
+(some bugs won't reproduce in that build), not to mention that you have to spend time building those binaries, too.
+
+If your application is not CPU bound, [10.9 you aren't getting any benefits] from using an unsafe language like C++ except for extra quality time
+ with the debugger.
+
+-END
+
+How can |inline| functions help with the tradeoff of safety vs. speed?
+
+FAQ: "In straight C" you could implement encapsulation using a |void*|, so that users can't access the underlying data.
+ Instead, the users have to call functions which access that data by casting the |void*| to the right type first.
+
+ Not only is this type-unsafe - it's also costly, since the simplest access now involves a function call. In C++ you
+ can use |inline| accessors to |private| data - safe, fast.
+
+FQA: Today C has inline functions (the FAQ probably doesn't consider the current C standard "straight",
+                                   I wonder why).
+AFAIK they were back-ported from C++ together with |const| and other useless things.
+But it's irrelevant to the question, which is about the completely wrong argument that |inline| accessors to |private|
+functions are a form of "high-speed encapsulation".
+                                   
+First, the tales about |void*| are [7.5 wrong] - you can use forward declarations to achieve the holy grail of (compile time)
+type safety. Second, [9.1 a good language implementation] can inline the small C-style accessors at link time. Third,
+|private| provides little encapsulation - change a private member and you have to [7.4 recompile] all code using the class.
+ Fourth, most frequently |private| members with straight-forward |public| accessors are a just verbose way to implement
+ a |public| member, since changing the representation is almost impossible and\/or hardly useful.
+
+ And in the quite rare cases
+ where it /is/ possible and useful, "properties" - a language facility allowing to overload the |obj.member| syntax -
+ could solve the problem, but C++ doesn't have properties. Or you could refactor the code automatically - if anything
+ could [10.19 reliably parse] it.
+                                   
+In the C++ world code is considered a good thing, of which there should be plenty.
+ |private: int _n; public: int n() const { return _n; }| is thus better than |int n;|. The question is -
+ do /you/ like lots and lots of C++ code doing practically nothing?
+
+-END
+
+Why should I use |inline| functions instead of plain old |#define| macros?
+
+FAQ: Because macros are [6.15 evil]. In particular, when a macro is expanded, the parameters are not evaluated before the
+ expansion, but copied "as is" (they are interpreted as character sequences by the preprocessor, not as C++ expressions). Therefore,
+ if a parameter is an expression with a side effect, such as |i++|, and the macro mentions it several times, the macro
+ will expand to buggy code (for instance, |i| will get incremented many times). Or the generated code may be slow
+ (when you use expressions like |functionTakingAgesToCompute()| as macro arguments).
+
+ Besides, inline functions check the argument types.
+
+FQA: Yeah, C macros are no picnic. But see that thing about argument types? How can you write an |inline| function
+ computing the maximal value of two arguments? A |template| |inline| function, you say? Try this: |std::max(n,5)|
+ with |short n|.
+
+And how should function arguments be passed - by value or by reference? "By value" may cause extra copying, and "by reference"
+ may slow down the code due to aliasing problems, forcing the compiler to actually spill values to memory in order to
+ pass them /to the code of an inlined function/! How's that for "performance benefits"? Another problem C macros don't have.
+
+Frequently |inline| functions are better than macros, though, because the problems with macros turn out to be more severe in many cases.
+[10.6 As usual], it's you who gets the interesting job of choosing between duplicate C++ facilities, each flawed in its own unique way.
+
+-END
+
+How do you tell the compiler to make a non-member function |inline|?
+
+FAQ: Prepend the |inline| keyword to its prototype, and place the code in a header file, unless it's only used in
+ a single |.cpp| file, or else you'll get errors about "unresolved externals" from the linker.
+
+FQA: The FAQ's decision to avoid the [9.1 discussion] of the /reasons/ leading to these requirements is wrong.
+ Clearly people who don't understand the underlying implementation issues won't survive to live the miserable life
+ of competent C++ developers. That's because in C++, the /underlying/ stuff tends to climb out of the basement in
+ repeated attempts to make /you/ the one lying under a pile of hard, urgent, mind-numbing low-level problems.
+
+Therefore, the only legitimate excuse for telling about a totally weird language requirement and not explaining
+ why it exists is brevity. See the FAQ's lengthy discussion about the performance of inline functions for a pretty good
+ evidence that brevity is hardly the motivation here.
+
+-END
+
+How do you tell the compiler to make a member function |inline|?
+
+FAQ: Declare the function in the class as usual. In the definition, add the |inline| keyword to the prototype.
+The definition must be in a header file.
+
+FQA: Yep, it's similar to non-member functions.
+
+-END
+
+Is there another way to tell the compiler to make a member function |inline|?
+
+FAQ: Yes, by writing its code right in the body of the class, instead of only writing the declaration there, and
+ defining it outside of the class. This way, you don't even have to use the |inline| keyword.
+
+ It's easier when you write classes, but harder when you read them, because the interface is mixed with the implementation.
+ Remember the "reuse-oriented world"? Think about the welfare of the many, many users of your class!
+
+FQA: What popular language forces you to write a bare interface ("header file") and separately an implementation containing
+ all the information in the interface ("source files")? Somehow all those languages which only make you type the interface
+ once are not at all that hard to use. May it be that it's because these languages are /parsable/ and therefore /IDEs can
+ do the oh-so-interesting job of extracting the interface from the implementation/ and then you can use things like
+ class view windows to inspect interfaces?
+
+Unless you use templates and operator overloading and all that, many IDEs even have a chance of working with your C++ code.
+So writing inline functions inside class definitions won't really hurt your users after all.
+Even if there were no IDEs, you should probably only inline very short functions, with implementations as descriptive
+                                       as a comment (is |return _x;| less of a documentation than "\/\/returns the value of the x coordinate"?). If there's lots of "implementation
+ details" to hide from the eye of a casual observer, inlining is most likely a bad idea anyway.
+
+-END
+
+With inline member functions that are defined outside the class, is it best to put the |inline| keyword next to the declaration within the class body, next to the definition outside the class body, or both?
+
+FAQ: The "best practice" is to only use it in the definition outside of the class. Blah, blah, blah, argues the FAQ
+ passionately about the issue. "Observable semantics", "practical standpoint", blah, blah, blah.
+
+FQA: Programmers typically have a good ability to keep many details in their heads. So good that many don't realize that
+                                       this ability is
+ /finite/. If you litter your brain with idiotic "best practices" which don't even affect the /observable semantics/ of code,
+you do it at the expense of /not/ thinking about something else when you write code. "Something else" may include
+ really important things, like the purpose and the meaning of the code.
+
+If you don't care about this sort of discussions, and you find yourself under an attack of "software professionals" buzzing
+ buzzwords about your "bad practices", send them a link to this page to distract them, and use the time gained
+ by the distraction to go out and buy a buzzer to talk back to them.
+
+-END

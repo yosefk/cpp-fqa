@@ -1,0 +1,169 @@
+Inheritance -- abstract base classes
+{'section':22,'faq-page':'abcs.html'}
+C++ abstract base classes are not bad at all by C++ standards. However, they are quite poor by OO standards.
+
+What's the big deal of separating interface from implementation?
+
+FAQ: Interfaces are the most important thing possessed by a company. Defining interfaces is hard, throwing together an implementation
+is easy. Designing interfaces takes lots of time and is done by people who are paid lots of money.
+
+You wouldn't want these valuable artifacts clobbered by implementation details, would you?
+
+FQA: If interface is decoupled from implementation, you can have more than one implementation of the same
+interface. This way, code /using/ the interface can work with all those implementations. For example, the same
+code may be used to render a document to a screen, a printer and a file. Which is /excellent/, and is a /very
+widely acknowledged and basic fact/.
+
+It's amazing that the FAQ's answer fails to mention this. The FAQ's claim about the relative importance
+of interfaces and implementations is unbelievable, too. Here's an interface for you:
+
+@
+class SearchEngine
+{
+public:
+  \/\/ search the documents pointed by URLs in the inputURLs stream, search the query string
+  \/\/ in them and emit the URLs sorted by relevance to the outputURLs stream (at most maxResults URLs).
+  virtual void find(const string& query, istream& inputURLs, ostream& outputURLs, int maxResults) = 0;
+};
+@
+
+Now, that took about 1 minute. It's your turn to "throw together an implementation", which shouldn't take more
+than 30 seconds according the FAQ's argument, should it? Go.
+
+If you don't like this example ("there are more complicated interfaces in a real search engine"), think about
+|matchScore = faceRecognition(suspectImage, testImage)|, |fft(outputArray, inputArray, size)|,
+|text = ocr(imageWithHandWriting)|, |render(screen,htmlPage)|, |write(file,buffer,size)|... The idea that
+"implementations are trivial" can only come from working on extremely stupid applications or example
+programs for text books.
+
+Of course many interfaces should be decoupled from implementations - but that's because they /hide/
+a /much more complicated/ implementation, and\/or because they have more than one implementation,
+and\/or because you want to change the implementation without affecting the client code. Surprisingly
+enough, C++ abstract classes actually allow you to achieve all these things.
+
+Of course they don't
+fix many hard problems with C++ - there's no real run time type information, for example. And adding a function
+to an abstract class changes the binary interface, which is frequently unacceptable.
+But abstract classes are better than nothing, as opposed to the many C++ features which are in fact
+/worse/ than nothing.
+
+-END
+
+How do I separate interface from implementation in C++ (like Modula-2)?
+
+FAQ: Use an abstract base class.
+
+FQA: What do you mean "like Modula-2"?
+
+If you want to be able to work with many different implementations selected
+at run time, abstract base class is the way to go. Alternatively, you can roll your own "abstract base classes"
+by using structures containing function pointers, emulating "vtables". This results in extra code, but it's [6.3 more
+portable] (C binary calling conventions on a given processor architecture tend to be shared by more tools than C++ ones).
+
+If you don't need dynamic implementation selection, you can use a header file with forward declarations of types,
+and have the types defined in the implementation file(s). [7.5 This way] you can change the implementation details
+without recompiling the calling code
+(which you can't do with C++ |private| members). In particular,
+you can build several versions of your program with different implementations of this interface without recompiling
+the entire program. 
+
+-END
+
+What is an ABC?
+
+FAQ: An abstract base class.
+
+Logically, it corresponds to an abstract concept, such as |Animal|. Specific animals, like |Rat|, |Skunk| and |Weasel|,
+correspond to implementation classes derived from |Animal|.
+
+Technically, a class with at least one pure [20.1 virtual] function is abstract. You can't have objects of abstract classes,
+ you can only create objects of classes derived from them that implement all the pure virtual functions.
+
+FQA: ABC is also an especially annoying abbreviation.
+
+Here are a couple of things you can't do with a C++ abstract base class, and which are supported in other OO languages. You can't iterate over the methods of
+ an abstract base class (neither at compile time nor at run time). So you can't easily utilize the decoupling
+ between the interface and the implementation by automatically generating wrapper classes that log function calls
+ or pack the arguments and send them to an object in another process and\/or on another machine. You also
+ can't ask a random object whether it implements the given interface (in language terms,
+ whether its class is derived from a given abstract base class).
+
+If the only language you use heavily is C++, it's possible that you don't realize that you might /want/ to do these
+ things at all, or even memorized elaborate arguments "proving" that these things /should not/ be done.
+ But hey - at least abstract classes don't make anything /worse/ than it already was in C. Quite an achievement
+ for a C++ feature.
+
+-END
+
+What is a "pure virtual" member function?
+
+FAQ: It's a virtual function which (normally) has no implementation in the base class, and (always) must be implemented
+ in a derived class to make it non-abstract. The syntax is: |virtual result funcname(args) = 0;|.
+
+This declaration makes the class abstract - it is illegal to create objects of this class. A derived class that doesn't
+ implement at least one pure virtual function is still abstract. Only derived classes without any unimplemented pure
+ virtual functions can be instantiated (you can create objects of these classes).
+
+FQA: The syntax is ridiculous. You may wonder what |virtual result funcname(args) = 1999;| means. Well, it means nothing;
+ it doesn't compile.
+
+One possible motivation for this syntax is to save a keyword (such as |pure| or |abstract|). The more new keywords there are,
+ the "less" C++ is compatible with C, or with C++ code written before the new keyword was introduced (well, [6.11 strictly
+speaking], either two things are compatible, or they are not, but we'll ignore that for the moment). That's because
+ C and C++ have grammars which disallow to use keywords as identifiers. This problem is shared by the majority of
+ programming languages.
+
+However, C++ does have a huge amount of new keywords. This makes one wonder why the very rarely used |explicit|
+ (not to mention |export|) is a keyword, while the many different uses of the keyword |static| are in fact collapsed
+ into a single keyword instead of using new keywords for the new uses. And why not use the silly, but standard
+ "reserved namespace" (names prefixed with two underscores or a single underscore followed by a capital letter
+are reserved for the compiler), the way it's (mostly) done in C99? Then we'd have |__explicit| built-in and |explicit|
+ would be a |#define| you'd |#include| from |<shiny_new_useless_cxx_features>| (no trailing |.h|, of course).
+This way, you give a normally looking keyword to people who need it, and don't break the code of those who don't.
+
+Here's a proposal for the next C++ standard: let's define two keywords, |__0| and |__1|. With a token sequence composed of these
+ two keywords, we can express anything
+ (actually, one keyword is enough, but that's just too verbose). Then we won't
+ever need any new keywords. As the pure virtual syntax example shows, the readability loss is a small price to pay
+ for the forward, backward and downward compatibility achieved using this approach.
+
+-END
+
+How do you define a copy constructor or assignment |operator| for a class that contains a pointer to a (abstract) base class?
+
+FAQ: If you don't want to make a "deep copy" of that pointer, there's nothing special about this case.
+
+If you do want to make a deep copy of the pointer (which you normally should do when the class "owns" it),
+  the abstract base class should have virtual |copy| and |assign| methods you can call from your copy constructor and
+  assignment operator.
+
+FQA: This is a small example of how C++ forces you to write code which [20.8 could be generated automatically].
+  You can avoid the problem by avoiding the ownership approach to lifetime management ([17.4 RAII]), but
+  figuring out that you need these virtual functions and implementing them is easy for people
+  who understand C++ well.
+
+  The trouble is that [6.6 most] people using C++ /don't/ understand it very well. C++ has the lethal combination
+  of looking all nice and simple on the surface and having lots of traps installed under the surface, waiting
+  for a victim. The only chance of the victim is to have a very good understanding of the underlying problems
+  of C++. With that understanding, it's easy to see that, um, you have to make a deep copy since you're
+  the "owner", and an object pointed by two owners is going to be wiped out twice by the [11.1 destructor], and we
+  don't want that, so let's copy the object - costly, but safe, and, um, we can't just copy the object, because we don't know its type, but wait,
+  the object /itself/ does know its type, so we need it to help us with the copying, so we need to add these
+  virtual |copy| functions to this hierarchy of classes. It's a good thing we did it now before the interfaces
+  became stable and adding functions became a royal pain, causing recompilation of calling code. Or did we?
+
+The problem with all this reasoning is that it has little to do with whatever you're ultimately trying to achieve
+  in your program. So many people who think more about what their program does than about the way their programming
+  language works won't see this coming, and do something wrong. No, it /doesn't/ mean that the people primarily focused
+  on the programming language are more productive than others. Of course they aren't uniformly less productive, either.
+  Some of the people with a programming language focus spend most of their time [14.3 choosing]
+  between |func(obj)| and |obj.func()|, some don't; it depends on the person, and people can change, further complicating matters.
+
+Of course this problem exists with all computer languages and, more generally, with all software systems, and, more
+  generally, with all formal systems. Basically there's the ice - the things compatible with human common sense -
+  and the cold water under it, into which you can fall when the rules governing the system [21.6 contradict]
+  your common sense. So what's so special about C++?
+
+Well, in C++, the very thin ice is covered with [13.2 paint], and the water is deep enough to [35.20 drown].
+
+-END

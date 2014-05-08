@@ -1,0 +1,280 @@
+How to mix C and C++
+{'section': 32, 'faq-page': 'mixing-c-and-cpp.html'}
+These questions are about mixing C and C++, which may be harder than you'd expect from the names of those languages, but easier than, say, [32.1 mixing C++ and C++]. Stay tuned.
+
+What do I need to know when mixing C and C++ code?
+
+FAQ:
+ You should check your vendor's documentation. Most frequently the rules are:
+
+`<ul>`
+`<li>` You must compile |main| with your C++ compiler.`</li>`
+`<li>` You must link everything with your C++ linker.`</li>`
+`<li>` Your C and C++ compiler should be compatible, which probably means they should have the same vendor and version.`</li>`
+`</ul>`
+
+And you'll need to read the rest of this section so that your C functions can call your C++ functions and vice versa.
+
+Or you can compile the C code with your C++ compiler - you may need to change the code, but you may also find bugs this
+way, so it's a good thing to do. Unless you don't have the C code in source form, of course.
+
+FQA: You have little chances to successfully apply the rules unless you understand
+the underlying technical problem the rules try to address. The problem is in all the things
+in C++ that can not be translated to C straight-forwardly (mostly exceptions), and the things
+which can be translated in /several/ ways (initialization of global variables before |main|
+and finalization after |main|, mangling names of overload & template functions, virtual
+function calls, constructor prototypes, layout of derived classes, RTTI - this list is quite
+large). Many languages which are easy to mix with C have such features. However, unlike C++
+they also come with a formal or a de-facto standard defining the ABI (application binary interface)
+or a source-level interface for C interoperability. The C++ standard doesn't bother.
+
+Most of these things can only cause problems when a particular C++ function is explicitly called.
+This kind of things is addressed in the rest of the questions in this section. However,
+the global initialization & finalization sequences are never explicitly called - hence the
+requirement about compiling |main| and linking the program with the C++ compiler. As to the
+need to use C and C++ compilers from the same vendor - this is true in theory, but in practice
+C compilers for a given hardware\/OS configuration will interoperate smoothly. So will the
+C++ compilers as long as the C subset of the calling conventions is involved. However, this requirement
+is almost always a must when /mixing C++ and C++/ - for example, when [6.3 third-party libraries with C++ interfaces] are involved.
+Think about it: mixing C and C++ is easier than mixing C++ and C++. Isn't this /amazing/?
+
+This situation is one excellent reason /not/ to follow the FAQ's advice to compile your C code
+with a C++ compiler: C code is more portable. There are other reasons to keep C code in C, such
+as compilation time, better accessibility (there's no name mangling so functions bundled into
+a shared library are easier to call), etc.
+
+-END
+
+How can I include a standard C header file in my C++ code?
+
+FAQ:
+ Like this: |#include <cstdio>|, and then |std::printf("I like std::!\\n")|. If you don't like
+|std::|, get over it. That's the way standard names are accessed.
+
+If you compile old C code with a C++ compiler, the following will also work: |#include <stdio.h>|,
+and then |printf("No std::!\\n");| - all due to the magic of namespaces.
+
+If you want to include a /non-standard/ C header, see the next questions.
+
+FQA: Um, if |printf| and |std::printf| both work, what's there to get over? |printf| is so standard
+that there seems to be little point in mentioning it over and over again. As to the "magic of namespaces",
+this particular case doesn't really seem to have anything to do with it. For some reason, the global
+unmangled |extern "C" printf| is also made accessible via |namespace std| by the C++ standard. What's
+so mysterious or amusing here? Perhaps the FAQ meant "the magic of standards".
+
+If you want to include a non-standard C header, basically you'll have to [32.3 tweak] them the same way your
+compiler vendor tweaked the standard C headers.
+
+-END
+
+How can I include a non-system C header file in my C++ code?
+
+FAQ:
+ Like this:
+
+`<pre>`
+extern "C" {
+#include "foo.h"
+}
+`</pre>`
+
+If |foo.h| is your header, you can change it to make inclusion from C++ easier.
+
+FQA: The reason you have to do this is that C function names are not /mangled/ - in C, there's
+no overloading, so |printf| is known to the linkers, debuggers, etc. as |printf|. But in C++
+there may be several functions with the same name. So the compiler has to make up a unique name using an encoding
+of the argument types. For example, the GNU C compiler generates
+an assembly function called |_Z6printfPKc| from C++ source code defining |int printf(const char*)|.
+Different C++ compilers will do the name mangling differently - one of the many reasons making
+them incompatible with each other.
+
+Theoretically there may be more differences between C and C++ functions, and |extern "C"|
+is your way to tell your C++ compiler "these are C functions, deal with all the differences".
+In practice, the problem is name mangling. Too bad there's no |extern "C++ compiled with a different compiler"|.
+
+-END
+
+How can I modify my own C header files so it's easier to #include them in C++ code?
+
+FAQ:
+ Like this:
+
+`<pre>`
+#ifdef __cplusplus
+extern "C" {
+#endif
+void foo();
+void bar();
+#ifdef __cplusplus
+}
+#endif
+`</pre>`
+
+Ew, macros are /evil/, [6.16 wash your hands] when you are done.
+
+FQA: Together with the usual |#ifndef,#define,#endif| trinity, we've just used 7 preprocessor
+directives to define a single interface. And these seven directives contain zero information
+specific to that interface. And they don't help the compiler to do things compilers of other
+languages can do, like locating the implementation of the interface.
+
+If you want to wash your hands after each preprocessor directive you touch in C++ and have
+some time left to do anything else with those hands, you'll have to work in a bathroom.
+
+-END
+
+How can I call a non-system C function |f(int,char,float)| from my C++ code?
+
+FAQ:
+ Prefix its prototype with |extern "C"| when you declare it. You can declare
+a whole bunch of C functions by surrounding the declarations with an |extern "C" { ... }|
+block.
+
+FQA: Yeah, we've [32.4 been] through this already. It doesn't matter whether a declaration
+is in a header file or not. Neither C nor C++ syntax is [23.10 aware] of header files or other
+preprocessor-related things. Header files are just an [35.12 automated copy-paste mechanism].
+
+-END
+
+How can I create a C++ function |f(int,char,float)| that is callable by my C code?
+
+FAQ:
+ Prefix the declaration and the definition with |extern "C"|. You can't have
+more than one |f| C-callable function since C has no overloading.
+
+FQA: Oh, how simple! /And what if the function throws an exception/? You didn't think you were going
+to escape /that/ easily, did you?
+
+I've just tried this with the GNU C and C++ compilers. When a C++ function calls a C function
+which calls a C++ function which throws an [17.1 exception], you can't even catch it at the first
+C++ function, not to mention disposing the resources allocated by the C function.
+
+So, make sure you catch all possible exceptions in your C-callable C++ functions. By the way, C++ exceptions
+can be of [17.6 any built-in or user-defined type], and you can't catch an arbitrary exception and check
+what kind of exception it is at run time, and |operator new| [16.6 can throw exceptions]. Enjoy.
+
+-END
+
+Why is the linker giving errors for C\/C++ functions being called from C++\/C functions?
+
+FAQ:
+ You probably forgot |extern "C"|, so the linker looks for a [32.3 mangled] C++ name instead
+of an unmangled C name.
+
+FQA: Quiz: does a typical C++ linker /try to check/ whether the unmangled C name is defined,
+and if in fact it is, ask you something like "did you forget |extern "C"|?" Hint: if it actually did this simple thing,
+how frequently would this question be asked?
+
+You see, one of the advantages of using C++ is that you get to work with [6.1 mature],
+industrial-strength tool chains.
+
+-END
+
+How can I pass an object of a C++ |class| to\/from a C function?
+
+FAQ:
+ You can use |class Fred| in C++ (|#ifdef __cplusplus|), and a |typedef struct Fred Fred;| otherwise.
+Then you can define |extern "C"| functions which accept |Fred*| (the FAQ contains two screens of code
+illustrating this point, including both ANSI and K&R C function prototypes).
+
+Note that this way, C++ code will be able to tell whether two pointers to class objects point to
+the same object, and C code won't. That's because when a pointer to a base class object is compared to
+a pointer to a derived class object, the compiler may need to do some pointer arithmetics before the
+comparison. In C++, this is done implicitly when the expression |p == q| is compiled.
+
+Note that if you convert pointers to objects of classes to |void*| and compare them, neither C
+nor C++ compilers will be able to do the right pointer adjustments.
+
+FQA: /Please/ don't follow this advice! This FAQ keeps telling how [6.15 evil] the preprocessor is,
+and then it proudly presents this /really nasty/ scheme. Defining type names to mean different
+things based on a preprocessor flag is as close to "evil preprocessor abuse" as it gets. Especially
+with all these pointer equality subtleties involved (these are [25.11 ridiculous] by themselves - seriously,
+if you can shoot yourself in the foot by simply /comparing two pointers to objects/, how "object-oriented"
+is the language?).
+
+Here's a pretty straight-forward solution: in the header file which is supposed to be used from C,
+declare a |struct FredObj| or something (just /use a different name/ than |Fred|, so that people can
+at least figure out what each name means! Sheesh!). In the C++ implementation file, define the structure
+to hold a single member - a |Fred| object. This doesn't lead to any run-time overhead. The extra
+syntax needed for dereferencing is worth the benefits -  you can compare pointers and have fun in safety.
+
+And if you /really/ need to return objects of classes
+derived from Fred - /just define a structure with a single member of type/ |Fred*| /and never mind
+the tiny run-time overhead/. If you are using class hierarchies to implement functionality so simple
+that this tiny run-time overhead is comparable to the actual work done by the classes,
+/throw these class hierarchies away/ and stop messing
+up the lives of your innocent users.
+
+Why do these people have to make everything cryptic /and/ dangerous?
+
+-END
+
+Can my C function directly access data in an object of a C++ |class|?
+
+FAQ:
+ Yes, if the class has no |virtual| functions or non-public members, and so do all objects
+it contains by value. The FAQ outlines the way inheritance and virtual functions are implemented
+at a level allowing you to do the pointer arithmetics in order to access member data from C in
+these clearly illegal cases.
+
+FQA: /"Can"/ may mean many things: "can do it with a particular version of C & C++ compilers",
+"can do it with all compilers which are actually out there", "can do it with any standard-conforming
+compilers", and even "should normally do it because provisions were made to make it easy".
+
+The short answer is that you should only do it with the so-called POD types
+(which basically means "structures
+defined using C syntax" for people who are not professional language lawyers). The only reasonable
+cases when breaking the rules is not an entirely moronic act are (1) when you play around with the language
+to see what's inside, (2) when you have to retrieve data from classes with definitions only available
+in binary form (you may want to check if your actions are legal first) and (3) you are implementing a debugger
+or the like, in which case you're writing legitimately non-portable code.
+
+In case (2), you could also ask "Can my C++ function directly access private data in an
+ object of a C++ class". Most often it can if you add a |#define private public| preprocessor directive
+ at the top of your |.cpp| file. This works quite portably and does not depend on the layouts of C++ classes in your particular compiler.
+
+People who want their C code to directly access data of a C++ class object for "speed" or something
+probably don't have enough real problems. The artificial problems they create for themselves will
+teach them a good lesson pretty soon.
+
+-END
+
+Why do I feel like I'm "further from the machine" in C++ as opposed to C?
+
+FAQ:
+ You are! C++ is a high-level language. In C, you can see where every clock cycle is spent;
+on the other hand, in C++ you can work at higher levels of abstraction and write more compact programs.
+Of course you can still write bad code - the idea is not to prevent bad programmers from doing it,
+but make it possible for the reasonable ones to write superior code!
+
+FQA: What is this question doing here? Presumably people try to mix C and C++, and have an |extern "C"|
+function implemented in C++ throw an exception, or the initialization stuff before |main| never gets
+called, or they compare pointers to C++ class objects from C and it doesn't work, and they don't know why
+or how to even start figuring it out. The real question
+probably is "why do I feel like I'm underneath the machine, not just close to it as opposed to C"?
+
+C++ is not a higher-level language than C. The damage caused by low-level errors is still not limited. You
+still have to think about pointers and object life cycles and integer endianness and many other things.
+But on top of that, there's a huge amount of things done implicitly, like global initialization and
+destruction, stack unwinding, base\/derived classes pointer adjustment, and many more things - and all of them
+combine with the low-level errors into a single deep, wide tar pit with the programmer in the middle.
+
+A good high-level language allows you to forget about many small details of program execution.
+A good low-level language allows you to control the many small details of program execution. C++ is not much
+of a high-level language, but it's not a very good low-level language either.
+
+As to the remark about "seeing every cycle spent in C programs", I really believe that the FAQ author knows
+ that you can't see that,
+since that's a pretty basic fact. You can't "see every cycle" spent in /assembly/ programs in most cases - you
+have to know the exact target processor variant and the system configuration and a zillion other things. The FAQ
+is probably just being poetical.
+
+But there's more to this remark than factual inaccuracy - it concentrates on a moderate problem, failing
+to mention an arguably more severe one. Consider the C++ code |p = obj.getVec().begin();|.
+The run-time of this code is unclear because it depends on whether |obj| is a value or a reference (the
+latter may be slower); in C it would be more clear. But there's another issue: is this code correct
+at all? If |getVec()| returns a reference to |std::vector| object, maybe it is correct, but if it returns it
+by value, it is certainly wrong. The compiler won't even warn you, and you won't [8.6 notice] the problem in the code without
+checking the definition of |getVec|. Not only is it hard to figure out how much time a C++ program runs,
+it is hard to even tell what it /does/, which is not supposed to be typical of high-level languages.
+
+-END

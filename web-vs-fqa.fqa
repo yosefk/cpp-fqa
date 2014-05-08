@@ -1,0 +1,111 @@
+FQA errors
+{}
+This page lists the factual errors\/inaccuracies in the C++ FQA. If you find one, please
+[http://yosefk.com send me e-mail]. If you are right, I'll publish your correction, either giving
+you the credit or anonymously, according to your choice.
+
+By "factual errors", I mean statements which can be proved wrong or refuted by a practically feasible test.
+
+Positive examples: if I say that C++ compilers may generate slower code from C source than C compilers
+unless exception support is off, and in fact no commercially significant compiler does that, I'm wrong
+(don't bother with this one - I already checked it). If I say that the C++ grammar is undecidable,
+ and you formally prove it's decidable, I'm wrong
+ (advice: don't bother with this one, too).
+
+Negative examples: if I say templates are mostly applicable to containers, and you know many other
+  ways to use templates, it's really a qualitative argument. You call this "uses", I call it [35.2 "abuses"].
+It's like arguing whether |sed| is [http://sed.sourceforge.net/grabbag/scripts/dc.sed applicable to numerical computing]: it's a matter of common sense,
+  and we'll get nowhere - there's no formal definition of a [http://en.wikipedia.org/wiki/Turing_tarpit Turing tarpit].
+  If you inform me that I'm "inconsistent" because "sometimes my problem with C++ is that
+  it's too low-level for high-level work and sometimes I think it's too high-level for low-level work",
+  the message will land in the bit bucket, too. I think that doing both low-level and high-level work in C++ is suboptimal
+  (I tried both); you are free to call it "inconsistency". If you think the fact that C++ is a [6.11 "superset"]
+  of C means that C++ can't be inferior to C, go visit [http://en.wikipedia.org/wiki/Chernobyl Chernobyl] and buy yourself a radioactive cat with 7 legs and
+  a wing (codenamed "cat++"), but don't expect me to agree.
+
+`<!-- h2toc -->`
+
+`<h2>`Sometimes base class constructors must have information on the actual object type`</h2>`
+
+/Eugene Toder:/ The FQA answer about [23.5 the dispatching of virtual functions in constructors]
+  is based on the following statement: /Base::Base doesn't know that it's called in order to ultimately initialize a Derived object/.
+This is wrong, since virtual inheritance can't work that way. In particular, AFAIK, |cfront|, the first C++ compiler,
+  always passed constructors a parameter telling whether it initializes a base class object or a derived class object,
+  no matter what kind of inheritance was involved.
+
+/Yossi:/ This is an error by itself, and it's also inconsistent with other information in the FQA. Specifically,
+  the FQA [25.12 mentions] (following the FAQ) that with virtual inheritance, the programmer must directly initialize
+  virtual base class objects in the derived classes, even if they are not its "immediate" base classes
+  (that is, it inherits them indirectly). But what if someone derives another class, |Derived2|, from a class |Derived| with virtual
+  base classes? It's /still/ up to the programmer to initialize the virtual base class objects in |Derived2| - but |Derived|
+   already contains code that does this (and maybe /other/ base classes contain such code, which is
+our problem in the first place). So we /don't/ want to use the virtual base class initialization code
+  in |Derived|, but we /do/ want to use the other initialization code in |Derived|. Therefore,
+  the constructor of |Derived| must know whether it ultimately initializes a |Derived| object or
+  an object of some child class, such as |Derived2|, in order to conditionally execute
+  some of the initialization code (or the constructor code must be generated twice, which is the same in this context).
+
+  I think that the FQA answer still has its value in the sense that it may actually be more intuitive to
+  C++ programmers. That's because the FAQ answer basically says, "C++ prevents you from a /potential/ (not certain)
+  error of accessing uninitialized members of a derived class, by silently doing something different than what you
+  thought it would". This is a very special fact which has to be memorized; normally C++ /doesn't/ try to prevent
+  access to uninitialized data. The FQA answer says, "C++ does the thing naturally and efficiently following
+  from the underlying implementation: to set up |vptr| to point to the correct |vtable|, you'd have to
+  spend cycles (a tiny amount of them, but C++ is frequently very conservative about run time cost)".
+  Arguably, this is more consistent with the rest of C++ and is easier to remember. But of course it
+  doesn't make the erroneous statement in the FQA correct.
+  
+`<h2>`C++ has |bool|, a built-in type not in C`</h2>`
+
+/From a Usenet posting/
+(in
+[http://groups.google.co.il/group/comp.lang.c++.moderated/tree/browse_frm/thread/870d15c57e831fc5/8396a5eaa8e3452d?hl=en&rnum=41&_done=%2Fgroup%2Fcomp.lang.c%2B%2B.moderated%2Fbrowse_frm%2Fthread%2F870d15c57e831fc5%2F5868fd6e57f6ae2c%3Fhl%3Den%26tvc%3D1%26#doc_1425cc7bbc57bcb8 comp.lang.c++.moderated]):
+You said "C++ doesn't add any built-in types to C."
+What about |bool|?
+
+/Yossi:/ This statement is false (wait, that's not good, I mean the one quoted in the posting).
+The FQA [23.5 does mention] that C++ adds built-in types which are essentially [8.1 new kinds of pointers]
+(references, pointers to members), but it doesn't say this in Defective C++ where the false assertion
+appears, and it fails to mention |bool| in this context anywhere.
+
+Unlike the previous item, this error doesn't invalidate the reasoning in the text where it appears. Specifically, the context
+ of the erroneous statement is the discussion of /high-level/ built-in types, which don't map directly
+ to C types the way |bool| does, primarily
+ because their sizes are not known at compile time.
+ 
+`<h2>`|#define private public| is not enough to cancel C++ encapsulation`</h2>`
+
+As Andreas Krey pointed out, you'd also need |#define protected public| and |#define class struct|.
+The latter will fail to work with code like |template<class T> class X {...}|, because the keyword
+|struct| can not be used in template parameter lists. There may be other problems related to
+interactions between access control and name look-up.
+
+Another thing I failed to mention in [7.7 the original context]: re-#defining keywords isn't legal
+C++. It will only work in implementations where preprocessing is a separate pass, which is
+unaware of the keywords and treats them as identifiers. I've never worked with an implementation
+doing it differently, but |#define private public| is still illegal C++. It's only useful for
+debugging (to print private data without changing header files and recompiling for hours),
+and to illustrate that C++ encapsulation is useless for security (the latter was my original point).
+
+`<h2>`The special case when N-dimensional arrays can be allocated dynamically with |new|`</h2>`
+
+When all array dimensions except for the first are known at compile time, you can allocate
+arrays dynamically with |new|. That's because C++ arrays are flat sequences of objects
+of the same type. In our case, those objects are (N-1)-dimensional arrays. If any of those
+N-1 dimensions weren't known at compile time, the (N-1)-dimensional array wouldn't be possible
+to describe with a C++ type. But not knowing the first dimension until run time doesn't create
+this problem.
+
+Joe Zbiciak found that [16.16 answer 16.16] fails to mention this. [16.20 Answer 16.20] does,
+but 16.16 is still incorrect because it says you only have 2 ways to allocate N-dimensional arrays
+dynamically. However, in our special case, you have a third way.
+
+`<h2>`Conversions between code and data pointers are common`</h2>`
+
+The FQA [33.8 says] that conversions between function pointers and void pointers are rare (independently of being
+illegal, though supported on many machines). Patrick Walton counters:
+
+"Actually, this is done all the time for dynamic linking, in |dlsym| on POSIX platforms (returns a |void*|, even for code pointers) and |GetProcAddress| on Windows (returns a |void (*)()|, even for data pointers). Interesting that both platforms violate the standard in opposite ways. In the case of POSIX, there's a lot of pain involved in making this required interface work on systems where function pointers are longer than data pointers."
+
+I wonder why neither Windows nor POSIX defined two functions, one returning a |void*| and one returning a |void (*)()|.
+

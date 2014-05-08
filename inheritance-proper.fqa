@@ -1,0 +1,350 @@
+Inheritance -- proper inheritance and substitutability
+{'section':21,'faq-page':'proper-inheritance.html'}
+This section is about using inheritance such that the code really works, not just compiles. Unlike most "OO"-related sections in the FAQ, much of the material is applicable to decent OO systems and not only to C++.
+
+Should I hide member functions that were public in my base class?
+
+FAQ: No, no, don't even think about it, /don't do that/, no. Your desire is probably the result of "muddy thinking".
+
+FQA: With all due respect, it is your precious programming language that probably is the result of "muddy thinking". The question talks
+about overriding base class functions in the |private| section of your derived class. This is trivially and reliably
+detectable at compile time. If you get so excited about how wrong it is, /why does it compile/?
+
+Answer: in C++, [25.13 random
+things] compile and [35.18 other random things] don't. The language definition is sloppy. What's that? You think the compiler writers
+made their own job easy by making yours hard? No, C++ is probably the hardest language to compile among those popular today.
+C++ is /pointlessly/ sloppy.
+
+The reason the FAQ gets so excited will become clear in [21.6 the next answers]. Basically, when your derived class overrides
+a function as |private|, you violate the substitutability principle: it is no longer true that an object of a derived
+class fully supports the interface of the base class. However, technically the functions from the base class are still
+accessible, because you can cast a pointer to a derived class object to the base class and call the function through the
+vtable (pretty /muddy/, isn't it?).
+
+People define overridden |virtual| functions as |private| to convey the message that objects of the derived class should never be used directly, and
+the purpose of the class is to interact with a framework which works with objects through base class pointers. While the FAQ gets
+overly hysterical about this practice, the polarity of its answer ("no") is probably right.
+
+-END
+
+Converting |Derived* -> Base*| works OK; why doesn't |Derived** -> Base**| work?
+
+FAQ: Because it shouldn't. Let's pretend it does work and see what happens.
+
+Suppose you have a |Dog* d|. You pass it to a function |void f(Pet** p)| with |f(&d)| - which should be OK,
+        since |Dog| is derived from |Pet|. The function does this: |*p = new Cat;|
+- perfectly legitimate, since |Cat| is derived from |Pet|, too. But now we have a |Dog*| pointing to a |Cat| object. So |d->bark()|
+will crash the program, or misbehave more severely, since a |Cat| may have a virtual function |scratchFurniture| at that slot
+of the vtable.
+
+Actually, the FAQ uses a scarier example, which launches nuclear missiles as the result of the mistake. IMHO, nothing can beat
+the following classic in this department:
+
+@
+if(status = UNDER_ATTACK) {
+  launch_nuclear_missiles();
+}
+@
+
+Best Industry Practice: use peer reviews to increase the quality of your nuclear missiles launching code.
+
+FQA: Yep, levels of indirection and static typing interact in non-obvious ways. This is another incarnation of [18.2 the problem]
+making it impossible to cast |T**| to |const T**|. Basically, /a T* is always a S*/ doesn't mean /a T** is always a S**/.
+
+The problem is that there are many cases where you /know/ that you are doing something legitimate, but the compiler doesn't. For example, you know
+that it was /you/ who filled this vector of Pets with a bunch of Dogs. You /couldn't/ use a vector of Dogs because
+you wanted to pass it to a function working with a vector of Pets. And as we've just seen, the compiler wouldn't let
+you pass a vector of Dogs to a function expecting a vector of Pets, and for a good reason. So you ended up
+        with a vector of Pets filled with Dogs.
+        And now you want to fetch a Dog from the vector - but the elements are typed as Pets,
+so you have to use a cast. It wouldn't be that bad if these cases wouldn't cause many people to develop a habit of
+aggressive casting to have the compiler shut up, and\/or C++ would catch illegal cast operations at run time.
+
+Moral: static typing (having the compiler validate the code according to a set of rules specifying properties of types and their relationships)
+is hard. A static type system will get in your way. And it only partially compensates you by "validating the interfaces",
+because only some of interface specification can be modeled statically, as we'll see [21.6 below].
+In particular, consider our example where you had to stuff your Dog objects into a vector of Pet pointers,
+all because the compiler /insisted/ on the looser typing.
+        Now the compiler won't prevent someone else from adding a Cat pointer to that vector, and
+        then your code fetching a Pet* from the vector and casting it to a Dog* will misbehave.
+
+I'm not saying that static typing is "bad", but if you think that /dynamic/ typing is bad, you are very lucky -
+you're just one step away from a quite noticeable increase in your productivity. Pick a dynamically typed language and give it a try.
+
+-END
+
+Is a parking-lot-of-|Car| a kind-of parking-lot-of-|Vehicle|?
+
+FAQ: No, because a |Plane| is one kind of |Vehicle|, and you don't want someone to park it at a cars' parking lot.
+
+FQA: In English, apparently the answer is yes. In OO, the answer is no. In natural language, there's no strict definition of "kind-of" (or anything
+else, for that matter). OO systems are formal, and they have a precise definition for "kind-of": /B is a kind of A if
+you can do to a B object whatever you can do to A, and it will work correctly/ (not just compile).
+
+Programming languages are not natural languages. In particular, the good programming languages don't try to look
+[13.2 "natural"] when such attempts make it hard to understand the formal, precise and dumb stuff the machine actually does.
+If you ever wondered what on Earth the C++ expression |a->b| does (when |a| is an object of a smart pointer template class with 7 parameters),
+you know what I mean.
+                                                                                           
+-END
+
+Is an array of |Derived| a kind-of array of |Base|?
+
+FAQ: No. Think of the array as an implementation of a parking lot, and you'll see that the answer follows from [21.3 the previous
+FAQ].
+
+FQA: Note that the ability of the compiler to figure out whether something is a kind-of something else is limited.
+In particular, it seems to work better with types
+related by inheritance (base and derived classes) than with types related by qualifiers (|const| and non-|const|)
+or by the way they are instantiated from the same templates.
+For example, a |vector<T*>| is apparently a kind-of |const vector<const T*>|, because there's nothing you can do
+with an all-|const| vector you couldn't do with an all-non-|const| vector. But the compiler [18.17 doesn't know that].
+
+One way around this is "duck typing" - don't bother to specify the relationships between the types, just
+pass objects to functions, which will work if the object can do whatever they ask it to do, and raise
+a run time error otherwise.
+"If it walks like a duck then it is a duck" and all that - you don't have to define a |Duck| interface all
+ducks should follow, just get an object and call methods such as |walkLikeADuck|.
+C++ doesn't have duck typing because it would require the compiler to rely on non-trivial and not-so-lightweight run time mechanisms,
+which kind of goes against the "spirit" of C++ (not that the run time mechanisms used to implement exceptions are trivial, mind you).
+
+One could claim that duck typing is incompatible with the "spirit of C++" because it involves run-time dispatching,
+but so do |virtual| functions, which are more efficient but less flexible and much more likely to trigger recompilations - a [6.3 big deal] in many situations.
+Or one could claim that duck typing is not "the C++ way" because it leaves out the specification of interfaces,
+but so do templates, which provide "static duck typing" - too bad they are such a pile of toxic waste that the scope of
+this discussion is too narrow to even briefly describe [35.1 why]. Or one could claim that with duck typing, you can fail
+at run time because someone provided an object of the wrong type - but nothing prevents someone from simply passing
+a null pointer to a C++ function that can't handle that and have it crash much harder than any code in a safe dynamic language ever will.
+
+The true reason making duck typing incompatible with The C++ Way is the 95% Is Nothing Axiom. It goes like this:
+"if something is only useful for 95% of the cases, /and/ it doesn't map almost directly to C,
+it's not worth adding to C". Other examples of the application of this axiom to the design of C++
+is [16.1 the lack of garbage collection], which "only" handles memory (>95% of all "resources"), and "only" in non-real-time
+applications (>95% of all application code).
+
+The consequences of this axiom wouldn't be that bad if the features C++ /did/ add to C were any good.
+
+-END
+
+Does array-of-Derived is-not-a-kind-of array-of-Base mean arrays are bad?
+
+FAQ: Yes, arrays are [6.15 evil]. Normally you should use |std::vector| instead of arrays. But if you are an enlightened OO
+specialist and so is everyone likely to maintain your code, and you fully understand the interaction of "kind-of"
+and arrays, you may use them.
+
+FQA: Huh? Arrays and vectors are synonyms in the context of the "kind-of" issue. What does the cult [8.6 advocating]
+the replacement of C features, which have their problems, with new shiny C++ features having much worse problems
+have to do with proper inheritance?
+
+What's that? Casting arrays is easier than casting vectors? Try this: |(vector<T>*)&vec_of_something_else_than_T|.
+Seriously, this is one weird question with a strange answer we have here.
+
+-END
+
+Is a |Circle| a kind-of an |Ellipse|?
+
+FAQ: Sometimes it is, most frequently it isn't. For example, if an |Ellipse| lets you change the size in a way
+making it asymmetrical, it's not a |Circle|.
+
+The point is that if you derive a |Circle| from an |Ellipse| and then someone tries to use an |Ellipse*| which
+really points to a |Circle| object, there's no way to make it work gracefully. Either the calling code will
+get an error in some form, even though it does something which should be possible to do with an |Ellipse|,
+or the |Circle| object will obey to the caller and become an invalid circle, breaking some other legitimate piece of code which
+does expect it to be a valid circle.
+
+FQA: This is just like [21.3 the parking lot example] in the sense that "kind-of" in English means many different things,
+some of which are incompatible with the precise definition of "kind-of" used in OO. The important point is that
+the interfaces are protocols and implementations must follow them.
+
+Some people think about inheritance merely
+as another form of "binding" - having the compiler call a function using new syntax. From this point of view,
+everything is legitimate as long as the program compiles and does whatever the end user expects. But this way
+inheritance only makes programming harder (another kind of syntax to decipher). The more restrictive "interfaces
+as a protocol" approach can make programming easier because when you implement a bunch of protocols correctly,
+you can extend a program without tweaking its code (for example, [20.1 add a movie format to a media player]). But this
+only works if you /really/ follow the protocol. If you /sort of/ do it ("a Circle is a kind-of Ellipse, well, almost - just don't call this function"),                                                                        
+the media player will crash.
+                                                                        
+There are numerous families of examples where natural languages and OO terms [19.2 are not aligned]
+(which doesn't mean OO is bad - it means it's formal, which is good for computer programming).
+The "parking lot" represents one family (collections); Circle\/Ellipse represent another one (parametric representations).
+One family of "positive" examples (where inheritance is likely to be proper) is record types
+(a |CPlusPlusProgrammer| has all the fields of a |Programmer|, plus a couple of new, orthogonal members, such
+ as |headAgainstTheWallBangingFrequency|).
+
+-END
+                                                                    
+Are there other options to the "|Circle| is\/isnot kind-of |Ellipse|" dilemma?
+
+FAQ: Well, you need to get rid of /some/ of your original claims to get back to consistency. Either |Ellipse| has no
+|setSize| function which can make a circular |Ellipse| object non-circular, or there's no inheritance which makes
+it possible to call such a function on a |Circle| object, or you can even choose to live with the fact that some
+of your |Circle| objects will become non-circular (and have the code working with |Circle| objects deal with it).
+
+Trying to keep all claims and cover up the problem by doing "something reasonable"
+(like calling |abort| when |setSize| is called with a |Circle| object, or "fixing" its arguments)
+is not going to solve the problem, because ultimately it breaks the assumptions behind the calling code.
+
+FQA: The FAQ answer is apparently correct and complete. Incidentally, this isn't exclusively about C++, it's about OO in general.
+
+One solution is to have |setSize| return a new |Ellipse| object. This way, |Circle::setSize| will return
+a |Circle| unless the new size is asymmetrical, in which case it will return an |Ellipse|. One possible
+ benefit is efficiency - circles have less parameters than ellipses, so if you have lots of operations to do
+ with a bunch of objects, you'd rather have all of the objects that can be represented as |Circle| objects
+ actually /be/ represented that way, not as redundant |Ellipse| objects.
+
+If you "roll your own OO" (that is, implement inheritance yourself instead of directly relying on language features),
+ you can avoid the creation of a new object and instead dynamically change its type. For example,
+ |setSize| may change the vptr to point to an |Ellipse| vtable when the new size is asymmetrical.
+ This kind of thing is implemented in the [http://www.povray.org/ POV-Ray] ray tracer, written in C.
+
+The fact that you can't do it in a portable way with C++ inheritance probably /doesn't/ mean that C++ inheritance
+ is underpowered (surprise!) - you need this kind of thing once in a lifetime, and you must have it very well
+ thought-out to make it really work, and in these rare cases you can go ahead and use function pointers instead
+ of inheritance and implement it. There probably are people that would classify this limitation as a symptom of
+ a deeper problem - having too much logic built into the compiler and too little ways to implement compile time
+ logic in user code - but it's debatable.
+
+-END
+
+But I have a Ph.D. in Mathematics, and I'm sure a Circle is a kind of an Ellipse! Does this mean Marshall Cline is stupid? Or that C++ is stupid? Or that OO is stupid?
+
+FAQ: It means a different thing: your intuition is wrong in the sense that it leads you to make wrong decisions about
+ inheritance. The right way to think about "kind-of" is this: B is a kind of A if you can always substitute a B for an A.
+
+FQA: I like how this question is formulated. Shows spirit. In general, the FAQ can be quite entertaining
+ if you're into that sort of thing. If I could legitimately quote the answers instead of summarizing them,
+ I'd sure would.
+
+Which is all nice and dandy, but did you notice the disturbing claim "your intuition is wrong"? Instead of admitting
+ that OO is /not/ [19.2 a natural language], and it /doesn't/ have to [13.2 map directly to a natural language], the FAQ actively tries
+ to persuade you to /change/ the way you use natural language words to make your thinking OO-compatible. Next, they'll
+ ship patches you should apply to your DNA, and a sticker saying "Designed for C++ Programming" for your skull.
+
+I think this point is worth discussion because it's representative of the whole notion of "good" in the C++ world.
+ C++ tries to make the program /look/ natural. See - we add things with the plus sign, and errors are handled [17.1 transparently],
+ and resources are managed [17.4 automatically] - that's one very high-level language, and it's efficient, too! But make a single
+ error in your program - and finding it becomes an nightmare. What is /really/ being called by this |a+b| expression?
+ What /really/ happens upon error? And this object we deallocate here - how do we know nobody is keeping a pointer to it?
+ Because all our pointers are "smart"? But look - here we use a library using bare pointers, and here's one using
+ different smart pointer classes. What is /really/ going on here?
+
+The basic rule C++ breaks is this: don't make promises you can't keep. Don't say that inheritance is equivalent to
+ the way people think about "kind-of" - introduce it from the beginning in terms of substitutability. Don't
+ pretend you manage resources "automatically" when in fact it's the responsibility of everyone to follow non-trivial
+ protocols for this to work, and a single error is fatal - make it visible where resources are acquired and released.
+Or you can /really/ manage them automatically - with garbage collection or reference counting or otherwise. But if you
+ refuse to do it, which may be perfectly legitimate at times, /admit it/. Changing your terms is more productive than
+ waiting for everyone to change theirs.
+
+Of course the Circle\/Ellipse problem is /not/ an example of "making promises that can't be kept". It's
+ the FAQ's [19.2 claims] about OO "capturing the way we think" that are such an example.
+
+-END
+
+Perhaps |Ellipse| should inherit from |Circle| then?
+
+FAQ: Probably not. For example, what would the |radius()| accessor do, and how would it be compatible with an assumption
+ that is most likely a part of the |Circle| protocol that you can use |radius()| to compute the |area()|?
+
+FQA: I think it's very easy to see with a slightly different, but a related example. What is more stupid: to claim
+ that a triangle is a rectangle with two identical vertices, or that a rectangle is a triangle with 4 vertices? It
+ probably sounds equally stupid to most people.
+
+ The major reason making people who themselves would think these claims are stupid to go ahead and derive |Triangle| from |Rectangle|
+ or vice versa is that /they don't think they are in fact making such claims by implementing such inheritance/.
+
+The idea is this: inheritance is not just yet another kind of syntax. Its purpose is /not/ to save a couple of lines
+ of code in the derived class (which you may accomplish by deriving |Triangle| from |Rectangle|). And the compiler /can't/ check that
+your inheritance is correct
+ (this is really hard for C++ aficionados to accept: /the compiler can't check something!/).
+Inheritance is about writing code that follows a protocol, making it possible to call this code from any function
+written to work with objects that follow that protocol, and thus /reusing the calling code/ (possibly /a lot/ of such code - much more than the couple of lines you saved in the derived class).
+
+And if your inheritance does not guarantee substitutability, then the compiler won't be able to catch your error
+(it's type checking /assumes/ that you provide substitutability - that's why it lets you use pointers
+ to derived class objects in contexts expecting base class object pointers). And you'll confuse most people
+  (frequently including yourself), who also expect substitutability, especially since the compiler agrees by
+  letting them pass an |Ellipse| where a |Circle| is required. And if you really don't need substitutability,
+  you don't really need (public) inheritance, either.
+
+-END
+
+But my problem doesn't have anything to do with circles and ellipses, so what good is that silly example to me?
+
+FAQ: But you see, /all/ examples of improper inheritance are basically equivalent to the |Circle|\/|Ellipse|
+  case. Inheritance is bad when a base class provides functionality which a derived class can't provide
+  (in the |Ellipse| case, that's asymmetrical resizing). The problem with inheritance in such cases is that
+it comes without substitutability, breaking a basic assumption shared by programmers using the classes
+and the compiler (which automatically allows to use objects of derived classes where base class objects are expected).
+
+FQA: Exactly. People [33.4 obsessed] with compile-time error checking, repeat: the compiler does the static type
+checking (as in "this object is of class |Derived| - OK, it's a legitimate parameter to function |f(Base&)|")
+based on assumptions it can not check ("whoever wrote |Derived| made it substitutable for |Base|").
+Say it again: /the compiler does the static type checking based on assumptions it can not check./
+`<b>` The compiler does the static type checking based on assumptions it can not check. `</b>`
+
+Translation: the correctness of an interesting program can not be checked at compile time. All programmers are supposed to [http://en.wikipedia.org/wiki/Halting_problem know] it,
+but some keep forgetting. So is it ultimately better to spend your time on type safety (things like [35.11 making sure] that nobody can cast |vector<T>::iterator| to the underlying |T*|)
+or writing tests checking that your code behaves correctly at run time? You be the judge.
+
+-END
+
+How could "it depend"??!? Aren't terms like "Circle" and "Ellipse" defined mathematically?
+
+FAQ: They are, but the /classes/ |Circle| and |Ellipse| have a /different/ definition - the C++ code
+defining the classes. In your program, that's the definition of |Circle| and |Ellipse|, and that's
+what you have to look at to validate your inheritance. If you keep thinking about the mathematical connotations,
+let's replace the class names with |Foo| and |Bar| for the moment; that's all the same for the compiler.
+   
+Now that we've defined the meaning of |Circle| and |Ellipse|, recall that "inherits" means "is substitutable for"
+   (not "is a" or "is a kind of", which are not precise definitions). With these definitions, you can get
+   the right answer using the previous FAQs.
+
+FQA: Exactly - you can't implement the mathematical notion of "circle" in a programming language,
+   you can only implement a definition (possibly called |Circle|) or a bunch of definitions
+   which model some of the aspects of mathematical circles to a certain extent. And when you reason
+   about the correctness of your program, you have to talk about these definitions, not the original
+   mathematical notion.
+
+Lots of suffering inflicted by the more talented programmers upon themselves originates at the hope
+   to implement "the ultimate something" (for example, "the ultimate circle class" that captures /all/
+                                          aspects of mathematical circles, so you'd never
+have to define a circle class again).
+   The /ultimate/ search for "the ultimate something" in programming is probably the search for
+   /the ultimate programming language/. Arguably, the C++ language is one result of this search -
+   it tries to meet a huge amount of conflicting requirements, the key ones being [http://www.research.att.com/~bs/bs_faq.html#why "readability, efficiency and generality"]
+   of C++ code, as well as [6.11 pseudo-compatibility] with C. The result is a large-scale nightmare, and the moral of the story is simple: design
+   the best tool for everything, and you'll get a tool good for nothing.
+
+On the bright side, it is probably possible to define a good |Circle| class for your program -
+   if you try to make it good /for your program/ rather than implement the mathematical notion.
+   And this is why the meaning of |Circle| /depends/ on your program.
+
+-END
+
+If |SortedList| has /exactly/ the same public interface as |List|, is |SortedList| a kind-of |List|?
+
+FAQ: It's quite unlikely. For instance, consider |List::insert|. Is it defined to insert the element
+   to the end of the list? If it is, there's no good way to implement it in |SortedList|, because
+   the insertion to the end will usually make the list unsorted.
+
+The substitutability principle is about the specified behavior, not just function names and parameter types.
+So "exactly the same public interface" in the syntactic sense is not enough - for proper inheritance,
+   the specified run time behavior must be the same.
+
+FQA: Yep, compile time type checking can not guarantee proper inheritance, it can only operate under
+   the [21.10 assumption] that /you/ guaranteed it. That's why some languages come with contract checking:
+   the base class specifies the behavior using input and output constraints computed at run time,
+   and you can have your run time environment automatically evaluate these constraints when methods of derived
+   classes are called.
+
+   You can simulate this behavior in C++ by writing lots of code. Namely, the base class can have a public
+   non-virtual |insert| method calling a protected virtual |onInsert| method. The |insert| wrapper
+   can then check whether |onInsert| follows the protocol using a bunch of |assert|s before
+   and after the call to |onInsert|. Since "a lot of code" is most frequently bad by itself (because you waste time writing it and then waste much more time reading it together with other people),
+   the benefits are not necessarily worth the trouble. But run time tests (stand-alone or integrated into a larger system)
+   greatly increase the quality of code, and making run time testing simple and painless pays off, especially compared
+   to work spent on compile time error detection.
+
+-END
