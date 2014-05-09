@@ -1,5 +1,6 @@
 import os
-execfile('start.py')
+import imp
+f2h = imp.load_source('f2h','fqa2html.py')
 h2toc=imp.load_source('h2toc','toc.py')
 def doit():
     fqa = [f for f in os.listdir('.') if f.endswith('.fqa')]

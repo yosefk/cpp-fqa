@@ -9,7 +9,6 @@ FAQ: Sure - not perfect, but mature and well-supported, which is good for busine
 FQA: It's "practical" in the sense that you can use it to modify and extend programs such as WebKit
 (a web browser engine written in C++) or LLVM (an optimizing compiler written in C++).
 
-
 It's "practical" in the sense that a lot of practical work is done with it, and a lot of useful things
 are hardi or impossible to do without it. Most of those useful things are along the lines of "changing a C++ program"
 or "using a C++ library".

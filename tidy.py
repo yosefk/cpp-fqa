@@ -20,7 +20,7 @@ def getoutput(cmd):
   return r
 
 def tidy(f):
-  o=getoutput('E:\\sw\\tidy\\tidy.exe -e %s 2>&1 | grep "errors were found"'%f)
+  o=getoutput('tidy -e %s 2>&1 | grep "errors were found"'%f)
   if ' 0 errors were found' not in o:
     raise Exception('ERRORS FOUND IN %s: %s'%(f,o[:-1]))
   print f+':',o[:-1]

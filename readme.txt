@@ -7,7 +7,6 @@ toc.py - module generating TOC from <h2> headings and a <!-- h2toc --> comment. 
 tidy.py - makes the html w3c-compliant, and runs tidy to make sure it really is.
 upload.py - uploads all *.html files generated from *.fqa files to yosefk.com/c++fqa. slow, but automatic.
 linkimages.py - manual. generates html code for link faces (for linking.html).
-start.py - dumb import stuff for refresh.py.
 
 data:
 
