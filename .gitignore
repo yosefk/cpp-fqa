@@ -2,3 +2,5 @@
 *.html
 *.exe
 _out_.txt
+*~
+.*.swp
