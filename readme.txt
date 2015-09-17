@@ -1,4 +1,8 @@
 
+This is the source code for the C++ FQA published at
+
+  http://yosefk.com/c++fqa/
+
 software:
 
 refresh.py - *.fqa -> *.html. master script doing it all.
