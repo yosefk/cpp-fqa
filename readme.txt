@@ -2,6 +2,9 @@
 This is the source code for the C++ FQA published at
 
   http://yosefk.com/c++fqa/
+  
+You're very welcome to edit the FQA; in particular, it's not up to date with C++11/14/etc., nor with
+the new FAQ structure (I mean the new, erm, they call it "Super-FAQ" at isocpp.org)
 
 software:
 
