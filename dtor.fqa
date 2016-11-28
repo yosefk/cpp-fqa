@@ -175,7 +175,7 @@ if you care where your objects are allocated, don't make them objects of classes
 This way, you can create [11.14 memory pools] with code like |C pool[N];|, which takes care of alignment /and/ "type safety".
 But if the class |C| has a constructor, it's going to get called N times by this statement (slow and stupid), and if you want someone to use
 placement |new| with the pool, you'll have to /call the destructors/ after the constructors finish running
-(slow, stupid and cryptic). Or you can use |char pool[N*sizeof(C);]| with platform-specific additions to handle
+(slow, stupid and cryptic). Or you can use |char pool[N*sizeof(C)];| with platform-specific additions to handle
 alignment, and then you won't be able to easily inspect the pool in a debugger (the object |pool| has the wrong type), etc.
 
 And you have to be /out of your mind/ to call placement |new| when you [13.3 deal with memory-mapped hardware].
