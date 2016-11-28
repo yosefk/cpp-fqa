@@ -47,7 +47,7 @@ start pointer to contain some meta-data it no longer contains, etc.
 
 Here's what happens in [6.5 managed environments]. First, you don't delete anything: the environment does. Second, it never
 deletes anything unless nobody points to it. So you are never stuck with pointers pointing to graves of dead objects,
-which may already be inhibited by freshly created objects. Which is good, because whatever your project is, memory
+which may already be inhabited by freshly created objects. Which is good, because whatever your project is, memory
 management is not one of its stated goals, is it? It's nice not to do something you don't really want to do.
 
 -END
