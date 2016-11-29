@@ -67,7 +67,7 @@ The FAQ probably means that they are different because they are less related to 
 You may wonder what the colon syntax has to do with the concept of inheritance. Well, the
 connection is obvious: there's no inheritance in C, and adding keywords to C++ reduces the
 [6.11 "compatibility"] with C, because the grammars of these languages prevent you from using keywords
-as identifiers. Once again, punctation comes to the rescue.
+as identifiers. Once again, punctuation comes to the rescue.
 The other technique for retro-fitting features into the grammar is overloading keywords
 (consider |static|).
 
