@@ -200,7 +200,7 @@ There are numerous reasons making |const_cast| safer in practice than in theory.
 Compiler writers are unlikely to add special cases to their compiler to support |const| objects of C++ classes because it's hard work
 that is unlikely to pay off. For example, allocating a global |const| C-style structure with an aggregate initializer in read-only
 memory is easy. Doing the same for a C++ class with a constructor is hard because the constructor must be able to
-write to the object upon initialization. So you'd have to use writable memory you later make readable, which is not
+write to the object upon initialization. So you'd have to use writable memory you later make read-only, which is not
 typically supported by object file formats and operating systems. Or you could translate C++ code to a C-style aggregate
 initializer, spending lots of effort to only handle the cases when the compiler can [9.1 inline] the code of the constructors.
 
