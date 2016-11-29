@@ -118,7 +118,7 @@ a null pointer to a C++ function that can't handle that and have it crash much h
 
 The true reason making duck typing incompatible with The C++ Way is the 95% Is Nothing Axiom. It goes like this:
 "if something is only useful for 95% of the cases, /and/ it doesn't map almost directly to C,
-it's not worth adding to C". Other examples of the application of this axiom to the design of C++
+it's not worth adding to C++". Other examples of the application of this axiom to the design of C++
 is [16.1 the lack of garbage collection], which "only" handles memory (>95% of all "resources"), and "only" in non-real-time
 applications (>95% of all application code).
 
