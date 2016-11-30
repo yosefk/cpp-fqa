@@ -218,7 +218,7 @@ FQA: You can only do that if |T| has a [10.5 default constructor] (one that can 
 
 What if I forget the |[]| when deleting array allocated via |new T[n]|?
 
-FAQ: You'll infect your program with an incurable decease. It will do something like corrupt its data and die.
+FAQ: You'll infect your program with an incurable disease. It will do something like corrupt its data and die.
 
 FQA: If you want to realize the idiocy of this rule in its full glory, consider this. |new| calls |malloc| or some other
 allocator, and it passes it the block size. The allocated pointer is then passed to |delete|, but the size is /not/.
