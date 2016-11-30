@@ -298,7 +298,7 @@ in close coordination between the implementers. This way, we'll finish the Tower
 language should have no good way to pass an object of arbitrary type through a "subsystem".
 Trust us: we are the people advocating a language without a /common string type/.
 We sure know a thing or two about the issue.
-`<li>` /Using bare pointers instead of smart pointer classes/: how about staring with the language and the standard
+`<li>` /Using bare pointers instead of smart pointer classes/: how about starting with the language and the standard
 library? When |operator new| returns a smart pointer, and |"abc"| has the type |std::string|, we'll have something
 to discuss. Until then, why should anyone manually emulate a high-level language on top of a low-level one throughout
 one's code? `</li>`
