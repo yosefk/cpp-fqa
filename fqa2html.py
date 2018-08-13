@@ -7,8 +7,12 @@ import os
 
 site = os.environ.get('FQA_SITE','') #'http://geocities.com/yossi_kreinin/'
 
+# fetched from web.archive, pages are mostly from 2015. There had been a lot of changes since 2007.
+faq_site = 'http://web.archive.org/web/20150113043533/http://www.parashift.com:80/c++-faq-lite'
+
 # in October 2007, parashift.com disappeared from the DNS
-faq_site = 'http://www.parashift.com/c++-faq-lite'
+#faq_site = 'http://www.parashift.com/c++-faq-lite'
+
 #faq_site = 'http://www.dietmar-kuehl.de/mirror/c++-faq'
 #faq_site = 'http://www.ensta.fr/~diam/c++/online/c++-faq-lite'
 
