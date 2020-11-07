@@ -113,7 +113,7 @@ But if we leave the claims about being object-oriented aside, the fact that a la
   check things at run time to prevent illegal operations, which translates to a certain (though frequently overestimated)
   performance penalty. So when performance isn't that important, a managed environment is the way to go.
   But when it's critical, you just have to deal
-  with the difficulties in debugging. However, C++ (compared to C, for example) makes /that/ much harder that it already has to be, because there are...
+  with the difficulties in debugging. However, C++ (compared to C, for example) makes /that/ much harder than it already has to be, because there are...
 
 `<h2>No binary implementation rules</h2>`
 
