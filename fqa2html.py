@@ -12,21 +12,19 @@ faq_site = 'http://www.parashift.com/c++-faq-lite'
 #faq_site = 'http://www.dietmar-kuehl.de/mirror/c++-faq'
 #faq_site = 'http://www.ensta.fr/~diam/c++/online/c++-faq-lite'
 
-style = '''
-  <style type='text/css'>
-  <!--
-  body { font-family: arial; color: black; background: white }
-  h2   { color: black; background-color: #ddeeff }
-  h1   { color: black; background-color: #ddeeff }
-  h5   { background-color: #eeeeee }
-  pre  { background-color: #eeeeee }
-  .part{ color: gray }
-  .FQA { background-color: blue; color: gold }
-  .FAQ { background-color: gold; color: blue }
-  .corr{ color: red }
-  -->
-  </style>
-'''
+style = '''<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>'''
 
 import time
 import datetime
@@ -207,15 +205,16 @@ def run(arg,sp=False):
     if 'Main page' in title:
       title_titag = 'C++ Frequently Questioned Answers'
       title_h1tag = 'C++ FQA Lite: Main page'
-    print('''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    print('''<!DOCTYPE html>
 <html>
-  <head>
-  <title>%s</title>
-  %s
-  </head>
-  <body>
-  <h1>%s</h1>
-  %s
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>%s</title>
+%s
+</head>
+<body>
+<h1>%s</h1>
+%s
   '''%(replace_html_ent(title_titag),style,replace_html_ent(title_h1tag),below_heading))
 
   # second line: attributes
@@ -401,13 +400,14 @@ The single page version does not include most "metadata" sections such as [http:
 def singlepage(outname):
   '''generate a single HTML page with: intro & index, Defective C++, Q&A sections, and FQA errors.'''
   outf = open(outname,'w')
-  print('''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  print('''<!DOCTYPE html>  
 <html>
-  <head>
-  <title>C++ Frequently Questioned Answers</title>
-  </head>
-  %s
-  <body>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ Frequently Questioned Answers</title>
+%s
+</head>
+<body>
 '''%style, file=outf)
 
   tmpfile = 'sp-index.tmp.fqa'

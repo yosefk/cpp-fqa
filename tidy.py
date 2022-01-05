@@ -20,10 +20,12 @@ def getoutput(cmd):
   return r
 
 def tidy(f):
-  o=getoutput('tidy -e %s 2>&1 | grep "errors were found"'%f)
-  if ' 0 errors were found' not in o:
+  o=getoutput('tidy -e %s 2>&1 | grep "errors were found"'%(f))
+  if ' 0 errors were found' or 'No warnings or errors were found' in o:
+    print(f+':',o[:-1])
+  else:
     raise Exception('ERRORS FOUND IN %s: %s'%(f,o[:-1]))
-  print(f+':',o[:-1])
+  
 
 for f in files:
   fd=open(f)
