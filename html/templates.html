@@ -1,0 +1,697 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Templates</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Templates</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This page is about C++ templates, one of the largest cannons to aim at your feet that the C++ arsenal has to offer. Templates solve the problems with C macros by creating 2 orders of magnitude more problems.
+</p>
+
+<ul>
+<li><a href="templates.html#fqa-35.1">[35.1] What&#39;s the idea behind templates?</a></li>
+<li><a href="templates.html#fqa-35.2">[35.2] What&#39;s the syntax / semantics for a &quot;class template&quot;?</a></li>
+<li><a href="templates.html#fqa-35.3">[35.3] What&#39;s the syntax / semantics for a &quot;function template&quot;?</a></li>
+<li><a href="templates.html#fqa-35.4">[35.4] How do I explicitly select which version of a function template should get called?</a></li>
+<li><a href="templates.html#fqa-35.5">[35.5] What is a &quot;parameterized type&quot;?</a></li>
+<li><a href="templates.html#fqa-35.6">[35.6] What is &quot;genericity&quot;?</a></li>
+<li><a href="templates.html#fqa-35.7">[35.7] My template function does something special when the template type <tt>T</tt> is <tt>int</tt> or <tt>std::string</tt>; how do I write my template so it uses the special code when <tt>T</tt> is one of those specific types?</a></li>
+<li><a href="templates.html#fqa-35.8">[35.8] Huh? Can you provide an example of template specialization that doesn&#39;t use <tt>foo</tt> and <tt>bar</tt>?</a></li>
+<li><a href="templates.html#fqa-35.9">[35.9] But most of the code in my template function is the same; is there some way to get the benefits of template specialization without duplicating all that source code?</a></li>
+<li><a href="templates.html#fqa-35.10">[35.10] All those templates and template specializations must slow down my program, right?</a></li>
+<li><a href="templates.html#fqa-35.11">[35.11] So templates are overloading, right?</a></li>
+<li><a href="templates.html#fqa-35.12">[35.12] Why can&#39;t I separate the definition of my templates class from its declaration and put it inside a .cpp file?</a></li>
+<li><a href="templates.html#fqa-35.13">[35.13] How can I avoid linker errors with my template functions?</a></li>
+<li><a href="templates.html#fqa-35.14">[35.14] How does the C++ keyword <tt>export</tt> help with template linker errors?</a></li>
+<li><a href="templates.html#fqa-35.15">[35.15] How can I avoid linker errors with my template classes?</a></li>
+<li><a href="templates.html#fqa-35.16">[35.16] Why do I get linker errors when I use template friends?</a></li>
+<li><a href="templates.html#fqa-35.17">[35.17] How can any human hope to understand these overly verbose template-based error messages?</a></li>
+<li><a href="templates.html#fqa-35.18">[35.18] Why am I getting errors when my template-derived-class uses a nested type it inherits from its template-base-class?</a></li>
+<li><a href="templates.html#fqa-35.19">[35.19] Why am I getting errors when my template-derived-class uses a member it inherits from its template-base-class?</a></li>
+<li><a href="templates.html#fqa-35.20">[35.20] Can the previous problem hurt me silently? Is it possible that the compiler will silently generate the wrong code?</a></li>
+</ul>
+
+<a name="fqa-35.1"></a>
+<h2>[35.1] What&#39;s the idea behind templates?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.1">FAQ:</a></b>
+ A template describes how to build definitions (classes or functions) which are basically the same.
+</p>
+
+<p>
+One application is type-safe containers; there are many, many more.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Let&#39;s get a bit more specific. The FAQ&#39;s answer is applicable to C macros, Lisp macros, ML functors, functions
+like <tt>eval</tt> found in many interpreted languages, OS code that generates assembly instructions used to handle interrupts at run time, and just plain code generation (writing programs that print source code). The purpose of all such devices is meta-programming - writing code that works with code, creating pieces of code which are &quot;basically the same&quot; (after all, they are built from the same rules), and yet have some interesting differences. The question is, how do we specify these rules and these differences?
+</p>
+
+<p>
+The approach used in C++ templates is to use integral constants and types to represent the differences, and to use
+class &amp; function definitions to represent the rules. The first decision prevents you from generating code
+dynamically, because the parameters can only be compile-time entities. The second decision prevents almost
+everything else, because you don&#39;t get to use a <i>programming language</i> to generate code - the only thing you
+can do is write code with some things factored out and made parameters. You can&#39;t do as simple and useful
+a set of &quot;basically the same&quot; classes as automatically generated class wrappers for remote procedure calls
+instead of normal &quot;local&quot; function calls (called &quot;proxies and stubs&quot; in <a href="http://en.wikipedia.org/wiki/Component_Object_Model">COM</a>
+terminology; there are many other terms). Even computing the factorial of an integer parameter
+is done using so much <a href="templates.html#fqa-35.2">code</a> abusing the language mechanisms that people with no useful work to do are <i>proud</i> of being able to accomplish this.
+</p>
+
+<p>
+Beyond those fundamental limitations, templates follow the tradition of C++ features of interacting poorly
+with each other. Templates can&#39;t be compiled because they are not code - they are, well, templates from
+which code can be generated once you have the parameters, and <i>then</i> you can compile it. C++, like C,
+defines <a href="inheritance-mother.html#fqa-23.10">no way</a> to locate the compiled code of a definition given its name. Consequently, template
+definitions are placed in <tt>#include</tt> files, and <i>recompiled in each translation unit each time they
+are instantiated</i>, even if the exact same instantiation is used in N other files. This
+problem is amplified by the tremendous complexity of the C++ grammar
+(the most complicated part of it is probably <a href="templates.html#fqa-35.18">templates themselves</a>), making this recompilation very
+slow. If your code doesn&#39;t compile, you get <a href="templates.html#fqa-35.17">cryptic error messages</a>. If it does compile, you might
+wonder what it means. That&#39;s where the interactions of the C++ type system
+(pointers, arrays, references, constants, literals...), function &amp; operator overload resolution,
+function &amp; class template specialization selection, built-in and user-defined implicit conversions,
+argument-dependent name look-up, namespaces, inheritance, dynamic binding and <i>other</i> things kick in.
+The sheer length of this list should be convincing: neither a human nor a program (say, an IDE) has a
+chance against this unprecedented syntactic power.
+</p>
+
+<p>
+Poor support for meta-programming is not necessarily a very big deal, because you can do lots and
+lots of things without it. That is, unless you work in C++. For example, there are no built-in lists or
+dictionaries in C++; the standard library provides templates you can use, so you can recompile the
+definition of each kind of dictionary each time you use it in a source file. In fact, most of
+the code in the C++ standard library belongs to a conceptually and historically separate library called
+STL, which stands for &quot;Standard Template Library&quot;. For example, that&#39;s where <tt>std::vector</tt>,
+which the FAQ recommends to use instead of the <a href="picture.html#fqa-6.15">evil</a> C arrays, comes from.
+</p>
+
+<p>
+If you use C++, chances are that you&#39;re going to deal a lot with its obscure meta-programming facilities.
+</p>
+
+
+<a name="fqa-35.2"></a>
+<h2>[35.2] What&#39;s the syntax / semantics for a &quot;class template&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.2">FAQ:</a></b>
+ You add the parameters before the definition of your class, as in <tt>template&lt;typename T&gt; class Array { ... };</tt>,
+and then you can use the parameters in the definition of the class, as in <tt>T arr[N];</tt>, and then you can use
+your class by substituting the parameters as in <tt>Array&lt;int&gt;</tt>
+(the FAQ gives a code listing instead of using words; its example is as simple as that).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Wow, that sounds easy! Too bad it&#39;s wrong, in two ways.
+</p>
+
+<p>
+First, things will not follow this straight-forward model - the FAQ itself discusses a couple of cases,
+ like the <a href="templates.html#fqa-35.18">need</a> to resort to the <tt>typename</tt> keyword and the <a href="templates.html#fqa-35.19">look-up</a> of &quot;nondependent names&quot;. All such cases illustrate that you <i>can&#39;t</i> take the definition of a class, parameterize some things making it a template, and expect it to just work - it&#39;s way more tricky.
+</p>
+
+<p>
+Second, what about the cases where nobody would <i>ever</i> write the classes generated from templates manually,
+ but templates are still used because that&#39;s the only meta-programming facility offered by C++? Of course
+ there are also C macros, which have some limitations templates don&#39;t have (and vice versa), and at least
+ compile fast. But in the C++ community, macros are considered the most <a href="picture.html#fqa-6.15">evil</a> feature ever, and using them is
+ treated as a sin somewhere between speeding and blasphemy. Anyway, a majority of all uses of templates
+ <a href="templates.html#fqa-35.1">"beyond type-safe containers"</a> actually fall in this second category. Let&#39;s look at the previously mentioned compile-time factorial example, which is <i>trivial</i> compared to nifty stuff like type lists:
+<br>
+</p>
+
+<pre>
+template&lt;int N&gt;
+struct Factorial
+{
+  enum { value = N*Factorial&lt;N-1&gt;::value };
+};
+template&lt;&gt;
+struct Factorial&lt;0&gt;
+{
+  enum { value = 1 };
+};
+</pre>
+
+<p>
+This code generates N+1 classes in order to compute the factorial of N.
+ Talk about &quot;the syntax / semantics of class templates&quot;. This is equally disturbing to humans - because it makes so little sense - and to compilers, which internally represent each class using a sizable data structure. This compile time computation technique tends to take a lot of compile time. When your only tool is a hammer template, not only does every problem look like a nail - you also hammer it with 100 hammers.
+</p>
+
+<p>
+Oh, and when you want to use a template, be kind with the C++ lexer
+(the part of the compiler converting text to &quot;tokens&quot; so that the parser can check whether they make meaningful statements).
+ Code like <tt>vector&lt;vector&lt;int&gt;&gt;</tt>, which tries to declare an inefficient implementation of a <a href="operator.html#fqa-13.11">2D array</a>,
+ won&#39;t compile - you need a space before the two &gt; characters. Their concatenation looks just like the right bitwise shift operator. This is one of the more harmless, albeit confusing, awkward interactions between C++ features.
+</p>
+
+
+<a name="fqa-35.3"></a>
+<h2>[35.3] What&#39;s the syntax / semantics for a &quot;function template&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.3">FAQ:</a></b>
+ Pretty similar to class templates, plus you can usually omit the template parameters - the compiler will figure them
+ out from the function arguments. For instance, you can write a <tt>swap</tt> function for swapping two values of any type,
+ be it integers, strings, sets or file systems (yes, the FAQ <i>actually mentions</i> swapping some <tt>FileSystem</tt> objects).
+</p>
+
+<p>
+By the way, an instantiation of a &quot;function template&quot; is called &quot;template function&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> In addition to all the <a href="templates.html#fqa-35.2">problems</a> with class templates, we are now engaged in a battle of wits with the oh-so-smart compiler figuring out template parameters from function arguments. Or not. For example, <tt>std::max(x,5)</tt> compiles when x is a <tt>int</tt>, but fails to compile when it&#39;s a <tt>float</tt> or a <tt>short</tt>. You see, the point of templates is to make &quot;algorithms&quot; work with values of many different types, facilitating &quot;code reuse&quot; (the fact that <tt>x&gt;5?x:5</tt> is less code than <tt>std::max(x,(short)5)</tt> doesn&#39;t mean you don&#39;t want to <i>reuse code</i>, does it?).
+</p>
+
+<p>
+For instance, you can reuse <tt>std::swap</tt> to swap a couple of file systems. All you have to do is implement a class
+ <tt>FileSystem</tt> with a <a href="ctors.html#fqa-10.4">default constructor</a> creating a new empty disk partition. The copy constructor will
+ copy all the files from a given <tt>FileSystem</tt> to a newly created partition, the <a href="dtor.html#fqa-11.1">destructor</a> will wipe it out,
+ and <tt>operator=</tt> will do <a href="assign.html#fqa-12.2">the latter followed by the former</a>. To handle errors, use <a href="exceptions.html#fqa-17.1">exceptions</a>.
+ You might get a few extra disk partitions created and destroyed, especially if you pass <tt>FileSystem</tt>
+ objects around too much in the code, but that&#39;s a small price to pay for reusing the 3 lines of code in <tt>std::swap</tt>.
+ And a &quot;commercial-grade&quot; compiler can even <a href="ctors.html#fqa-10.9">eliminate</a> some of those copies!
+</p>
+
+<p>
+The note about &quot;function templates&quot; and &quot;template functions&quot; is very useful. Too bad there are people out there that confuse the two. Be careful with C++ terminology. For example, don&#39;t confuse &quot;object files&quot; (compiled code) with &quot;objects&quot; (which belong to a class), which in turn shouldn&#39;t be confused with &quot;instantiation&quot; of class templates (substituting template parameters is called &quot;instantiation&quot;, the result of this process is also &quot;instantiation&quot;, and creating objects is called &quot;construction&quot;). The good (or bad) news is that the terminology is the easy part.
+</p>
+
+
+<a name="fqa-35.4"></a>
+<h2>[35.4] How do I explicitly select which version of a function template should get called?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.4">FAQ:</a></b>
+ Most of the time you don&#39;t need to do it - the compiler will guess. It uses arguments to guess, so when your function has none,
+ use <tt>f&lt;int&gt;();</tt>. Sometimes you want to force the compiler to choose a different type than it would choose by default -
+ for example, <tt>g(45)</tt> will instantiate <tt>g&lt;int&gt;</tt>, while you want <tt>g&lt;long&gt;</tt>. You can force the compiler to call <tt>g&lt;long&gt;</tt> with explicit instantiation
+ as in <tt>g&lt;long&gt;(45);</tt> or type conversion as in <tt>g(45L);</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There is a good reason to avoid all kinds of &quot;clever&quot; behavior which gets in your way when you try to figure out
+ what a program actually does
+ (it doesn&#39;t always do what the author thought it would do). Overloading and template specialization are one kind of this
+  behavior - go figure which function is actually called.
+  But let&#39;s assume for a moment that it&#39;s not a problem, and that the important thing is to write code expressing
+  the author&#39;s intent &quot;clearly&quot; in the sense that it&#39;s not cluttered with &quot;low-level&quot; details like which
+  &quot;version&quot; of a function is called.
+</p>
+
+<p>
+In that case, the picture presented by the FAQ looks fair - you only need to explicitly specify parameters when
+  the compiler has no information to guess them itself, or when you don&#39;t like its guess. The truth is more
+  complicated, because sometimes a function has more than one argument, and the template defines constraints
+  on these arguments. That&#39;s what happens with <tt>std::max(x,5)</tt> when x is a <tt>float</tt>.
+  The template wants two arguments of <i>the same</i> type, and the compiler thinks that &quot;5&quot; is of type <tt>int</tt>.
+  So even though the intent seems clear (you probably want 5 to be treated as a number of the same type as that of x),
+  the compiler can&#39;t make a decision.
+  So you have to interfere in these cases, and choose between two almost equally unreadable alternatives, explicit instantiation or explicit type conversion.
+</p>
+
+<p>
+Out of the two options, explicit instantiation, the syntax defined by C++ (as opposed to type conversion which is inherited from C) is typically worse. First, this way the code using a function forces it to be implemented as a template, although it doesn&#39;t really care, and makes it harder to get rid of the pesky templates when you feel like it. And second, when the need to interfere and disambiguate arises <i>inside another template</i>, you may have to use the following syntax, hideous even by C++ standards:
+</p>
+
+<pre>
+a.template f&lt;long&gt;(45);
+</pre>
+
+<p>
+While C++ features generally interact poorly with each other, templates set the record by interacting poorly with themselves.
+</p>
+
+
+<a name="fqa-35.5"></a>
+<h2>[35.5] What is a &quot;parameterized type&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.5">FAQ:</a></b>
+ A way to say &quot;class templates&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Hmm, why do we need two ways of saying this?
+</p>
+
+
+<a name="fqa-35.6"></a>
+<h2>[35.6] What is &quot;genericity&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.6">FAQ:</a></b>
+ A way to say &quot;class templates&quot;. Don&#39;t confuse with &quot;generality&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Hmm, why do we need three ways of saying this? Apparently C++ promoters consider templates an excellent and unique feature, despite their obscurity and the availability of much better meta-programming facilities in many languages. The many different synonyms are probably needed to illuminate the killer feature from many different directions.
+</p>
+
+
+<a name="fqa-35.7"></a>
+<h2>[35.7] My template function does something special when the template type <tt>T</tt> is <tt>int</tt> or <tt>std::string</tt>; how do I write my template so it uses the special code when <tt>T</tt> is one of those specific types?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.7">FAQ:</a></b>
+ First, make sure it&#39;s a good thing to do in your case. Generally, it is when the &quot;observable behavior&quot;
+  in the special version you want to add is identical to the general case - otherwise, you&#39;re not helping your users.  If the special case is &quot;consistent&quot; with the generic case, you can do it as in <tt>template&lt;&gt; void foo&lt;int&gt;() { ... }</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> &quot;Observable behavior&quot; means different things to different people. In particular, many C++ users tend to <i>observe</i> performance (if you don&#39;t care about performance, but you still use a language that won&#39;t detect run time violations of language rules like out-of-bounds array indexes, you&#39;re probably wasting your time).
+</p>
+
+<p>
+Consequently, the specialization of <tt>vector&lt;bool&gt;</tt> to be space-efficient (by storing bits instead of bytes) at the cost of speed (individual bits are harder to access than whole bytes) found in some STL versions is not a very good idea, because it ultimately confuses the performance-aware user. If the user wants a vector of bits, the user can  implement a vector of bits, or STL could supply one, but it&#39;s very inconvenient when you can&#39;t have a simple mental model describing what <tt>vector</tt> really means.
+</p>
+
+<p>
+In addition, specialization is actually a pretty dangerous trap because it is your responsibility to make sure that all specializations are visible to the compiler
+(<tt>#included</tt>) at each point where a template is used. If that&#39;s not the case, you can get too kinds of <tt>vector&lt;bool&gt;</tt> instantiated in your program, triggering &quot;undefined behavior&quot; (typically you&#39;ll pass a vector of the first kind to a function compiled to work with vectors of the second kind and crash). So specializing <i>others&#39; templates</i> is very likely to lead to a disaster (because you can&#39;t make sure that your specializations are visible in code you didn&#39;t write),
+                                                                                                                                                                     and libraries which actually <i>assume</i> that you&#39;ll specialize templates they define are best avoided.
+</p>
+
+<p>
+If you really want to use specialization, take into account that function templates don&#39;t support partial specialization (&quot;I want a special version for all types which are vectors of any T&quot;), only class templates do (template functions support <i>overloading</i>, which follows different rules). One workaround is to implement a single function template working with any T and delegate the call to a static method of a template class, as in:
+</p>
+
+<pre>
+template&lt;class T&gt;
+void f(const T&amp; x)
+{
+  FImpl&lt;T&gt;::f(x);
+}
+</pre>
+
+<p>
+This way, the class <tt>FImpl</tt> can be defined using partial specialization. All these layers of cryptic syntax could be considered tolerable if they ultimately were the only way to accomplish something really useful, and you could forget about them once you were done. But it&#39;s actually very easy to program <i>without</i> these complications, and almost always these complications get you nothing except for reducing maintainability, and you get to see them each time you have a compilation error deep down a chain of templates delegating trivial work to each other, and debugging run time errors becomes a real nightmare.
+</p>
+
+<p>
+Basically you can choose simple interfaces and simple implementations, or C++-style cryptic interfaces and cryptic implementations. It&#39;s a trade-off.
+</p>
+
+
+<a name="fqa-35.8"></a>
+<h2>[35.8] Huh? Can you provide an example of template specialization that doesn&#39;t use <tt>foo</tt> and <tt>bar</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.8">FAQ:</a></b>
+ For instance, you can &quot;stringify&quot; values of different types using a template. The generic version boils down to <tt>ostringstream out; out &lt;&lt; x</tt>. But you might want to define specializations to handle types where the <tt>ostream</tt> output operator doesn&#39;t do what you like (you can set the output precision of floating point numbers, etc.)
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This means that all values of the same type will have to be formatted <a href="io.html#fqa-15.8">identically</a>.
+ For example, all integers will be printed using decimal digits. If you prefer hexadecimal, you can define <tt>class HexInt</tt>
+ (a template, of course, so that it can handle all the different integral types, including user-defined ones). Then you can use <tt>stringify(HexInt&lt;int&gt;(x))</tt>. You might need a partial specialization of <tt>stringify</tt> for <tt>HexInt&lt;T&gt;</tt> (see <a href="templates.html#fqa-35.7">previous FAQ</a>). To save the trouble of explicitly passing the template parameters to <tt>HexInt</tt>, use a creator function template <tt>HexInt&lt;T&gt; hexint(const T&amp;)</tt> - the compiler will figure T out from <tt>stringify(hexint(x))</tt>.
+ Specifying a number of leading zeros (as in the format string <tt>&quot;%08x&quot;</tt>) using advanced C++ type-based techniques is left as an exercise to the reader.
+</p>
+
+<p>
+We&#39;ve done quite some work indeed in order to print an integer. Time to relax and let the compiler concentrate while it cleverly figures out all the things we want it to figure out. You usually print stuff for debugging, so the long build time may be annoying, but it&#39;s sure better than using a visual debugger where you get to see the line noise generated from all those other templates.
+</p>
+
+<p>
+In the meanwhile, it is quite likely that whatever your <i>real</i> job was, someone else (probably some kind of competitor) has already done it. But did the result contain a mature, generic and efficient printing infrastructure with really, really minor usability and maintainability problems? Most certainly it didn&#39;t. Which is why C++ template specialization is your friend.
+</p>
+
+
+<a name="fqa-35.9"></a>
+<h2>[35.9] But most of the code in my template function is the same; is there some way to get the benefits of template specialization without duplicating all that source code?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.9">FAQ:</a></b>
+ You can factor out the common code and only specialize a helper function called from the common code. Two screens of source code are attached for illustration.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Factoring out common code and helper functions are indeed very useful (which is why you can do that kind of thing with virtually every programming language). The existence of this question in the FAQ seems to indicate that people get unbelievably confused by templates, and lose hope that anything useful they know is applicable to them. Which is not that much of an exaggeration.
+</p>
+
+
+<a name="fqa-35.10"></a>
+<h2>[35.10] All those templates and template specializations must slow down my program, right?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.10">FAQ:</a></b>
+ You guessed wrong. Maybe the compilation will become &quot;slightly&quot; slower. But the compiler ends up figuring out the types of everything, and then doing all the usual nifty C++ optimizations.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You guessed right. And the compilation will become intolerably slow. It&#39;s not like the FAQ is lying - it&#39;s just talking about the state of affairs in <a href="picture.html#fqa-6.1">theory</a>,
+ where C++ belongs. The &quot;slight&quot; slowdown of compilation is not even worth discussing: everything is
+ &quot;slight&quot; if you have lots of time on your hands. Just try to build a C program and a <i>modern</i> C++ program full of templates
+ and compare the time it took. As to execution time, there are practical problems making programs generated from templates slow compared to the hand-written alternatives.
+</p>
+
+<p>
+First, the compiler generates the same code over and over again. Sometimes the linker throws away the extra copies and sometimes it doesn&#39;t, and the size of your program increases. In particular, the linker doesn&#39;t have a chance to throw away the functions which are identical at the <i>assembly</i> level, but not at the <i>source code</i> level (think about <tt>vector&lt;int&gt;</tt> and <tt>vector&lt;void*&gt;</tt>). It is possible to implement templates in a way avoiding these problems (by using the same implementation for all specializations yielding the same assembly code). It is very tedious and almost never done. Two identical functions almost always take more time to execute than a single function called twice, which has to do with instruction caches - a useful gadget frequently overlooked by many <a href="ctors.html#fqa-10.9">people</a> who care about &quot;theoretical efficiency&quot; without actually <i>measuring</i> performance.
+</p>
+
+<p>
+Second, when people work with templates, they use <i>types</i> - their only hammer - for saying almost everything (consider the <tt>HexInt</tt> class from <a href="templates.html#fqa-35.9">the previous FAQ</a>). More specifically, they wrap simple values of
+ built-in types in user-defined types - classes. The type is used to select the right specialization and what-not -
+ in fact it&#39;s used to specify what to do. An extreme example is the <a href="http://www.boost.org/doc/html/lambda.html">boost lambda library</a> - it creates structures representing entire <i>functions</i>, with a sub-structure representing addition, a sub-structure representing the constant 1, etc.
+</p>
+
+<p>
+Now, &quot;theoretical performance fans&quot; may think that all of these structures get optimized out by the clever compiler. In practice, that&#39;s almost always close to impossible to do because of the so-called <a href="const.html#fqa-18.14">pointer aliasing problem</a>. When you have a local variable x, it&#39;s clear that nobody can change it but the code of the function, so the compiler can do lots of things with x, like stuffing it into a register or even completely optimizing it out. But once you push x into a structure, it&#39;s hard to see where it&#39;s modified - go figure who has a pointer to that structure, especially if you pass the object to a separately compiled function. So the compiler has to allocate a memory slot for x and make sure the memory cell gets updated when x is modified and that the memory cell gets read when there&#39;s a chance that it could have been changed by someone else. Code working with templates and relying on types to do compile time dispatching ends up doing lots of memory load/store operations at <i>run time</i> since the types don&#39;t really go away.
+</p>
+
+<p>
+And anyway, there&#39;s such a huge amount of scenarios to take care of to optimize complicated template-based code well that compiler writers rarely bother. They are lucky if they get the <i>parsing</i> right. Even that is unlikely - when you are porting from one compiler to another, chances are that most of your compatibility problems will come from the semantics of the code using templates.
+</p>
+
+
+<a name="fqa-35.11"></a>
+<h2>[35.11] So templates are overloading, right?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.11">FAQ:</a></b>
+ They are in the sense that they are inspected when the compiler resolves names (figures out the version of <tt>f</tt> that should be called by <tt>f(x)</tt>). They are not in the sense that the rules are different. Specifically, there&#39;s the SFINAE (Substitution Failure Is Not An Error) rule: the argument types have to match exactly for a template to be considered in overload resolution. If they don&#39;t, the compiler won&#39;t try to apply conversions the way it would with a function - instead it will discard the template.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Aside from the fact that the acronym &quot;SFINAE&quot; interpreted literally doesn&#39;t seem to describe what it&#39;s supposed to describe, this sounds <i>just a little bit</i> too easy. For example, what does &quot;exact match&quot; mean? Let&#39;s have a look at a real life example taken from the GNU implementation of the C++ standard library. I tried to make this short, but there are about <b>5</b> distinct stupid things involved, so it was hard. If you get tired in the middle of this and stop, it&#39;s probably an indication that you <i>do</i> get the main point - that things are actually very complicated in this department and that these complications are best avoided.
+</p>
+
+<p>
+<b>Stupid thing #1</b>: Once upon a time, <tt>vector&lt;int&gt;::iterator</tt> was a plain old <tt>typedef</tt> for <tt>int*</tt> in the GNU STL. Of course this is <i>very, very</i> dangerous: people might use <tt>std::vector</tt> as if it were just an array of objects - a serious abstraction violation, you could get arrested for that in some jurisdictions. At the beginning of the 21st century, the guys behind GNU STL decided to &quot;fix&quot; this by creating a class template called <tt>__normal_iterator</tt>. This template serves as a &quot;strict typedef&quot; - it wraps any existing iterator type, such as <tt>int*</tt>, and delegates all operations to the existing type, but can not be converted to <tt>int*</tt>. This has many important benefits over the previous implementation, for example, much longer <a href="templates.html#fqa-35.17">error messages</a>.
+</p>
+
+<p>
+<b>Stupid thing #2</b>: As you may know, there are two kinds of iterators defined by STL containers: <tt>iterator</tt> and <tt>const_iterator</tt> because of <a href="const.html#fqa-18.2">inherent problems with const</a>: <tt>const iterator</tt> is <i>not at all</i> the same as <tt>const_iterator</tt>. If STL wanted to be consistent, it would also define <tt>volatile_iterator</tt> and <tt>const_volatile_iterator</tt>, and then nobody would even look at STL, which wouldn&#39;t necessarily be bad. But they didn&#39;t. So now you also need two kinds of &quot;normal iterators&quot; - for <tt>int*</tt> and <tt>const int*</tt>.
+</p>
+
+<p>
+<b>Stupid thing #3</b>: <i>Of course</i> the GNU STL guys didn&#39;t want to define a <tt>__normal_const_iterator</tt> - after all, making conversion hard for <i>you</i> is an excellent thing, but making it hard for <i>them</i> is a completely different thing. Instead, they decided to support automatic conversion between different instantiations of <tt>__normal_iterator</tt>, by - of course - delegating the conversion to the wrapped types (templates normally delegate all useful work to someone else; their job is obfuscation). This way, you can compare const and non-const iterators using the same operator, having this elegant prototype:
+</p>
+
+<pre>
+  template&lt;typename _IteratorL, typename _IteratorR, typename _Container&gt;
+  inline bool
+  operator&gt;(const __normal_iterator&lt;_IteratorL, _Container&gt;&amp; __lhs,
+            const __normal_iterator&lt;_IteratorR, _Container&gt;&amp; __rhs);
+</pre>
+
+<p>
+<b>Stupid thing #4</b>: STL provides another, <i>seemingly unrelated</i> service to its users. It defines global relational operators which work on arguments of any type. How can they compare objects without knowing anything about them? At this point you can probably guess the answer - of course, they delegate the work to someone else, this time to <i>existing</i> relational operators, using interesting identities such as <tt>(a&gt;b) == !(a&lt;=b)</tt>. This way, you can define only 2 relational operators, and get the rest &quot;for free&quot;.
+</p>
+
+<p>
+<b>Stupid thing #5</b>: Except when you can&#39;t. This is where our subject, overload resolution and templates, kicks in. Remember the rule about only considering templates when the argument types match the prototype <i>exactly</i>? Well, when you compare &quot;normal iterators&quot; of the same type (for example, both wrapping <tt>int*</tt>), the beautiful prototype above matches the arguments &quot;exactly&quot;. So do the &quot;generic&quot; relational operators. Oops, we have ambiguous overloading! The &quot;solution&quot; is to define a <i>third</i> overload, matching the types <i>even more exactly</i> by using a single template parameter <tt>_Iterator</tt> instead of two which can possibly differ. Why is this situation considered &quot;unambiguous&quot;? Frankly, beyond the basic intuition saying that you must show the compiler a type pattern as similar to your arguments as possible, I don&#39;t know. That&#39;s why I didn&#39;t list the Stupid thing #6. But the first 5 make me feel that in this case, <i>ignorance is bliss</i>.
+</p>
+
+<p>
+Apparently this situation looks discouraging even from inside the C++ universe, as indicated by the following <i>rather sad</i> comment found in one of the header files of the GNU STL. You can probably decipher it, unless the 5 stupid things above have already faded from your memory:
+</p>
+
+<pre>
+  // Note: In what follows, the left- and right-hand-side iterators are
+  // allowed to vary in types (conceptually in cv-qualification) so that
+  // comparison between cv-qualified and non-cv-qualified iterators be
+  // valid.  However, the greedy and unfriendly operators in std::rel_ops
+  // will make overload resolution ambiguous (when in scope) if we don&#39;t
+  // provide overloads whose operands are of the same type.  Can someone
+  // remind me what generic programming is about? -- Gaby
+</pre>
+
+<p>
+This could be amusing (an implementor of the standard library of a language complaining about this language in files delivered to users and all) if it weren&#39;t so mind-numbing. People who think they are better at C++ than the GNU STL authors are welcome to waste their entire life chasing and &quot;solving&quot; problems with overload resolution, template specialization or whatever its name is. For the rest, trying to avoid templates &amp; overloading sounds like a good advice, which can be followed to an extent even if you are forced to use C++.
+</p>
+
+
+<a name="fqa-35.12"></a>
+<h2>[35.12] Why can&#39;t I separate the definition of my templates class from its declaration and put it inside a .cpp file?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.12">FAQ:</a></b>
+ &quot;Accept these facts&quot;, says the FAQ - templates are not code, just a recipe for generating code given parameters; in order to compile this code, it must first be generated, which takes knowing both the template definition and the definitions of the parameters which are passed to it; and the compiler doesn&#39;t know anything about code outside of a file when compiling the file (which is called &quot;separate compilation&quot;).
+</p>
+
+<p>
+So you have to place template definitions in header files, or else the compiler won&#39;t get a chance to see all the definitions it needs at the same time. Experts should calm down - yes, it&#39;s oversimplified; if you know it is, you don&#39;t need this answer anyway.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There are two problems with placing template definitions in header files which may bother you: you get to recompile them each time the file is included, and you disclose your source code to the user. Let&#39;s concentrate on the first problem. The second is minor anyway because source code of templates isn&#39;t necessarily easier to understand than disassembled object code. As to the first problem - to get an idea about its magnitude, consider the fact that an iostream-based &quot;hello, world&quot; program requires the GNU C++ compiler to parse <b>718K</b> (!!) bytes. And contrary to the claims in the FAQ, it turns out that the need to make the source code of templates available to the compiler is not the only reason we have this problem.
+</p>
+
+<p>
+Suppose a C++ compiler could use some rules to locate compiled definitions of classes given their names, for example &quot;<tt>std::vector&lt;int&gt;</tt> is always located at the file <tt>$OUTPUT_ROOT/templates/std/vector_int.o</tt>&quot; and so on. This way, if you used <tt>vector&lt;int&gt;</tt> and <tt>vector&lt;double&gt;</tt>, you&#39;d have to compile <tt>vector</tt> twice, but if you used <tt>vector&lt;int&gt;</tt> twice, the compiler could avoid recompilation. That would make sense since you&#39;d only compile <i>different</i> classes each time you compile the template.
+</p>
+
+<p>
+Unfortunately, this can&#39;t work in C++. That&#39;s because the compiler can&#39;t <i>parse</i> <tt>std::vector&lt;int&gt;</tt> without parsing
+ the entire preprocessed output generated by <tt>#include &lt;vector&gt;</tt>. That parsing, which <i>has</i> to be done over and
+ over again for each compiled source file, takes most of the compilation time. Generating the code of <tt>std::vector&lt;int&gt;</tt>
+ several times is the small part of the problem, and most compiler writers don&#39;t bother to solve it, since you&#39;d still
+ have the parsing bottleneck.
+</p>
+
+<p>
+The basic problem inherited from C is that the compiler can&#39;t look up
+ definitions. Instead, you have to arrange <tt>#include</tt> files so that the preprocessor can copy-and-paste definitions into a single huge bulk containing everything relevant (as well as many irrelevant things) for the compilation of your source file. C still compiles fast because its grammar is simple. Many newer languages define not only the concept of a &quot;class&quot;, but also rules to help the compiler locate definitions instead of parsing them over and over again. C++ programmers enjoy the worst of both worlds.
+</p>
+
+
+<a name="fqa-35.13"></a>
+<h2>[35.13] How can I avoid linker errors with my template functions?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.13">FAQ:</a></b>
+ You probably didn&#39;t make the definition of a template available to your compiler at the point where a template is used (did you implement a template in a .cpp file?). There are three solutions:
+</p>
+
+<ul>
+<li>Move the definition to the .h file (which may increase the size of your compiled code, unless the compiler is &quot;smart enough&quot;).</li>
+<li>Add explicit instantiations in your .cpp file. For example, <tt>template void foo&lt;int&gt;();</tt> will cause the compiler to generate the code of <tt>foo&lt;int&gt;</tt>, and the linker will find it.</li>
+<li><tt>#include</tt> the .cpp file defining the template at the .cpp file using the template. If it feels weird, live with it or read <a href="templates.html#fqa-35.12">the previous FAQ</a>.</li>
+</ul>
+
+<p>
+<b class="FQA">FQA:</b> These &quot;solutions&quot; create new problems:
+</p>
+
+<ul>
+<li><b>Moving code to .h file</b>: even if the code size doesn&#39;t increase, the compilation time will - you are going to recompile your templates from scratch each time they are used, and templates are one of the hardest parts of C++ to compile. It&#39;s nice that the FAQ at least acknowledges that your code size <i>might</i> increase though - in practice it most certainly <i>will</i>. Too bad the FAQ didn&#39;t mention it in <a href="templates.html#fqa-35.10">the question about the speed of templates</a> - replicated code means more time spent in fetching code into instruction caches.</li>
+<li><b>Explicit instantiations</b>: this is one big step back to C macros. Suppose you have a parameterized preprocessor macro which expands to a definition of a container class. One difference between this macro and an equivalent template is that if someone <i>uses</i> one such class, that someone must also make sure that the macro is actually <i>expanded</i> somewhere with the appropriate parameters - or you must provide these expansions. Otherwise, there will be linker errors. With templates, the compiler is supposed to generate the needed instantiations transparently - except it&#39;s almost impossible to accomplish. Along comes this &quot;solution&quot;, moving us back to square one.</li>
+<li><b>Including the definition at the point of usage</b>: this shares the problems of the first two options. If you use templates in .h files, you may have to include the .cpp files defining them in these .h files, getting the problems of option 1. But the benefit of option 1 - transparency - is gone: quite similarly to option 2, it is now your job to make the definition of a template available wherever the template is used.</li>
+</ul>
+
+
+<a name="fqa-35.14"></a>
+<h2>[35.14] How does the C++ keyword <tt>export</tt> help with template linker errors?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.14">FAQ:</a></b>
+ It&#39;s &quot;designed&quot; to eliminate the need to make the definition of a template available to the compiler at the point of usage. Currently, there&#39;s only one compiler supporting it. The keyword&#39;s future is &quot;unknown&quot;.
+</p>
+
+<p>
+An advice for futuristic programmers follows. It shows a way to make code compatible with both compilers that support <tt>export</tt> and those that don&#39;t using - guess what? - the wonders of the <a href="picture.html#fqa-6.15">evil</a> C preprocessor. Among other things, the FAQ advises to <tt>#define export</tt> under certain conditions.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> &quot;How does it help&quot;, is that what you want to know? OK then. The <tt>export</tt> keyword helps with template linker errors just the way a song about peace helps to stop a bullet penetrating a foot. It helps just like a keyword <tt>findbugs</tt> telling the compiler to find and report all the bugs in a piece of code would help you with bugs.
+</p>
+
+<p>
+The rest of C++ makes this keyword impossible to support in any useful way that would actually yield faster compilation compared to the case when template definitions are included at header files. That&#39;s why most compilers don&#39;t bother to support it, and that&#39;s why the future of the keyword is &quot;unknown&quot;: it&#39;s useless.
+</p>
+
+<p>
+If you spot someone following the FAQ&#39;s advice (<tt>#ifdef EXTRATERRESTRIAL_COMPILER</tt> and all that), call an ambulance. Warning: the patient has likely reached a very agitated state and might escape before the people qualified to deal with the situation arrive. Try to occupy the patient&#39;s mind with a discussion about the fact that <tt>#defining</tt> keywords is illegal C++. Propose to consult your lawyer. Try to &quot;design&quot; a couple of keywords together (look up synonyms in a dictionary, imagine them printed in popular fonts, stuff like that). Improvise. It&#39;s gonna be over soon.
+</p>
+
+
+<a name="fqa-35.15"></a>
+<h2>[35.15] How can I avoid linker errors with my template classes?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.15">FAQ:</a></b>
+ It&#39;s just like errors with template functions, which were explained in the previous answers.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, it&#39;s about the same.
+</p>
+
+
+<a name="fqa-35.16"></a>
+<h2>[35.16] Why do I get linker errors when I use template friends?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.16">FAQ:</a></b>
+ If you have a class template <tt>C</tt> declaring a friend like <tt>Foo&lt;T&gt; f()</tt>, the compiler assumes that there&#39;s a global function <tt>f()</tt> returning <tt>Foo&lt;T&gt;</tt>. You probably meant a different thing, namely - there&#39;s a function template <tt>template&lt;class T&gt; Foo&lt;T&gt; f()</tt>, and you want its instantiation <tt>f&lt;T&gt;()</tt> to be a friend of your instantiation <tt>C&lt;T&gt;</tt>.
+</p>
+
+<p>
+There are two ways around this:
+</p>
+
+<ul>
+<li>Declare the function template before the definition of the class, and add <tt>&lt;&gt;</tt> to the friend declaration, as in <tt>friend Foo&lt;T&gt; f&lt;&gt;();</tt></li>
+<li>Define the friend function template inside the body of the class.</li>
+</ul>
+
+<p>
+<b class="FQA">FQA:</b> In both solutions the syntax is unrelated to the semantics to an extent remarkable even for C++.
+</p>
+
+<p>
+Why does <tt>&lt;&gt;</tt> mean that we are talking about an instantiation of a template function? Why not use a keyword (like, just an example off the top of the head, the <tt>template</tt> keyword) to say that?! The C++ way is uncompromisingly ugly, especially in the example mentioned by the FAQ itself: <tt>operator&lt;&lt; &lt;&gt;(...)</tt>.
+</p>
+
+<p>
+And even when you don&#39;t have a problem with placing the definition in a header file, the seemingly cleaner second way is actually <i>more</i> cryptic. This breaks one of the <i>very few</i> things in C++ you can normally count on: that a declaration of a function or a type looks just like a definition without the body. Here, we change the meaning of the prototype by adding a body: instead of declaring a function, we now declared and defined a function template.
+</p>
+
+<p>
+Last but not least, the very fact that this problem <i>exists</i> is an indication of a readability problem with the C++ grammar. How many people would guess that the original declaration refers to a function and not a function template?
+</p>
+
+<p>
+How is one supposed to navigate through this swamp of arbitrary syntax? <i>Of course</i> one shouldn&#39;t expect the kind of readability you get with a natural language from a programming language. <i>Of course</i> any formal language will behave &quot;counter-intuitively&quot; at times. But people <i>do</i> deal with formal languages quite successfully, when it is possible to keep a reasonably compact model of the key rules in one&#39;s mind. In these cases, even if you bump into a behavior which doesn&#39;t make sense at the first glance, you can think again and - &quot;Of course, of course, I know what it&#39;s doing!&quot;. Do you feel that you understand what a C++ compiler is actually doing? Neither do most C++ users out there.
+</p>
+
+
+<a name="fqa-35.17"></a>
+<h2>[35.17] How can any human hope to understand these overly verbose template-based error messages?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.17">FAQ:</a></b>
+ There&#39;s a &quot;free tool&quot; converting compiler error messages to more human-readable ones. It works with many compilers.
+</p>
+
+<p>
+An example follows, having a snippet <tt>[STL Decryptor: Suppressed 1 more STL standard header message]</tt> in it.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Oh <i>really</i>? <i>Any</i> &quot;template-based&quot; error messages? Hmm, why didn&#39;t the compiler writers produce clean error messages in the first place if a single tool can clean up all the mess created by many different compilers? These people must be quite lazy and/or stupid. Or are they?
+</p>
+
+<p>
+Actually, no, they are not. The error messages are cryptic because templates are cryptic, and most compilers can&#39;t really do much better than they do today.
+</p>
+
+<p>
+The tool mentioned (<i>without the name</i>) and <a href="http://www.bdsoft.com/tools/stlfilt.html">linked to</a> by the FAQ is called <tt>STLFilt</tt>. That&#39;s why the FAQ doesn&#39;t mention the name. That&#39;s why its output does mention STL. That&#39;s why it works at all - you can&#39;t improve generic template error messages, but you can filter STL-related messages if you know how STL is implemented in each specific case.
+</p>
+
+<p>
+We need a couple more tools, like <tt>STLCompilationTimeReducer</tt> and <tt>STLDebugInformationBeautifier</tt>, and we&#39;re all set. Yet another proof that generic meta-programming facilities are a <a href="picture.html#fqa-6.2">better</a> way to implement containers than build them into a language.
+</p>
+
+<p>
+If you wish to implement a template library, don&#39;t forget to implement a tool filtering the error messages your users will get, as well as the other cool tools, for all the flavors of compilers out there.
+</p>
+
+
+<a name="fqa-35.18"></a>
+<h2>[35.18] Why am I getting errors when my template-derived-class uses a nested type it inherits from its template-base-class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.18">FAQ:</a></b>
+ This can hurt, sit down. The compiler doesn&#39;t look for &quot;non-dependent&quot; names (ones that don&#39;t mention the template parameters) in &quot;dependent&quot; base classes. So if you inherited a nested class or typedef <tt>A</tt> from your base class <tt>B&lt;T&gt;</tt>, you can only access it using a dependent name, like <tt>B&lt;T&gt;::A</tt>, but you can&#39;t use a non-dependent name, like plain <tt>A</tt>.
+</p>
+
+<p>
+<i>And</i> you&#39;ll have to prefix that &quot;dependent&quot; name with the <tt>typename</tt> keyword. That&#39;s because the compiler doesn&#39;t know that <tt>B&lt;T&gt;::A</tt> is a type (think about two specializations, one defining a nested class <tt>A</tt> and one defining a global variable <tt>A</tt>).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This illustrates two generic problems with the C++ grammar.
+</p>
+
+<p>
+First, class templates are <i>not</i> <a href="templates.html#fqa-35.2">just parameterized class definitions</a>, because the crazy C++ name look-up gets crazier when you are inside a template. So don&#39;t assume you can take a C++ class definition, factor out a bunch of parameters and get a working template definition.
+</p>
+
+<p>
+Second, telling a C++ type name from a C++ object/function name is <a href="ctors.html#fqa-10.19">insanely complicated</a>. This interacts badly with templates, constructors, and everything else.
+</p>
+
+<p>
+As to the possible reactions of users the FAQ attempts to anticipate: while <i>running away</i> may be justified, <i>sitting down</i> is probably not. Good developers tend to <i>test their code</i>, so even if the compiler didn&#39;t spit an error message and did the wrong thing silently (for instance, used a type called <tt>A</tt> from the global namespace), a test will find the error. Stupid compiler behavior only feels like pain for people who think that the extremely slow C++ compilers spend their time in finding all their bugs, and don&#39;t bother to test the result. Those people should relax and save their tears for the C++ <i>run-time</i> errors.
+</p>
+
+
+<a name="fqa-35.19"></a>
+<h2>[35.19] Why am I getting errors when my template-derived-class uses a member it inherits from its template-base-class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.19">FAQ:</a></b>
+ The reasons are identical to those in <a href="templates.html#fqa-35.18">the previous FAQ</a>. But the workarounds are <i>different</i> - convert <tt>f()</tt> to <tt>this-&gt;f()</tt> or add the statement <tt>using B&lt;T&gt;::f()</tt> to your class definition. Using the fully qualified name like it was done in the previous FAQ (<tt>B&lt;T&gt;::f()</tt>) will also work, except when the function is virtual, in which case the compiler will use static binding, not dynamic binding.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, the case with member functions is similar to the case with nested types, with the additional bonus of interacting badly with <a href="inheritance-virtual.html#fqa-20.1">virtual functions</a>.
+</p>
+
+<p>
+The FAQ has a hilarious comment in the spirit of &quot;this doesn&#39;t mean that template inheritance doesn&#39;t work - but the name look-up works differently&quot;. And that&#39;s C++ for you: it&#39;s not like you can&#39;t write code, it&#39;s just that you can&#39;t tell for sure what any particular name or some other part of it means.
+</p>
+
+
+<a name="fqa-35.20"></a>
+<h2>[35.20] Can the previous problem hurt me silently? Is it possible that the compiler will silently generate the wrong code?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/templates.html#faq-35.20">FAQ:</a></b>
+ Yes - the compiler might call a function or use a type from the global namespace instead of what you meant, for example.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It&#39;s not as horrible that a language can silently misinterpret what you mean as it may sound. Any language will do this to the creative but imprecise human mind (formal languages aside, people frequently misunderstand each other).
+</p>
+
+<p>
+With formal languages, you can form a relatively simple model which will help you understand these problems. It&#39;s the same with C++ except for the &quot;simple&quot; part, so C++ and you will misunderstand each other pretty frequently.
+</p>
+
+<p>
+And you can also test your code by creating programs that check if it does what you want it to do in a bunch of cases. It&#39;s the same with C++ except that it compiles forever and you have to write notable amounts of code to implement the simplest test, so C++ code ends up being tested pretty rarely.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

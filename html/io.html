@@ -1,0 +1,572 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Input/output via &lt;iostream&gt; and &lt;cstdio&gt;</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Input/output via &lt;iostream&gt; and &lt;cstdio&gt;</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This section explains the benefits of <tt>iostream</tt> - a <i>&quot;type-safe&quot;</i> I/O library (which does not mean it will <i>save</i> keystrokes when you <i>type</i> some code).
+</p>
+
+<ul>
+<li><a href="io.html#fqa-15.1">[15.1] Why should I use <tt>&lt;iostream&gt;</tt> instead of the traditional <tt>&lt;cstdio&gt;</tt>?</a></li>
+<li><a href="io.html#fqa-15.2">[15.2] Why does my program go into an infinite loop when someone enters an invalid input character?</a></li>
+<li><a href="io.html#fqa-15.3">[15.3] How can I get <tt>std::cin</tt> to skip invalid input characters?</a></li>
+<li><a href="io.html#fqa-15.4">[15.4] How does that funky <tt>while (std::cin &gt;&gt; foo)</tt> syntax work?</a></li>
+<li><a href="io.html#fqa-15.5">[15.5] Why does my input seem to process past the end of file?</a></li>
+<li><a href="io.html#fqa-15.6">[15.6] Why is my program ignoring my input request after the first iteration?</a></li>
+<li><a href="io.html#fqa-15.7">[15.7] Should I end my output lines with <tt>std::endl</tt> or <tt>&#39;\n&#39;</tt>?</a></li>
+<li><a href="io.html#fqa-15.8">[15.8] How can I provide printing for my <tt>class Fred</tt>?</a></li>
+<li><a href="io.html#fqa-15.9">[15.9] But shouldn&#39;t I always use a <tt>printOn()</tt> method rather than a <tt>friend</tt> function?</a></li>
+<li><a href="io.html#fqa-15.10">[15.10] How can I provide input for my <tt>class Fred</tt>?</a></li>
+<li><a href="io.html#fqa-15.11">[15.11] How can I provide printing for an entire hierarchy of classes?</a></li>
+<li><a href="io.html#fqa-15.12">[15.12] How can I open a stream in binary mode?</a></li>
+<li><a href="io.html#fqa-15.13">[15.13] How can I &quot;reopen&quot; <tt>std::cin</tt> and <tt>std::cout</tt> in binary mode?</a></li>
+<li><a href="io.html#fqa-15.14">[15.14] How can I write/read objects of my class to/from a data file?</a></li>
+<li><a href="io.html#fqa-15.15">[15.15] How can I send objects of my class to another computer (e.g., via a socket, TCP/IP, FTP, email, a wireless link, etc.)?</a></li>
+<li><a href="io.html#fqa-15.16">[15.16] Why can&#39;t I open a file in a different directory such as <tt>&quot;..\test.dat&quot;</tt>?</a></li>
+<li><a href="io.html#fqa-15.17">[15.17] How can I tell {if a key, which key} was pressed before the user presses the ENTER key?</a></li>
+<li><a href="io.html#fqa-15.18">[15.18] How can I make it so keys pressed by users are not echoed on the screen?</a></li>
+<li><a href="io.html#fqa-15.19">[15.19] How can I move the cursor around on the screen?</a></li>
+<li><a href="io.html#fqa-15.20">[15.20] How can I clear the screen? Is there something like <tt>clrscr()</tt>?</a></li>
+<li><a href="io.html#fqa-15.21">[15.21] How can I change the colors on the screen?</a></li>
+</ul>
+
+<a name="fqa-15.1"></a>
+<h2>[15.1] Why should I use <tt>&lt;iostream&gt;</tt> instead of the traditional <tt>&lt;cstdio&gt;</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.1">FAQ:</a></b>
+ There are four reasons:
+</p>
+
+<ul>
+<li> <i>Increase type safety</i>: with <tt>iostream</tt>, the compiler knows the types of the things you print. <tt>stdio</tt> only figures them out at
+run time from the format string. </li>
+<li> <i>Reduce the number of errors</i>: with <tt>stdio</tt>, the types of objects you pass must be consistent with the format string;
+<tt>iostream</tt> removes this redundancy - there is no format string, so you can&#39;t make these errors. </li>
+<li> <i>Printing objects of user-defined types</i>: with <tt>iostream</tt>, you can overload the operators <tt>&lt;&lt;</tt> and <tt>&gt;&gt;</tt> to support
+new types, and the old code won&#39;t break. <tt>stdio</tt> won&#39;t let you extend the format string syntax, and there seems to be no way
+to support this kind of thing in a way avoiding conflicts between different extensions. </li>
+<li> <i>Printing to streams of user-defined types</i>: you can implement your own stream classes by deriving from the
+base classes provided by <tt>iostream</tt>. <tt>FILE*</tt> can not be extended because &quot;it&#39;s not a real class&quot;. </li>
+</ul>
+
+<p>
+<b class="FQA">FQA:</b> Why should I do this, why should I do that, you ask. What kind of manners are these? Do what you are told. Assignment Number 1 - convert all your evil
+<tt>printf(&quot;0x%08xn&quot;, x)</tt> statements to this:
+</p>
+
+<pre>
+std::cout &lt;&lt; std::hex &lt;&lt; std::setfill(&#39;0&#39;) &lt;&lt; std::setw(8) &lt;&lt; x &lt;&lt; std::dec &lt;&lt; std::endl; 
+</pre>
+
+<p>
+Even if you commit the environmental crime of namespace pollution, adding a <tt>using namespace std</tt>
+and removing those pesky <tt>std::</tt>, the verbosity is still amazing. This achievement is not accidental.
+It follows from one of the basic flaws in the C++ way of thinking:
+the &quot;everything is a type&quot; axiom. For example, <tt>hex</tt> has a special type which hexes streams, and so does every
+other strange object sent to <tt>cout</tt>.
+</p>
+
+<p>
+The FAQ explains why this thinking is good for you. Here&#39;s why the FAQ is wrong:
+</p>
+
+<ul>
+<li> Why is <i>type safety</i> a good thing here - because we gain performance? The last time I checked, we didn&#39;t really gain
+any - your typical iostream implementation is slower and bulkier than your typical stdio implementation. Anyway, isn&#39;t I/O
+the bottleneck here? </li>
+<li> Oh, now I get it - type safety is supposed to help the compiler <i>catch errors</i>. This is very important for people
+who never actually look at what they print. The needs of this population surely justify the 700K of crud that <tt>gcc</tt> gets
+to parse when compiling a C++ &quot;Hello, world&quot; problem, as well as my time spent waiting for it to compile. What&#39;s easier
+to fix: a run-time printf problem or a compile-time iostream problem (with the compiler helpfully listing hundreds of <a href="operator.html#fqa-13.1">overloaded</a> left shift operators)? </li>
+<li> Maybe &quot;everything is a type&quot; is a good thing because it lets you <i>print objects of user-defined types</i>. If you
+believe this, concentrate for 10 seconds - this is your chance to achieve enlightenment. <b> What on Earth prevents
+you from printing user-defined objects with printf? </b> You write a helper function which gets a pointer to your
+object and prints it. While you&#39;re at it, give the function some special name, so that you don&#39;t have to shovel through lists of overloads
+anymore. What&#39;s that? It&#39;s verbose, because function calls are separate statements, unlike the funky left shift operators?
+Well, look at a simple statement printing an integer above if you care about verbosity. </li>
+<li> What about <i>printing to streams of user-defined types</i>? Well, this claim is valid in the sense that there&#39;s no way to define custom
+<tt>FILE*</tt>, but it has nothing to do with the fact that &quot;it&#39;s not a real class&quot;. A &quot;real class&quot; is not a very well-defined
+term; to me, C++ classes look <a href="class.html#fqa-7.1">pretty surreal</a> compared to classes defined in almost any other language I&#39;ve ever seen. Anyway,
+stdio could provide ways to define custom <tt>FILE*</tt>, for instance by providing <tt>read</tt>, <tt>write</tt> and other callbacks.
+The authors just didn&#39;t bother. The ability to define custom streams does not justify the problems
+of iostream, nor is it a feature unique to iostream. This ability is achieved in (relatively) sane OO ways, (almost) in the way it&#39;s done
+in many languages saner than C++ and I/O libraries saner than iostream. </li>
+</ul>
+
+<p>
+<tt>iostream</tt>. The only thing you&#39;ll gain from all this extra typing is extra long build cycles and error messages and extra large
+program image. This is what you get when you shift a file object by an integer.
+</p>
+
+
+<a name="fqa-15.2"></a>
+<h2>[15.2] Why does my program go into an infinite loop when someone enters an invalid input character?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.2">FAQ:</a></b>
+ Probably you did something like <tt>int i; std::cin &gt;&gt; i;</tt> without checking for an error.
+From now on, all attempts to read stuff from <tt>std::cin</tt> won&#39;t actually read anything, because the stream has entered
+an erroneous state. Presumably, you wrote a program that will still keep trying. Use something like <tt>while(std::cin &gt;&gt; i)</tt>
+instead.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, that&#39;s iostream&#39;s way to handle input errors. For some reason, it doesn&#39;t throw an <a href="exceptions.html#fqa-17.1">exception</a> (it&#39;s not really
+bad, because what&#39;s really bad is C++ exceptions). But it doesn&#39;t return an error code, either, because the overloaded operator
+<a href="operator.html#fqa-13.1">has to return its first argument</a> for the &quot;neat&quot; operator call chaining to work. So it has to set an error bit - the
+dreaded <a href="exceptions.html#fqa-17.2">"zombie object"</a> pattern the FAQ condemns so convincingly.
+</p>
+
+<p>
+You can then check for errors using <tt>if(std::cin)</tt> or the like because the object has overloaded <tt>operator void*</tt>,
+and <tt>void*</tt> is convertible to <tt>bool</tt>. You
+can also check for end-of-file conditions this way. Actually you can check for error-or-end-of-file conditions. The more
+operator calls you chain, the less details about the error context are left. Simple, safe, efficient and elegant.
+</p>
+
+<p>
+Oh, and iostream has other state bits. For example, <tt>std::hex</tt> transfers it to hex mode. People frequently forget
+to undo the effect, which is especially entertaining when they print numbers like <tt>10</tt>, which is as good a decimal
+ten as it is a hexadecimal sixteen. Well, if you found the bug (which for some reason went undetected by the type-safe almighty paranoid C++ compiler),
+you can use <tt>std::dec</tt> to get the stream back to decimal mode. Um, actually, it transfers it to decimal mode, which is not necessarily &quot;back&quot;, because
+we don&#39;t know which mode it was in before it was hexed. This gets interesting when people print numbers and user-defined
+objects in the same statement, and count on their hexing to maintain its effect after the user-defined object is printed.
+</p>
+
+
+<a name="fqa-15.3"></a>
+<h2>[15.3] How can I get <tt>std::cin</tt> to skip invalid input characters?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.3">FAQ:</a></b>
+ Here&#39;s an example:
+</p>
+
+<pre>
+   while ((std::cout &lt;&lt; &quot;Give me your credit card number now!!&quot;) &amp;&amp; !(std::cin &gt;&gt; n)) {
+     std::cout &lt;&lt; &quot;Don&#39;t mess with me, I&#39;m written in C++!!!&quot;;
+     std::cin.clear();
+     std::cin.ignore(std::numeric_limits&lt;std::streamsize&gt;::max(), &#39;\n&#39;);
+   }
+</pre>
+
+<p>
+<b class="FQA">FQA:</b> Oops, you forgot to test for end of file. If a brave user hits <tt>Ctrl-D</tt> or whatever it takes to close the standard input
+with the given terminal, your program will enter an infinite loop. Overloaded operators and error handling are not
+very compatible.
+</p>
+
+<p>
+<tt>std::cin.ignore(std::numeric_limits&lt;std::streamsize&gt;::max(), &#39;\n&#39;);</tt> speaks for itself. You just can&#39;t invent it if
+your &quot;use case&quot; is yourself getting any work done.
+</p>
+
+
+<a name="fqa-15.4"></a>
+<h2>[15.4] How does that funky <tt>while (std::cin &gt;&gt; foo)</tt> syntax work?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.4">FAQ:</a></b>
+ <tt>istream</tt> has overloaded <tt>operator void*</tt>. The compiler calls this operator in boolean contexts (when it expects a condition, for example),
+because <tt>void*</tt> can be converted to a boolean. The operator returns <tt>NULL</tt> when there&#39;s nothing left to read, or
+when a format error occurred previously.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There&#39;s nothing &quot;funky&quot; about it.
+It is ugly and boring. It&#39;s also scary because many people think this is what programming is all about - using complicated
+syntax to do simple things without even getting them right (how do you tell end-of-file conditions from format errors?).
+</p>
+
+<p>
+Why is it <tt>operator void*</tt>, and not <tt>operator bool</tt>? Apparently because the compiler implicitly converts booleans to numbers
+in &quot;numeric contexts&quot; (such as <tt>file1+file2</tt>), and we don&#39;t want that to compile, do we?
+</p>
+
+<p>
+But wait, there&#39;s more! There&#39;s an actual book out there, called &quot;Imperfect C++&quot;, arguing that <tt>operator void*</tt> is not
+ the way to go, either. Because this way, <tt>delete file</tt> would compile. Surely we don&#39;t want it to, do we? I mean,
+ the fact that the statement is completely <i>moronic</i> shouldn&#39;t matter. Morones have a right to get an equal opportunity
+ in the exciting world of C++ programming; let&#39;s catch of all their errors at compile time. Evil people spread
+ rumors about the problem being undecidable, but we should keep trying.
+</p>
+
+
+<a name="fqa-15.5"></a>
+<h2>[15.5] Why does my input seem to process past the end of file?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.5">FAQ:</a></b>
+ Because the stream doesn&#39;t know that you&#39;ve reached the end of file until you actually try to read past the end of file.
+For instance, a stream object may read characters which are entered interactively using a keyboard. So it&#39;s impossible
+to tell when it&#39;s over.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s right, and has nothing to do with iostream - except the fact that iostream handles I/O errors in the silly
+way discussed <a href="io.html#fqa-15.4">above</a>.
+</p>
+
+
+<a name="fqa-15.6"></a>
+<h2>[15.6] Why is my program ignoring my input request after the first iteration?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.6">FAQ:</a></b>
+ Because non-digits are left in the input buffer. You can ignore them using calls like <tt>std::cin.ignore(std::numeric_limits&lt;std::streamsize&gt;::max(), &#39;\n&#39;);</tt>
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Doesn&#39;t the fact that there are <a href="io.html#fqa-15.2">so</a> <a href="io.html#fqa-15.3">many</a> questions about the handling of input format problems ring a bell?
+This silent treatment of errors is wrong. Stuff like parsing is better handled by languages which have good support
+for <a href="exceptions.html#fqa-17.1">exceptions</a> (<a href="picture.html#fqa-6.2">built-in strings and containers</a> help, too). If you have to live without exceptions, at least the library
+should treat errors reasonably. The iostream interface of operator call chains makes error handling as awkward as it gets.
+</p>
+
+
+<a name="fqa-15.7"></a>
+<h2>[15.7] Should I end my output lines with <tt>std::endl</tt> or <tt>&#39;\n&#39;</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.7">FAQ:</a></b>
+ The former has the additional side-effect of flushing the output buffer. Therefore, the latter will probably work
+faster.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The latter is also shorter, unless you have a <tt>using namespace std</tt>. Many people probably ask this question because
+they think that <tt>endl</tt> will end the line the way it&#39;s normally done at a given platform (say, emit CRLF on Windows and LF
+on Unix). When <tt>endl</tt> behaves that way, so does <tt>&#39;\n&#39;</tt>. You can <a href="io.html#fqa-15.12">suppress this behavior</a> when you open the file
+(pass <tt>ios::binary</tt> with iostream or the <tt>&quot;b&quot;</tt> flag with <tt>fopen</tt>).
+</p>
+
+
+<a name="fqa-15.8"></a>
+<h2>[15.8] How can I provide printing for my <tt>class Fred</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.8">FAQ:</a></b>
+ By adding a <tt>friend std::ostream&amp; operator&lt;&lt; (std::ostream&amp; o, const Fred&amp; fred);</tt>. The operator <a href="friend.html#fqa-14.2">can't be a member
+of the class</a>, because we need the object to be the second argument, not the first one.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yeah, yeah, C++ and its stupid syntax. Let&#39;s forget about it for a moment: the real problem here is semantical, and it
+starts at the question &quot;How can I provide printing <i>for my class</i>?&quot;. The formulation encourages to give an answer
+in the spirit of <a href="io.html#fqa-15.1">"everything is a type"</a>, and indeed this is the kind of answer given by the FAQ. Here&#39;s <i>the</i> way
+to print <i>all</i> objects of your class.
+</p>
+
+<p>
+But was that really your question? What if you want more than a single output format for your class?
+For instance, you might want a textual format for people and a binary format for machines. Or there could be
+several textual formats - even integers can be printed using different bases. Do you really want to develop
+and maintain the layers of syntax needed to make things like <tt>hex</tt> and <tt>dec</tt> sort of work? Why not just define
+named functions for printing?
+</p>
+
+<p>
+The <tt>friend</tt> thing is also questionable. With all due respect, you might want to print to several different
+output channels, <i>without</i> creating an adapter class derived from <tt>ostream</tt>. One simple reason for such
+heretical behavior is performance - <tt>ostream</tt> may be too slow for things like real-time logging. Why not create accessors to the data you want to print, so that all
+the different output methods won&#39;t need to be part of your class, which may then have a stable interface? <a href="class.html#fqa-7.4">Encapsulation</a>? You&#39;ve already made
+your data public - one can read it by printing to a <tt>stringstream</tt>. Providing accessors violates <a href="class.html#fqa-7.7">obfuscation</a>,
+not encapsulation.
+</p>
+
+<p>
+If you abandon the <tt>friend</tt> part and the <tt>operator</tt> part, the remaining part of the FAQ&#39;s answer - create
+a global function accepting some kind of stream object and an object of your class and do the printing there -
+makes a good advice. In particular, it may be better than a method for the same reasons making it better than
+a friend (however, unlike a friend, a method may be polymorphic, which might be useful).
+</p>
+
+
+<a name="fqa-15.9"></a>
+<h2>[15.9] But shouldn&#39;t I always use a <tt>printOn()</tt> method rather than a <tt>friend</tt> function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.9">FAQ:</a></b>
+ Not &quot;always&quot;. A method may be useful for a class hierarchy, for example, but in that case it would
+normally be protected, not public.
+</p>
+
+<p>
+Some people think <tt>friend</tt> violates encapsulation, and therefore
+prefer to have their <tt>operator&lt;&lt;</tt> call a public method of the class, even though there&#39;s no class hierarchy. Their basic assumption is wrong,
+so they end up writing extra code that doesn&#39;t solve any real problems and confuses people.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Just to make things clear: a <tt>printOn()</tt> method is something like <tt>void Fred::printOn(std::ostream&amp; o) const</tt>.
+</p>
+
+<p>
+The FAQ is right about the important thing: creating extra layers of code doing nothing but delegating
+work to other layers of code is a pesky habit. Many people feel that &quot;good design&quot; means &quot;lots of code&quot;
+or &quot;lots of layers&quot;. Actually, those are some of the meanings of &quot;bad design&quot;.
+</p>
+
+<p>
+The fact that <tt>friend</tt> is really needed here to compensate for syntactical limitations of C++,
+as well as the problems with the whole <tt>friend operator</tt> approach, are discussed in <a href="io.html#fqa-15.8">the previous FAQ</a>. They are not
+the main theme here. The main theme here is the message to the &quot;designers&quot;: listen to the voice
+of C++ overlords who originally inspired you to create N layers with 0 functionality, and stop.
+</p>
+
+
+<a name="fqa-15.10"></a>
+<h2>[15.10] How can I provide input for my <tt>class Fred</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.10">FAQ:</a></b>
+ By adding a <tt>friend std::istream&amp; operator&gt;&gt; (std::istream&amp; i, Fred&amp; fred);</tt>
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This defective technique is symmetrical to the <tt>operator&lt;&lt;</tt> thing, which was discussed above.
+We&#39;ll use this opportunity to look at some advanced defects of this approach. For beginner&#39;s defects, go
+<a href="io.html#fqa-15.8">two FAQs back</a>.
+</p>
+
+<p>
+The complicated problems come from the same source as the simple problems: the idea that for each type,
+we want exactly one output function looking like a bit shift operator. Therefore, to create complicated problems,
+we&#39;ll need some complicated types. Luckily, C++ comes with one of the most complicated type systems in the solar system
+(itself an example of a simpler system).
+</p>
+
+<p>
+Consider <tt>std::map</tt>. It&#39;s standard, and so is iostream. Does this mean that the operators reading and writing
+them are also standard? I think you know <a href="operator.html#fqa-13.6">the answer</a>. But no matter: you can create a template operator
+printing all kinds of <tt>map</tt>. So can I. We&#39;re both happy, unless we have to integrate our code into a single program some
+time later. We both used the same intuitive name - <tt>operator&lt;&lt;</tt> - for our printing functions. Normally we&#39;d rename one of the two,
+but in this special case, this is <i>really</i> going to be ugly - for instance, other templates will break because they
+think everything can be printed with <tt>&lt;&lt;</tt>, and even if there aren&#39;t any, <tt>printMap(std::cout &lt;&lt; &quot;map: &quot;, myMap) &lt;&lt; std::endl</tt>
+is too ugly even for seasoned C++ developers, who do have pretty low standards.
+</p>
+
+<p>
+The real fun starts when two people overload (or specialize or whatever they call it) the operators for <i>special
+cases of types</i> in conflicting ways. For instance, I know how to print <tt>std::map&lt;std::string,T&gt;</tt>, and you know how to print <tt>std::map&lt;T,int&gt;</tt>.
+The question is, who gets to print <tt>std::map&lt;std::string,int&gt;</tt>? The compiler is in trouble, and when a C++ compiler
+is in trouble, it immediately empties its bowl, dumping a nice, large, stinky error message right at our faces.
+Happy, happy, joy, joy, dear colleague.
+</p>
+
+
+<a name="fqa-15.11"></a>
+<h2>[15.11] How can I provide printing for an entire hierarchy of classes?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.11">FAQ:</a></b>
+ You can create a <tt>protected virtual</tt> method that each class will override to do the printing, and call it from
+a <tt>friend operator&lt;&lt;</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Fantastic, except for the <tt>protected</tt> and the <tt>friend operator&lt;&lt;</tt> part. Of course you can use a plain <tt>public virtual</tt>
+method instead.
+</p>
+
+
+<a name="fqa-15.12"></a>
+<h2>[15.12] How can I open a stream in binary mode?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.12">FAQ:</a></b>
+ Open the stream with the <tt>std::ios::binary</tt> flag. That way, the stream will not translate between <tt>&#39;\n&#39;</tt> and
+the target platform representation of line termination, which may be different (for instance, Windows uses CRLF).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> With <tt>fopen</tt>, pass the <tt>&quot;b&quot;</tt> character in the options string. This whole issue is pretty annoying, especially
+if you work with binary files on a system where <tt>&#39;\n&#39;</tt> is not actually translated, and forget to open them as binary,
+and everything works, and then you port the program to
+a system where <tt>&#39;\n&#39;</tt> actually is translated, and then you have to find all those cases and open the files as binary. However, this is
+not the fault of C++. It is the fault of the distributed nature of the human race, which fails to standardize the
+simplest things.
+</p>
+
+<p>
+Many programs may screw up your binary files due to this family of issues, for instance, many FTP clients will do so unless
+explicitly told otherwise.
+</p>
+
+
+<a name="fqa-15.13"></a>
+<h2>[15.13] How can I &quot;reopen&quot; <tt>std::cin</tt> and <tt>std::cout</tt> in binary mode?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.13">FAQ:</a></b>
+ There&#39;s no portable way to do it.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s probably the fault of all those different incompatible systems rather than C++ or any other programming language.
+</p>
+
+
+<a name="fqa-15.14"></a>
+<h2>[15.14] How can I write/read objects of my class to/from a data file?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.14">FAQ:</a></b>
+ Read the section about serialization.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FQA doesn&#39;t have a section about a serialization. Short summary: you&#39;re in for a rude awakening. There&#39;s no
+standard serialization mechanism in C++. Furthermore, there&#39;s no way to define a reasonable custom one since
+there&#39;s no reflection (no way to figure out the structure of an arbitrary object given a pointer to it,
+no way to create an object of a class given its name or some other sort of ID, etc.).
+</p>
+
+<p>
+However, there are many custom
+packages for serialization (typically thousands of source code lines, requiring you to use hairy macros/templates for each serialized class member).
+Or you can roll your own, or you can dump the whole snapshot of your process to a file in non-portable ways
+(may be the cheapest thing to do more frequently than it sounds).
+</p>
+
+
+<a name="fqa-15.15"></a>
+<h2>[15.15] How can I send objects of my class to another computer (e.g., via a socket, TCP/IP, FTP, email, a wireless link, etc.)?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.15">FAQ:</a></b>
+ Read the section about serialization.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <a href="io.html#fqa-15.14">Keep your expectations low</a>.
+</p>
+
+
+<a name="fqa-15.16"></a>
+<h2>[15.16] Why can&#39;t I open a file in a different directory such as <tt>&quot;..\test.dat&quot;</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.16">FAQ:</a></b>
+ Because <tt>\t</tt> expands to the tab character. Use <tt>\\t</tt> to say &quot;backslash followed by t&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You have to escape certain things somehow, so this is perfectly legitimate - unlike the fact that the C++ standard library has no way to <i>open a directory</i>, for example.
+</p>
+
+
+<a name="fqa-15.17"></a>
+<h2>[15.17] How can I tell {if a key, which key} was pressed before the user presses the ENTER key?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.17">FAQ:</a></b>
+ The C++ standard doesn&#39;t even assume your system has a keyboard. So there&#39;s no portable way.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Good for the C++ standard, but is there a reason not to provide a standard interface for systems which do have a keyboard?
+</p>
+
+
+<a name="fqa-15.18"></a>
+<h2>[15.18] How can I make it so keys pressed by users are not echoed on the screen?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.18">FAQ:</a></b>
+ You can&#39;t. See <a href="io.html#fqa-15.17">above</a>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, some systems don&#39;t have screens - we sure shouldn&#39;t support the ones that do.
+</p>
+
+<p>
+Interestingly, the C++ standard assumes that your system has persistent files, and has separate output and error streams. Even more interestingly,
+it assumes that you might need Unicode output and locales. You&#39;d be surprised to find out some of the strange places
+where devices carrying dead code supporting these features live.
+</p>
+
+
+<a name="fqa-15.19"></a>
+<h2>[15.19] How can I move the cursor around on the screen?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.19">FAQ:</a></b>
+ Using whichever way that works on your system. It&#39;s not related to the C++ standard.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You should have spotted a <a href="io.html#fqa-15.17">trend</a> by now.
+</p>
+
+
+<a name="fqa-15.20"></a>
+<h2>[15.20] How can I clear the screen? Is there something like <tt>clrscr()</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.20">FAQ:</a></b>
+ There is, but not in the C++ standard. It&#39;s system-specific.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> So are windows, sockets and regular expressions. You see, the C++ standard <a href="io.html#fqa-15.18">doesn't assume you have a screen</a>, a network
+controller or hardware for regular expression matching.
+</p>
+
+<p>
+The lame standard library is another one of those things making using C++ a joy.
+</p>
+
+
+<a name="fqa-15.21"></a>
+<h2>[15.21] How can I change the colors on the screen?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/input-output.html#faq-15.21">FAQ:</a></b>
+ Depends on your system. The C++ standard doesn&#39;t refer to this.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> But there&#39;s <a href="http://en.wikipedia.org/wiki/ANSI_escape_code">an ANSI standard</a> that does. There are some ugly character sequences you can send to
+<tt>cout</tt>/<tt>stdout</tt>; you don&#39;t need to call any special functions. Many terminals support this.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

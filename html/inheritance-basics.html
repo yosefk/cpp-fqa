@@ -1,0 +1,305 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Inheritance -- basics</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Inheritance -- basics</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This section outlines the C++ &quot;support&quot; for the OO concept of inheritance. Do not confuse C++ and OO.
+</p>
+
+<ul>
+<li><a href="inheritance-basics.html#fqa-19.1">[19.1] Is inheritance important to C++?</a></li>
+<li><a href="inheritance-basics.html#fqa-19.2">[19.2] When would I use inheritance?</a></li>
+<li><a href="inheritance-basics.html#fqa-19.3">[19.3] How do you express inheritance in C++?</a></li>
+<li><a href="inheritance-basics.html#fqa-19.4">[19.4] Is it OK to convert a pointer from a derived class to its base class?</a></li>
+<li><a href="inheritance-basics.html#fqa-19.5">[19.5] What&#39;s the difference between <tt>public</tt>, <tt>private</tt>, and <tt>protected</tt>?</a></li>
+<li><a href="inheritance-basics.html#fqa-19.6">[19.6] Why can&#39;t my derived class access <tt>private</tt> things from my base class?</a></li>
+<li><a href="inheritance-basics.html#fqa-19.7">[19.7] How can I protect derived classes from breaking when I change the internal parts of the base class?</a></li>
+<li><a href="inheritance-basics.html#fqa-19.8">[19.8] I&#39;ve been told to never use protected data, and instead to always use private data with protected access functions. Is that a good rule?</a></li>
+<li><a href="inheritance-basics.html#fqa-19.9">[19.9] Okay, so exactly how should I decide whether to build a &quot;protected interface&quot;?</a></li>
+</ul>
+
+<a name="fqa-19.1"></a>
+<h2>[19.1] Is inheritance important to C++?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.1">FAQ:</a></b>
+ Sure. That&#39;s the new thing OO adds on top of the more basic notion of abstract data types.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It is, but for a slightly different reason. C++ uses inheritance to implement run-time polymorphism -
+allow to use two objects of different classes in the same way. In order for this to work, the classes
+(very roughly) must be inherited from a common base class.
+</p>
+
+<p>
+It is also possible to implement polymorphism without inheritance. The system may simply allow you to
+call the methods of an object without knowing its type, and the code will work if and only if the
+object actually has the methods with the right name and arguments. Such systems may still support
+inheritance, but it&#39;s less central for them.
+</p>
+
+<p>
+OO systems encouraging polymorphism of the former kind are said to be &quot;statically typed&quot; in the sense
+that you use objects through explicitly defined interfaces which are visible at compile time. This
+approach is well-established and has many pros and cons (so does the other approach).
+The C++ choice to use this approach is &quot;legitimate&quot; in the sense that it can yield a relatively usable &amp; consistent result.
+</p>
+
+<p>
+However, C++ inheritance is designed to support many other things, leading to a less usable and less
+consistent result. In particular, inheritance complicates the already complicated name look-up
+in many ways unique to C++, and <a href="inheritance-multiple.html#fqa-25.2">multiple inheritance</a> is quite a mess. On the other hand, many handy
+features are left out, for example, there are no multimethods or dynamic type information allowing
+to list the interfaces supported by a class (the latter is a special case of lacking reflection).
+</p>
+
+
+<a name="fqa-19.2"></a>
+<h2>[19.2] When would I use inheritance?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.2">FAQ:</a></b>
+ As a tool for specifying the behavior of a system. People think in two dimensions: &quot;is a&quot;
+and &quot;has a&quot;. For instance, a cat &quot;is a&quot; mammal and &quot;has a&quot; tail. Aggregation of data into
+abstract data types supports the &quot;has a&quot; dimension. Inheritance adds support for the &quot;is a&quot; dimension.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <i>When appropriate</i>. The FAQ itself does <a href="inheritance-proper.html#fqa-21.8">a pretty good
+job</a> listing situations when something &quot;is a&quot; something else on an intuitive level, but using inheritance
+is still wrong. Inheritance is a formal concept, and formal concepts don&#39;t map directly to English words.
+</p>
+
+<p>
+Nobody knows the number of dimensions people use to think yet. For example, imagine a black cat. Does it
+&quot;have a&quot; black color or &quot;is a&quot; black object? What if it&#39;s under a table - does it &quot;have a&quot; table above it
+or &quot;is a&quot; thing under a table? Nobody knows what &quot;thinking&quot; is, and natural language can not be reduced
+to a couple of dimensions. It &quot;has&quot; an unknown number of dimensions. It &quot;is a&quot; thing with an unknown number
+of dimensions. Whatever &quot;dimension&quot; means.
+</p>
+
+<p>
+A programming language is a tool people use to <i>program</i> machines. Even if we knew how thinking works, and
+we could build a &quot;thinking machine&quot;, we&#39;d still need programming languages for <i>the other</i> machines. The
+ones that are supposed to do what they are told, quickly, reliably and cheaply, as opposed to those
+supposed to be creative thinkers. And a programming language, which must be precise, can not map directly
+to a natural language, which is not.
+</p>
+
+<p>
+To use inheritance or any other formal device, you have to understand exactly how it works. Luckily,
+in most programming languages it&#39;s reasonably easy. And with C++, you can at least try to restrict
+yourself to the subset you do understand.
+</p>
+
+
+<a name="fqa-19.3"></a>
+<h2>[19.3] How do you express inheritance in C++?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.3">FAQ:</a></b>
+ By using the <tt>: public</tt> syntax, as in <tt>class Car : public Vehicle { ... };</tt>. <tt>private</tt> and <tt>protected</tt>
+inheritance are different.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yeah, very different: replace the <tt>public</tt> keyword with the <tt>private</tt> or <tt>protected</tt> keyword.
+The FAQ probably means that they are different because they are less related to OO semantically.
+</p>
+
+<p>
+You may wonder what the colon syntax has to do with the concept of inheritance. Well, the
+connection is obvious: there&#39;s no inheritance in C, and adding keywords to C++ reduces the
+<a href="picture.html#fqa-6.11">"compatibility"</a> with C, because the grammars of these languages prevent you from using keywords
+as identifiers. Once again, punctuation comes to the rescue.
+The other technique for retro-fitting features into the grammar is overloading keywords
+(consider <tt>static</tt>).
+</p>
+
+<p>
+To be fair, many languages have this problem with their grammar, and it&#39;s not a very big deal.
+</p>
+
+
+<a name="fqa-19.4"></a>
+<h2>[19.4] Is it OK to convert a pointer from a derived class to its base class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.4">FAQ:</a></b>
+ For public inheritance - yes. By definition, an object of a derived class is an object of the base class.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Moreover, if you don&#39;t think someone is going to do this, or you know it&#39;s not going to work
+as expected, <a href="inheritance-proper.html#fqa-21.6">don't use inheritance</a>. The whole point of inheritance is to allow exactly that:
+to have code that works with objects of a base class and in fact can be passed objects of
+arbitrary derived classes. If making this possible is not what you want, inheritance doesn&#39;t
+really help you and will confuse the users of your classes.
+</p>
+
+<p>
+Of course public inheritance is also used for mind numbing template metaprogramming tricks, like having
+a template derive from its own instantiation recursively, or from a template argument. The judgment
+of whether this is a reasonable usage of a language feature is left to the reader.
+</p>
+
+
+<a name="fqa-19.5"></a>
+<h2>[19.5] What&#39;s the difference between <tt>public</tt>, <tt>private</tt>, and <tt>protected</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.5">FAQ:</a></b>
+ <tt>private</tt> is for class members and friends. <tt>protected</tt> is also for derived classes and their friends. <tt>public</tt> is
+for everybody.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Exactly. The only part having to do with inheritance is <tt>protected</tt>, and it&#39;s useful relatively rarely.
+</p>
+
+
+<a name="fqa-19.6"></a>
+<h2>[19.6] Why can&#39;t my derived class access <tt>private</tt> things from my base class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.6">FAQ:</a></b>
+ It protects you from changes to the base class by not letting you rely on its implementation details.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> However, it doesn&#39;t protect you from recompilation of your derived classes when changes are made to
+the base class (access control keywords are <a href="class.html#fqa-7.4">little more than comments</a> in C++). Keep that in mind when
+you design interfaces, especially those which are supposed to be used outside of your team. If you want
+to supply C++ interfaces, which is <a href="picture.html#fqa-6.3">pretty daring</a> by itself, not exposing any base classes except pure
+abstract ones (those having no data members) may be a good idea.
+</p>
+
+
+<a name="fqa-19.7"></a>
+<h2>[19.7] How can I protect derived classes from breaking when I change the internal parts of the base class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.7">FAQ:</a></b>
+ Your class has two interfaces: <tt>public</tt> and <tt>protected</tt>. To protect your users, don&#39;t expose
+data members. Similarly, you can protect the derived classes by not having <tt>protected</tt> data members;
+provide <tt>protected inline</tt> accessors instead.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Dear Design Guru! Listen carefully, and try to understand.
+</p>
+
+<p>
+One. Writing get and set function for every member takes
+time, and so does reading them. This time can instead be used to get something done.
+</p>
+
+<p>
+Two. If you can get and set a member, it&#39;s pretty close to being public.
+Any non-trivial representation change becomes impossible since the ability to set this particular member
+is now a part of the contract.
+</p>
+
+<p>
+Three. Having properties in the language - things that look like members
+but are in fact accessors - doesn&#39;t hurt. Many languages have it, allowing to use plain members and
+in the 0.1% of the cases when your class becomes very popular <i>and</i> you want to change it <i>and</i> you
+can do it without breaking the contract, you can make the member a property. There&#39;s no reason for not
+having this in C++ that&#39;s even remotely interesting to a language user.
+</p>
+
+<p>
+If you know C++ programmers who are obsessed with useless wrapper code <i>and</i> performance they never measure,
+the <tt>protected inline</tt> part is kinda funny.
+</p>
+
+
+<a name="fqa-19.8"></a>
+<h2>[19.8] I&#39;ve been told to never use protected data, and instead to always use private data with protected access functions. Is that a good rule?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.8">FAQ:</a></b>
+ No, no, no - &quot;always&quot; rules don&#39;t work in the real world! You don&#39;t have time to make life
+easy for everyone. Spend your time making it easy for the important people. People are not equal.
+The important people are called &quot;customers&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Thanks, that&#39;s just what I needed! You know, I was going to make life easier for <i>everyone</i>
+by writing hordes of get and set functions. But now I can <i>prioritize</i> and only make life easier
+for the important people.
+</p>
+
+<p>
+Please your customers by writing 56% more get and set functions than your competitor using the newest
+Visual Refactoring Tool today!
+</p>
+
+<p>
+Actually, the FAQ does mention that you&#39;ll probably need more than get and set functions to really
+&quot;protect the derived classes from changes&quot;. But the basic assumption that lots of layers
+make life easy when you have time to create all those layers is still ridiculous. There are teams
+out there that actually <i>have</i> lots of time to do a real world job, and turn a 500-line simple, working, fast
+prototype program into 30K-line incomprehensible, broken, slow &quot;product&quot; because they think that
+they are dealing with an <i>important</i> task, so now is the time to write piles of wrapper code.
+</p>
+
+
+<a name="fqa-19.9"></a>
+<h2>[19.9] Okay, so exactly how should I decide whether to build a &quot;protected interface&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/basics-of-inheritance.html#faq-19.9">FAQ:</a></b>
+ There are many useful guidelines, for example: grow up, don&#39;t do things that can jeopardize your
+schedules, and only invest time in the things which will ultimately pay off.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If you find this advice useful, here&#39;s more: don&#39;t be an idiot, be lucky, and avoid pushing sharp
+objects into your body.
+</p>
+
+<p>
+It&#39;s rather annoying that the C++ FAQ <i>dares</i> to tell people to be <a href="picture.html#fqa-6.1">"practical"</a>. Why don&#39;t you add a third
+useful built-in type to your language (we already have integers and floats), say, a string or
+a dictionary, and then talk about the difference between theory and the real world?
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

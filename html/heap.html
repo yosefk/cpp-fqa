@@ -1,0 +1,945 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Freestore management</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Freestore management</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This page is about one of the most hard, boring and dangerous things C++ forces you to do manually - killing your objects at the right time. One dirty job, that.
+</p>
+
+<ul>
+<li><a href="heap.html#fqa-16.1">[16.1] Does <tt>delete p</tt> delete the pointer <tt>p</tt>, or the pointed-to-data <tt>*p</tt>?</a></li>
+<li><a href="heap.html#fqa-16.2">[16.2] Is it safe to <tt>delete</tt> the same pointer twice?</a></li>
+<li><a href="heap.html#fqa-16.3">[16.3] Can I <tt>free()</tt> pointers allocated with <tt>new</tt>? Can I <tt>delete</tt> pointers allocated with <tt>malloc()</tt>?</a></li>
+<li><a href="heap.html#fqa-16.4">[16.4] Why should I use <tt>new</tt> instead of trustworthy old <tt>malloc()</tt>?</a></li>
+<li><a href="heap.html#fqa-16.5">[16.5] Can I use <tt>realloc()</tt> on pointers allocated via <tt>new</tt>?</a></li>
+<li><a href="heap.html#fqa-16.6">[16.6] Do I need to check for <tt>NULL</tt> after <tt>p = new Fred()</tt>?</a></li>
+<li><a href="heap.html#fqa-16.7">[16.7] How can I convince my (older) compiler to automatically check <tt>new</tt> to see if it returns <tt>NULL</tt>?</a></li>
+<li><a href="heap.html#fqa-16.8">[16.8] Do I need to check for <tt>NULL</tt> before <tt>delete p</tt>?</a></li>
+<li><a href="heap.html#fqa-16.9">[16.9] What are the two steps that happen when I say <tt>delete p</tt>?</a></li>
+<li><a href="heap.html#fqa-16.10">[16.10] In <tt>p = new Fred()</tt>, does the <tt>Fred</tt> memory &quot;leak&quot; if the <tt>Fred</tt> constructor throws an exception?</a></li>
+<li><a href="heap.html#fqa-16.11">[16.11] How do I allocate / unallocate an array of things?</a></li>
+<li><a href="heap.html#fqa-16.12">[16.12] What if I forget the <tt>[]</tt> when deleting array allocated via <tt>new T[n]</tt>?</a></li>
+<li><a href="heap.html#fqa-16.13">[16.13] Can I drop the <tt>[]</tt> when deleting array of some built-in type (<tt>char</tt>, <tt>int</tt>, etc)?</a></li>
+<li><a href="heap.html#fqa-16.14">[16.14] After <tt>p = new Fred[n]</tt>, how does the compiler know there are <tt>n</tt> objects to be destructed during <tt>delete[] p</tt>?</a></li>
+<li><a href="heap.html#fqa-16.15">[16.15] Is it legal (and moral) for a member function to say <tt>delete this</tt>?</a></li>
+<li><a href="heap.html#fqa-16.16">[16.16] How do I allocate multidimensional arrays using <tt>new</tt>?</a></li>
+<li><a href="heap.html#fqa-16.17">[16.17] But the previous FAQ&#39;s code is SOOOO tricky and error prone! Isn&#39;t there a simpler way?</a></li>
+<li><a href="heap.html#fqa-16.18">[16.18] But the above <tt>Matrix</tt> class is specific to <tt>Fred</tt>! Isn&#39;t there a way to make it generic?</a></li>
+<li><a href="heap.html#fqa-16.19">[16.19] What&#39;s another way to build a <tt>Matrix</tt> template?</a></li>
+<li><a href="heap.html#fqa-16.20">[16.20] Does C++ have arrays whose length can be specified at run-time?</a></li>
+<li><a href="heap.html#fqa-16.21">[16.21] How can I force objects of my class to always be created via <tt>new</tt> rather than as locals or global/<tt>static</tt> objects?</a></li>
+<li><a href="heap.html#fqa-16.22">[16.22] How do I do simple reference counting?</a></li>
+<li><a href="heap.html#fqa-16.23">[16.23] How do I provide reference counting with copy-on-write semantics?</a></li>
+<li><a href="heap.html#fqa-16.24">[16.24] How do I provide reference counting with copy-on-write semantics for a hierarchy of classes?</a></li>
+<li><a href="heap.html#fqa-16.25">[16.25] Can you absolutely prevent people from subverting the reference counting mechanism, and if so, <i>should</i> you?</a></li>
+<li><a href="heap.html#fqa-16.26">[16.26] Can I use a garbage collector in C++?</a></li>
+<li><a href="heap.html#fqa-16.27">[16.27] What are the two kinds of garbage collectors for C++?</a></li>
+<li><a href="heap.html#fqa-16.28">[16.28] Where can I get more info on garbage collectors for C++?</a></li>
+</ul>
+
+<a name="fqa-16.1"></a>
+<h2>[16.1] Does <tt>delete p</tt> delete the pointer <tt>p</tt>, or the pointed-to-data <tt>*p</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.1">FAQ:</a></b>
+ That would be <tt>*p</tt>. The keyword should have been <tt>delete_whatever_is_pointed_by</tt>. Similarly, <tt>free</tt> should have
+been called <tt>free_whatever_is_pointed_by</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It really should have been &quot;&quot;. That&#39;s right, the keyword should have been an empty string. <i>You</i> don&#39;t need it. The object should live
+as long as someone can use it, and when it becomes unaccessible and can no longer be used by anyone, it should die. Why is making sure that
+this is what actually happens <i>your</i> job?
+</p>
+
+<p>
+Of course <a href="heap.html#fqa-16.26">garbage collection</a> may be time consuming in the average and/or worst case.
+Are you sure your implementation of <tt>new</tt> is better in this respect though? At least with garbage collection and
+managed pointers you can do heap compaction. With <tt>new/delete</tt> and bare pointers, pieces of memory between
+used blocks too small to satisfy an actual allocation request will accumulate, and you&#39;ll effectively run out of memory.
+This nice situation is called external memory fragmentation. Try it with your production code that&#39;s supposed to have long
+(not to mention &quot;unlimited&quot;) uptime - it&#39;s fun!
+</p>
+
+<p>
+And what if you make a mistake, one single mistake with all these deletions? Either you&#39;ll run out of memory, or your
+program will crash, or it will corrupt its own data. Which is why many experienced C++ programmers do everything to avoid explicit
+calls to <tt>new</tt>. Instead, they use <a href="exceptions.html#fqa-17.4">RAII</a> - have some constructor do the <tt>new</tt> and the destructor do the <tt>delete</tt>. Which
+eventually leads to lots of <a href="dtor.html#fqa-11.1">unnecessary copying</a> - you can&#39;t point to some data inside a data structure since the
+data structure may be about to die, and it will kill all its data whether or not someone points to it. So you have
+to make a copy of that data, and keep believing that manual memory management is what makes your C++ programs so fast.
+</p>
+
+<p>
+If managing the life and death of objects is such a big deal, perhaps the language isn&#39;t very <a href="picture.html#fqa-6.17">object-oriented</a> after all,
+is it?
+</p>
+
+
+<a name="fqa-16.2"></a>
+<h2>[16.2] Is it safe to <tt>delete</tt> the same pointer twice?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.2">FAQ:</a></b>
+ It isn&#39;t. Don&#39;t do that. Your program may crash or corrupt its own data. If it works in a test, it doesn&#39;t mean
+it always works. Don&#39;t do that.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> When you <tt>delete</tt> the pointer, it still points to the same place - the only difference is that the place was
+marked as &quot;free&quot; in some system-specific way. The second call to <tt>delete</tt> will probably try to mark it as &quot;free&quot; again.
+Which may be problematic when it&#39;s no longer free, actually, because someone has already allocated an object there,
+and you&#39;ve just wiped it out with your second <tt>delete</tt> call, so now <i>still other someone</i> can allocate an object there
+and overwrite the object you&#39;ve destroyed so immorally.
+</p>
+
+<p>
+There are other ways for this to fail - say, the code marking
+blocks as &quot;free&quot; and assuming they are taken may count on some memory right before the place pointed by the block
+start pointer to contain some meta-data it no longer contains, etc.
+</p>
+
+<p>
+Here&#39;s what happens in <a href="picture.html#fqa-6.5">managed environments</a>. First, you don&#39;t delete anything: the environment does. Second, it never
+deletes anything unless nobody points to it. So you are never stuck with pointers pointing to graves of dead objects,
+which may already be inhabited by freshly created objects. Which is good, because whatever your project is, memory
+management is not one of its stated goals, is it? It&#39;s nice not to do something you don&#39;t really want to do.
+</p>
+
+
+<a name="fqa-16.3"></a>
+<h2>[16.3] Can I <tt>free()</tt> pointers allocated with <tt>new</tt>? Can I <tt>delete</tt> pointers allocated with <tt>malloc()</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.3">FAQ:</a></b>
+ You can&#39;t. Don&#39;t do that. Your program may crash or corrupt its own data. If it works in a test, it doesn&#39;t mean
+it always works. Don&#39;t do that.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The many <a href="ref.html#fqa-8.6">duplicate C++ facilities</a>, such as <tt>new</tt> and <tt>malloc</tt>, are ugly, but using mismatching functions for allocation
+and deallocation is not less ugly. Why do you want to do that? It&#39;s like using an opening parenthesis and a closing bracket.
+How can you count on something like this to work reliably?
+</p>
+
+
+<a name="fqa-16.4"></a>
+<h2>[16.4] Why should I use <tt>new</tt> instead of trustworthy old <tt>malloc()</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.4">FAQ:</a></b>
+ <tt>new/delete</tt> call the constructor/destructor; <tt>new</tt> is type safe, <tt>malloc</tt> is not; <tt>new</tt> can be overridden by
+a class.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The virtues of <tt>new</tt> mentioned by the FAQ are not virtues, because <a href="ctors.html#fqa-10.1">constructors</a>, <a href="dtor.html#fqa-11.1">destructors</a>, and <a href="operator.html#fqa-13.1">operator overloading</a>
+are garbage (see what happens when you have no garbage collection?), and the type safety issue is really tiny here
+(normally you have to cast the <tt>void*</tt> returned by <tt>malloc</tt> to the right pointer type to assign it to a typed pointer variable, which may be
+ annoying, but far from &quot;unsafe&quot;).
+</p>
+
+<p>
+Oh, and using trustworthy old <tt>malloc</tt> makes it <a href="heap.html#fqa-16.5">possible</a> to use the equally trustworthy &amp; old <tt>realloc</tt>. Too bad
+we don&#39;t have a shiny new <tt>operator renew</tt> or something.
+</p>
+
+<p>
+Still, <tt>new</tt> is not bad enough to justify a deviation from the common style used throughout a language, even when the
+language is C++. In particular, classes with <a href="ctors.html#fqa-10.17">non-trivial constructors</a> will misbehave in fatal ways if you simply <tt>malloc</tt>
+the objects. So why not use <tt>new</tt> throughout the code? People rarely overload <tt>operator new</tt>, so it probably won&#39;t
+get in your way too much. And if they do overload <tt>new</tt>, you can always ask them to stop.
+</p>
+
+
+<a name="fqa-16.5"></a>
+<h2>[16.5] Can I use <tt>realloc()</tt> on pointers allocated via <tt>new</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.5">FAQ:</a></b>
+ Guess what - you can&#39;t. <tt>realloc</tt> may end up copying memory, and C++ objects don&#39;t like to have their memory
+copied without getting notified. They like to have their copy constructors and <tt>operator=</tt> handle the copying.
+</p>
+
+<p>
+By the way, why do you think <tt>malloc/realloc/free</tt> use the same heap as <tt>new/delete</tt>?
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The fact that there&#39;s no <tt>renew</tt> or whatever you&#39;d call it is one of the reasons to use custom allocators
+instead of <tt>new</tt>. You can then allocate uninitialized memory with <tt>malloc</tt> and use placement <tt>new</tt>
+to call constructors. Code doing these things is usually <a href="ctors.html#fqa-10.5">as ugly as sin</a>, hard to get right and gets in the way
+of debuggers.
+</p>
+
+<p>
+Many C++ objects will live happily ever after they&#39;re moved (<tt>realloc</tt>&#39;d). A different set of objects always get broken - those <i>pointing to the old place</i>.
+The intersection of these sets is non-empty since objects can keep pointers into themselves. Which is the <i>special case</i>
+that&#39;s sort of solved by copy constructors and <tt>operator=</tt> (the solution is simply to have <i>you</i> implement the copying
+so that pointers are set up correctly).
+</p>
+
+<p>
+However, the <i>general case</i> can&#39;t be solved - you can&#39;t move a C++ object
+and destroy the old one unless you can prove that no pointers are left to the old location. This can&#39;t be proved
+automatically in the general case (the halting problem and all that). Which is why you can&#39;t
+do <a href="heap.html#fqa-16.1">automatic heap compaction</a>, which could solve the external fragmentation problem.
+</p>
+
+<p>
+If your implementation uses two heaps, one for <tt>malloc</tt> and one for <tt>new</tt>, then it stinks, because sometimes
+you want to somehow replace <tt>malloc</tt> with something else, and it&#39;s nice to be able to do it once (for <tt>malloc</tt>), not twice (for <tt>malloc</tt> and <tt>new</tt>),
+and two heaps probably mean more fragmentation, and what&#39;s the point of two heaps? I&#39;ve never seen this done,
+but it actually is legal.
+</p>
+
+
+<a name="fqa-16.6"></a>
+<h2>[16.6] Do I need to check for <tt>NULL</tt> after <tt>p = new Fred()</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.6">FAQ:</a></b>
+ No, that would be bad. <tt>new</tt> throws an exception, so you don&#39;t have to insert tests all over the place.
+Unless you&#39;re using an old compiler (you can still work around it and have an exception thrown).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> C++ exceptions are frequently <a href="exceptions.html#fqa-17.1">worse</a> than having your code simply and straight-forwardly crash (at least in the
+latter case, you have a good chance to find the call stack where that happened). Disabling exception support
+at your latest &amp; greatest compiler is sometimes a good idea.
+</p>
+
+<p>
+If you really have to write code handling out-of-memory conditions gracefully, that&#39;s not as easy a task as simply
+catching a C++ exception. First, you&#39;ll probably have to avoid recursion (C++ doesn&#39;t throw stack overflow exceptions, you know,
+so the program can&#39;t behave gracefully when you&#39;re out of <i>that</i> memory).
+Second, what are you going to do when you&#39;re out of memory? Take into account that you&#39;ll need <i>memory</i> to do it;
+you might need to reserve some in advance.
+</p>
+
+<p>
+And there aren&#39;t that many choices in most cases. You can exit with an error message instead of &quot;hard&quot; crashing.
+You can show a message saying that there&#39;s not enough memory and could the user please close some programs and
+then you&#39;d retry, or maybe the user wants your program to quit? All these can be done without exceptions.
+</p>
+
+<p>
+Exceptions can be sort of handy when your approach is to &quot;abort the current operation&quot;, but exceptions are not a very good way
+to develop robust code, and if you actually want to deal gracefully with out-of-memory situations
+(you probably noticed that it&#39;s rarely done), that&#39;s
+way out of their league. The reason is that with exceptions, there are many ways to make subtle errors
+in your error handling code, and when some aspect of your application is important, you&#39;re usually better off
+making the handling of that aspect explicit and clear.
+</p>
+
+
+<a name="fqa-16.7"></a>
+<h2>[16.7] How can I convince my (older) compiler to automatically check <tt>new</tt> to see if it returns <tt>NULL</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.7">FAQ:</a></b>
+ You can pass a callback function throwing an exception to <tt>std::set_new_handler</tt>. This will work, except for
+ global variables calling <tt>new</tt> before you set your handler. There is no way to make sure your handler is set first -
+ even if you set it in the constructor of a global variable, that variable is not necessarily the first one to be constructed.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> I wonder why you want <tt>new</tt> to throw exceptions. This desire may be the indication of a certain kind of mindset.
+Hmmm, let&#39;s conduct a test: are you happy with the FAQ&#39;s solution, or are you actually bothered by the fact that <i>a constructor of a global variable</i>
+ may run out of memory without throwing an exception?
+</p>
+
+<p>
+If this option scares you, it probably means that you like to do hairy things before <tt>main</tt>
+ in <a href="ctors.html#fqa-10.12">undefined order</a>, including throwing and catching exceptions, which confirms my worst fears. I hope you get out of these habits by the time we happen to work
+ on the same project.
+</p>
+
+<p>
+If, on the contrary, you think that global constructors shouldn&#39;t get that complicated, your approach is apparently a little bit more practical,
+and now I&#39;m really puzzled. Are you absolutely sure you want <tt>new</tt> to throw exceptions?
+</p>
+
+
+<a name="fqa-16.8"></a>
+<h2>[16.8] Do I need to check for <tt>NULL</tt> before <tt>delete p</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.8">FAQ:</a></b>
+ <tt>delete</tt> already does that, so no, you shouldn&#39;t! <i>You could get the test wrong</i>, and you&#39;ll spend time testing
+ both execution paths <i>as required by testing methodologies</i>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Apparently the FAQ is written for imbeciles that can&#39;t test for <tt>NULL</tt>, <i>and</i> they don&#39;t test the code after writing
+ it to see if it worked, <i>but</i> they <i>do</i> mechanically test all branches because of <i>testing methodologies</i>. If you want
+ to really create a vivid image of a member of the FAQ&#39;s target audience in your imagination, think about this: just <i>how</i> does the
+ idiot cover both execution paths? The poor creature must artifically create cases where <tt>p</tt> is <tt>NULL</tt>, without
+ having the rest of the program crash. Which can be tricky enough to be inconsistent with the rest of our data
+ about the mental capabilities of this programmer. And now we get a clear picture: the FAQ
+ is designed for extraterrestrial intelligence struggling with the many difficulties of C++.
+</p>
+
+<p>
+Actually, there is no reason to be mean this time. Once in a lifetime those people actually made something easy.
+ Maybe they were inspired by the example of <tt>free</tt>, which also accepts null pointers.
+Pretty inconsistent with the spirit of the language. Which is why I was very surprised when I first found this out.
+</p>
+
+
+<a name="fqa-16.9"></a>
+<h2>[16.9] What are the two steps that happen when I say <tt>delete p</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.9">FAQ:</a></b>
+ When <tt>p</tt> is a <tt>T*</tt>, the first step is <tt>p-&gt;~T();</tt>, and the second is <tt>operator delete(p);</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Ugly syntax, isn&#39;t it? Especially the fact that <tt>a+b</tt> is the same as <tt>operator+(a,b)</tt>, but
+ <tt>delete p</tt> is <i>not at all</i> the same as <tt>operator delete(p)</tt>.
+</p>
+
+<p>
+The semantics are consistent with the <a href="ctors.html#fqa-10.1">decoupling</a> of <i>allocation</i> (<tt>operator new</tt>) and <i>construction</i> (<tt>T()</tt>).
+ This decoupling breaks <a href="class.html#fqa-7.4">encapsulation</a> without admitting it (the caller must know the size of the objects of the class
+at compile time, which means it must know all the <tt>private</tt> members) in order to increase efficiency in straight-forward implementations
+ (which can&#39;t do just-in-time compilation with optimization and have to know the size at compile time to optimize allocation).
+Which is why C++ code is recompiled all the time.
+</p>
+
+
+<a name="fqa-16.10"></a>
+<h2>[16.10] In <tt>p = new Fred()</tt>, does the <tt>Fred</tt> memory &quot;leak&quot; if the <tt>Fred</tt> constructor throws an exception?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.10">FAQ:</a></b>
+ No, because the compiler effectively generates a <tt>try/catch</tt> block around the constructor call, and when exceptions
+  are thrown, the <tt>catch</tt> part deallocates the memory and rethrows the exception.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If you throw exceptions in constructors, make sure they are caught when custom allocators are used
+(the kind that looks like this: <tt>new (pool.alloc()) Fred()</tt>).
+</p>
+
+<p>
+If you don&#39;t throw exceptions, the implicit <tt>try/catch</tt> around <tt>new</tt> is one illustration of the fact that exceptions
+increase the size of your code even when you don&#39;t use them. One good thing is that most compilers have a flag disabling exceptions.
+</p>
+
+
+<a name="fqa-16.11"></a>
+<h2>[16.11] How do I allocate / unallocate an array of things?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.11">FAQ:</a></b>
+ You allocate it with <tt>p = new T[N]</tt> and deallocate with <tt>delete[] p</tt>. Using <tt>delete p</tt> is an error.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You can only do that if <tt>T</tt> has a <a href="ctors.html#fqa-10.5">default constructor</a> (one that can work without arguments). Which is one more
+  reason to avoid non-trivial constructors. Alternatively, if you&#39;d rather create a problem than solve one,
+  you can replace your <a href="picture.html#fqa-6.15">evil</a> arrays with <tt>std::vector</tt>.
+</p>
+
+
+<a name="fqa-16.12"></a>
+<h2>[16.12] What if I forget the <tt>[]</tt> when deleting array allocated via <tt>new T[n]</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.12">FAQ:</a></b>
+ You&#39;ll infect your program with an incurable disease. It will do something like corrupt its data and die.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If you want to realize the idiocy of this rule in its full glory, consider this. <tt>new</tt> calls <tt>malloc</tt> or some other
+allocator, and it passes it the block size. The allocated pointer is then passed to <tt>delete</tt>, but the size is <i>not</i>.
+How does <tt>delete</tt> know to free a block of the right size - not too little, not too much? <i>It has to store the size
+  somewhere</i>, doesn&#39;t it? But <i>of course</i> it <i>can&#39;t be bothered</i> to figure out the number of objects pointed by the
+  pointer (like, divide the stored size by <tt>sizeof(*p)</tt>, making an actual <i>use</i> of &quot;type safety&quot;) so it can call the destructors properly.
+</p>
+
+<p>
+But wait, there&#39;s more! What&#39;s the deal with <i>data corruption</i>? Shouldn&#39;t the worst possible effect be a resource leak
+  due to the fact that some destructors are not called?
+</p>
+
+<p>
+Here&#39;s the best part. <tt>operator new[]</tt> allocates <i>a little bit more memory</i> than it&#39;s asked for in order to <i>store
+  the number of the frigging objects</i> in that place (it can also be done in other ways, but the effect is equivalent). <tt>delete[]</tt> uses it to call the destructors for all the allocated
+  objects. Since <tt>new</tt> doesn&#39;t store any number and only allocates the amount of memory it was told to, it becomes
+  clear why mismatching the <tt>new</tt> and <tt>delete</tt> operators will lead to data corruption.
+</p>
+
+<p>
+The bottom line is this: C++ stores the number of objects in a block <i>once</i> when <tt>new</tt> is called and <i>twice</i> when <tt>new[]</tt>
+  is called, <i>and it will rather have you introduce lethal bugs in your program than use the information to help you
+  get it right</i>. Now that is what I call &quot;hospitality&quot;.
+</p>
+
+
+<a name="fqa-16.13"></a>
+<h2>[16.13] Can I drop the <tt>[]</tt> when deleting array of some built-in type (<tt>char</tt>, <tt>int</tt>, etc)?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.13">FAQ:</a></b>
+ No you can&#39;t. You may think that you can, because <tt>int</tt> has a trivial destructor. But it&#39;s not just about
+  destructors. For example, what if someone replaces <tt>operator new[]</tt> and <tt>operator delete[]</tt> in a way
+  incompatible with mismatching <tt>new/delete[]</tt> calls?
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yeah, did you think about that? And what if you use an array of <tt>Int</tt>, which is a <tt>typedef</tt>, and someone changes the <tt>typedef</tt> to
+<tt>SmartIntClass</tt> instead of plain old <tt>int</tt>? Think about it. That&#39;s what your brain is for: thinking about
+exciting, useful things like this.
+</p>
+
+<p>
+The serious answer is that if a language has two sets of similar matching operators, than a programmer is better off
+  <a href="heap.html#fqa-16.3">avoiding mismatches</a> between those operators. The fact that there really should have been <a href="heap.html#fqa-16.12">one</a> <tt>delete</tt> operator, no, wait,
+make it <a href="heap.html#fqa-16.1">zero</a>, may be a reason to switch to a different language, but not to <a href="ctors.html#fqa-10.3">violate the rules</a> of a language.
+</p>
+
+
+<a name="fqa-16.14"></a>
+<h2>[16.14] After <tt>p = new Fred[n]</tt>, how does the compiler know there are <tt>n</tt> objects to be destructed during <tt>delete[] p</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.14">FAQ:</a></b>
+ Sing along: &quot;It&#39;s a kind of magic...&quot;
+</p>
+
+<p>
+There are two common ways used by our friends the compiler-implementing magicians. One is to allocate extra memory
+  and store the number of objects there. The other one is to use an associative array mapping from pointers to sizes.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You may wonder why these clever magicians don&#39;t rely on <tt>malloc</tt> to do the magic, and have you end up with
+  the block size stored <i>twice</i>: you ask <tt>new</tt> for 8 bytes, then <tt>new</tt> asks malloc for 12 bytes, then <tt>malloc</tt>
+  asks <tt>sbrk</tt> or whatever&#39;s down its guts for 16 bytes.
+</p>
+
+<p>
+The answer is of course <i>modularity</i>. Translation:
+  why should the implementor of the C++ language bother to figure out the details of <tt>malloc</tt> when there&#39;s the easier
+  option - leave it to the implementor of the C language and simply and portably implement <tt>new[]</tt> on top of the
+  C runtime? 4 bytes of your memory are surely not a good enough reason.
+</p>
+
+<p>
+&quot;Magic&quot;. The next thing you know, they&#39;ll call exploiting security holes in your OS to utilize some of those unused processor &amp; memory resources &quot;magic&quot;.
+</p>
+
+
+<a name="fqa-16.15"></a>
+<h2>[16.15] Is it legal (and moral) for a member function to say <tt>delete this</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.15">FAQ:</a></b>
+ You can do this, as long as you are sure the object is allocated with <tt>new</tt>, and the pointer is not used for anything
+  at all after <tt>delete this</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This is a bit weird, and it probably causes many people to get alarmed and start anxiously looking for places that
+  <i>might</i> touch the deleted object (as if it were more likely than a less exotic access to a dangling reference).
+  And it forces the user of a class to allocate the objects with <tt>new</tt>, which is against the (misguided) <a href="ctors.html#fqa-10.1">spirit of C++</a>
+  and therefore another source of <a href="ref.html#fqa-8.6">confusion</a>. At least provide a <tt>static</tt> method that allocates objects with <tt>new</tt> and declare
+  the destructors <tt>private</tt> to document your intent to control the allocation.
+</p>
+
+<p>
+Why do you want to do it anyway? If you want to impress people, why not do some real magic - actual functionality, not just
+  yet another syntactic exercise?
+</p>
+
+
+<a name="fqa-16.16"></a>
+<h2>[16.16] How do I allocate multidimensional arrays using <tt>new</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.16">FAQ:</a></b>
+ The answer is very long with 3 large code listings.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There is no <tt>operator new[][]</tt> in C++ - it decided that <tt>new</tt> and <tt>new[]</tt> are sufficient; it had many stupid reasons
+  to decide that way. Anyway, you have two options: allocate a flat array and manage the N-dimensional indexing manually
+  (generating one-dimensional indexes using expressions like <tt>x+y*width</tt>), or you can allocate an array of arrays <i><a class="corr" href="web-vs-fqa.html#correction-4">(correction)</a></i>.
+  For 2 dimensions, you need to allocate a <tt>new T*[M]</tt> and then in a loop with <tt>M</tt> iterations allocate a <tt>new T[N]</tt>.
+</p>
+
+<p>
+With the second way you get more natural-looking indexing, but worse performance (less speed, more space). It may
+  be convenient if you need each one-dimensional array in the two-or-more-dimensional array to have a different length,
+  but even then it&#39;s probably better to fake it with a flatter kind of array in ugly ways if you care about
+  performance
+(by the way, if you don&#39;t, make the best of it - try a safe language).
+</p>
+
+
+<a name="fqa-16.17"></a>
+<h2>[16.17] But the previous FAQ&#39;s code is SOOOO tricky and error prone! Isn&#39;t there a simpler way?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.17">FAQ:</a></b>
+ Sure it is! You can define a <tt>Matrix</tt> class and have it do all the dirty work. Which is good, as should be obvious
+to anyone familiar with <i>Star Trek 2</i> (a reference follows).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> I didn&#39;t see <i>Star Trek</i>, but moving the dirty work to a single place doesn&#39;t make that work &quot;simple&quot;.
+Of course it&#39;s better than doing that work over and over again, but how many multi-dimensional array classes have you seen,
+ and what happens when someone tries to convert between them? I mean it can&#39;t be a &quot;single place&quot; unless that place is the compiler.
+</p>
+
+<p>
+By the way, if you need performance, you can&#39;t really encapsulate the layout of the multi-dimensional array,
+because you&#39;ll need to do things like get one column to the right (with <tt>flat_index+1</tt>) or one row up (with <tt>flat_index+row_width</tt>),
+ instead of computing things like <tt>x+(y+1)*row_width</tt> every time through the innermost loop.
+</p>
+
+<p>
+You can try to define all kinds of functions like
+ <tt>increment_by_row</tt>. If you really believe that it will make it possible to &quot;transparently&quot; change the representation later
+ (thus turning all the optimizations carefully developed for this representation into pessimizations), go ahead and define
+and optimize hordes of such tiny functions and keep lying to yourself about how this makes your code more readable.
+</p>
+
+<p>
+Data representation is very important. Too bad so many people believe that the only important thing about <i>data</i>
+ is to hide it behind <i>code</i> (<a href="inheritance-abstract.html#fqa-22.1">interfaces</a>) so that you can &quot;always change the data representation later&quot;. While this
+ may be right in the majority of cases, it is likely to be wrong in <i>the most important</i> cases.
+</p>
+
+
+<a name="fqa-16.18"></a>
+<h2>[16.18] But the above <tt>Matrix</tt> class is specific to <tt>Fred</tt>! Isn&#39;t there a way to make it generic?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.18">FAQ:</a></b>
+ Of course! You can use templates!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This way, not only will your code run slowly - it will also compile slowly.
+</p>
+
+
+<a name="fqa-16.19"></a>
+<h2>[16.19] What&#39;s another way to build a <tt>Matrix</tt> template?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.19">FAQ:</a></b>
+ You can use <tt>std::vector</tt> instead of bare pointers!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You can also use any of the numerous array classes implemented before <tt>std::vector</tt> was introduced into the
+ C++ standard library (which was long after C++ became widely used).
+</p>
+
+<p>
+Alternatively, you can also use any of the numerous <i>matrix</i> classes implemented before <tt>std::matrix</tt> was introduced
+ into the C++ standard library... Actually, make that &quot;before <tt>std::matrix</tt> <i>will be</i> introduced into the C++
+ standard library&quot;. Can you explain why the C++ standard includes <tt>std::vector</tt> - a class quite similar to built-in
+ arrays, but different - but does not include <tt>std::matrix</tt>, a class that would be quite similar to built-in 2D arrays,
+ but different? Here&#39;s a more difficult question: is it good or bad that we don&#39;t have <tt>std::matrix</tt>, provided that
+ we <i>do have</i> less than optimal built-in 2D arrays? Before you answer, consider type conversions, dynamic resizing, literal values,
+ telling the size of an array at run time...
+</p>
+
+<p>
+That&#39;s what C++ is all about: the development of your ethical judgment. Everybody can tell
+ good from bad; <a href="ref.html#fqa-8.6">choosing</a> between the ugly and the disgusting takes real wisdom.
+</p>
+
+
+<a name="fqa-16.20"></a>
+<h2>[16.20] Does C++ have arrays whose length can be specified at run-time?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.20">FAQ:</a></b>
+ That would be yes - there&#39;s <tt>std::vector</tt>.
+</p>
+
+<p>
+Actually, it&#39;s a no - you can&#39;t do it with built-in arrays.
+</p>
+
+<p>
+Wait a minute - you <i>can</i> do it with <i>the first index</i> of a built-in array, for example: <tt>new T[run_time_val][compile_time_val]</tt>.
+</p>
+
+<p>
+You know what? Arrays are <a href="picture.html#fqa-6.15">evil</a>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <tt>std::vector</tt> is not an array, it&#39;s a class that looks like an array until you try to initialize it with <tt>{1,2,3}</tt>
+ or pass an array to a function expecting a <tt>vector</tt> or get a huge compiler error message.
+ Built-in arrays don&#39;t behave like this.
+</p>
+
+<p>
+C++ inherits the following rule about types from C: the size of a type is always known at compile time, and you can
+ get it with <tt>sizeof</tt>. This rule is useful in C because, <i>together with other rules</i> which are violated in C++, it makes it quite easy to
+ mentally map source code to assembly code (sort of) and estimate run time performance. In C++ it&#39;s no longer useful,
+ because telling the <i>meaning</i> of C++ code is nearly impossible, not to mention reasoning about its performance.
+</p>
+
+<p>
+Anyway, the length of a built-in array is part of its type, so if it could be dynamic, it would violate the ex-useful
+ rule. So it can&#39;t. However, built-in <i>pointers</i> can point to an array of length defined at run time. So you can have
+ a <tt>T* p</tt> pointing to <tt>run_time_val</tt> objects, but you can&#39;t have an array of type <tt>T[run_time_val]</tt>. Which means that
+ you can&#39;t allocate such arrays on the stack (unless the compiler decides to <i>almost</i> violate the ex-useful rule
+ and support it, the way GNU C/C++ does, for example).
+</p>
+
+<p>
+The built-in C++ arrays are inherited from C without changes
+  (well, except for constructor/destructor calls and <tt>new</tt> in addition to <tt>malloc</tt> and other stuff of this kind), so if you
+  care about details, the best place to look is material about C. This is one of the many examples illustrating that you
+  have to know C in order to really understand C++.
+</p>
+
+
+<a name="fqa-16.21"></a>
+<h2>[16.21] How can I force objects of my class to always be created via <tt>new</tt> rather than as locals or global/<tt>static</tt> objects?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.21">FAQ:</a></b>
+ You can define the constructors <tt>private</tt> and provide <tt>public</tt> functions which return pointers to objects allocated
+  with <tt>new</tt>. Which goes by the fancy name of &quot;The Named Constructor Idiom&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Why do you want to force this? Allocating locals is more efficient than <tt>new</tt>, and you wouldn&#39;t have to worry
+  about <tt>delete</tt>, either. The cost is that when you change the <tt>private</tt> members of the class, all code using it
+  gets recompiled.
+</p>
+
+<p>
+Wait, is that what you want - to avoid recompilation? In that case, the &quot;Named Constructor Idiom&quot; <a href="ctors.html#fqa-10.8">defeats the purpose</a> - change
+  a <tt>private</tt> member and you still trigger a rebuild.
+  You can either drop C++ classes and store the state in a C <tt>struct</tt>
+  (place a forward declaration in the header file and the full definition in the implementation file), or you can
+  wrap this exact solution with the code of an extra C++ class just because C is evil. The latter
+  way is known as &quot;The Pimpl Idiom&quot; (&quot;pimpl&quot; apparently stands for &quot;pointer to implementation&quot;).
+</p>
+
+<p>
+Idioms make the world move. Especially the Design Pattern Idiom. Or the Idiom Design Pattern. Or something.
+</p>
+
+
+<a name="fqa-16.22"></a>
+<h2>[16.22] How do I do simple reference counting?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.22">FAQ:</a></b>
+ Two large code listings are given (a quote from these listings: <tt>// DO NOT CHANGE THE ORDER OF THESE STATEMENTS!</tt>), followed by a bold
+  claim that now you have a way to do simple reference counting.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You do <b>simple</b> reference counting by using a language which does reference counting
+  (or garbage collection - you probably don&#39;t care if you want it &quot;simple&quot;).
+</p>
+
+<p>
+You do <b>complicated</b> and <b>broken</b> reference counting by using C++, creating smart pointer classes
+   (and smart array classes, and smart multi-dimensional array classes), wrapping your private constructors with
+   public functions returning smart pointers to objects (or smart arrays of objects) to make sure all objects
+   are actually pointed by smart pointers so the reference counting is not entirely worthless.
+</p>
+
+<p>
+Congratulations! You&#39;ve just wasted lots and lots of time to emulate garbage collection on top of C++.
+Well, the code doesn&#39;t compile as fast as it would with built-in garbage collection (all those smart pointer templates),
+   and the error messages are a bit cryptic (all those smart pointer templates), and there are those tricky cases
+   like cyclic references you still fail to deal with (despite all those smart pointer templates), and for every class
+   you write extra code wrapping constructors, and the whole thing doesn&#39;t play well with existing libraries
+   (which use <i>different</i> smart pointer templates), and...
+</p>
+
+<p>
+<i>Why</i> do you want to do reference counting in C++?
+</p>
+
+
+<a name="fqa-16.23"></a>
+<h2>[16.23] How do I provide reference counting with copy-on-write semantics?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.23">FAQ:</a></b>
+ You can have your class keep all the data in a structure pointed by a member pointer <tt>_data</tt>, and then each method
+   that wants to modify the object has to check the reference count, and if the data is shared by several objects,
+   the data must be cloned before the modification.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Ultimately, what are you trying to achieve? If you care a lot about efficiency <i>and</i> you care a lot about high
+   level of abstraction <i>in the same piece of code</i>, there&#39;s probably no easy solution for you. Are you sure
+   it&#39;s <i>the same</i> code? Or maybe you want efficiency in some places, and high level of abstraction in other places?
+Then you can use two different languages.
+</p>
+
+<p>
+If it&#39;s really the same code, the best solution is probably to write your own little language.
+   It&#39;s not as hard as it sounds, and not so strange - think about it: apparently you must write a lot of code
+   (if there wasn&#39;t a lot of it, it wouldn&#39;t be a problem) in some pretty
+    specific domain, because there&#39;s no high level language which supports the right built-in facilities. Or is there?
+   Are you looking for copy-on-write strings or something? <i>String processing in C++?</i> Do yourself a favor and stop right there.
+   Use a language with decent built-in strings.
+</p>
+
+<p>
+If there really is no good existing high-level language for your job,
+   basically what you have to do is meta-programming: you want something which is not directly related to the specific meaning
+   of your program - you want objects of pretty much arbitrary classes to behave in a certain way. Which means you want a new language. You can do it with
+   your own compiler or you can do it in a system which supports meta-programming well (the two approaches are really pretty close).
+   C++ meta-programming is a nightmare - the facilities for it are very poor, and there&#39;s lots of strange features
+   already in the language that you must interoperate with. You have been warned: this path leads to the gates of madness.
+</p>
+
+<p>
+Clarification: I&#39;m not saying that meta-programming is likely to be the solution when you want copy-on-write.
+   On average, that would probably be over-engineering. However, in the cases where it indeed is over-engineering,
+   so is the FAQ&#39;s solution; the way to go is probably to have the user code explicitly copy objects upon modifications.
+   And when there&#39;s enough code involved to make that tedious, then the C++ solution also gets tedious,
+   and that&#39;s when meta-programming could be appropriate.
+</p>
+
+
+<a name="fqa-16.24"></a>
+<h2>[16.24] How do I provide reference counting with copy-on-write semantics for a hierarchy of classes?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.24">FAQ:</a></b>
+ You do it by writing a lot of code! Like this:
+</p>
+
+<pre>
+  code;
+  code;
+  code;
+  lots of code;
+  more code;
+  two screens of code;
+  //boy is this FUN!
+  code;
+</pre>
+
+<p>
+<b class="FQA">FQA:</b> Here&#39;s a solution for another hierarchy of classes (you might have more than one in your project - it happens, and the FAQs
+   &quot;solution&quot; is done on a per-method basis, and <i>there isn&#39;t even a way to iterate over the methods of a class</i> in C++,
+   not to mention &quot;transparently instrument the methods of a class with custom logic like copy-on-write&quot;):
+</p>
+
+<pre>
+  code;
+  code;
+  //why am I doing this?
+  code;
+  code;
+  //help
+  code;
+  //I think I&#39;d rather become a farmer
+</pre>
+
+<p>
+Seriously, I&#39;m not going to discuss the nightmare that is the FAQ&#39;s proposed solution. Follow the link to the FAQ&#39;s
+  answer if you want to check it out. What I would like to point out is that it&#39;s possible to do all this
+  transparently if your environment has good support for meta-programming. For example, some languages
+  let you write your own code to implement object attribute modification (the simpler option), and/or automatically
+  generate wrapper classes to intercept methods changing objects (the more complicated option). Either way, you end
+  up with O(1) code to solve the problem instead of O(N), where N is the number of classes involved.
+</p>
+
+
+<a name="fqa-16.25"></a>
+<h2>[16.25] Can you absolutely prevent people from subverting the reference counting mechanism, and if so, <i>should</i> you?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.25">FAQ:</a></b>
+ You can&#39;t, and you <i>usually</i> shouldn&#39;t.
+  (Yes, that&#39;s pretty much what the FAQ says: sometimes you <i>should</i> do what you <i>can&#39;t</i>. Just what does &quot;should&quot; mean in its warped universe?)
+</p>
+
+<p>
+There are two holes in the armor. First, your <tt>SmartPtr</tt> probably has an <tt>operator*</tt> that returns a bare reference to an object. So you can end up with <tt>Dumb* p = &amp;*smart_p;</tt>.
+  This can be sort of closed using several approaches, each worse than the others in its own unique way. And then
+  there are ways to get the bare pointer with syntax like <tt>smart_p.operator-&gt;()</tt>, returning a <tt>Dumb*</tt>.
+</p>
+
+<p>
+The second hole is that someone can have dangling references to <tt>SmartPtr</tt>. This can&#39;t be prevented even by
+  returning a <tt>SmartPtrPtr</tt> in an overloaded <tt>operator&amp;</tt>, because C++ has <i>references</i> (remember - the new feature you <a href="ref.html#fqa-8.6">should</a> use instead of the <a href="picture.html#fqa-6.15">evil</a> pointers),
+  and there&#39;s nothing you can overload to prevent someone from taking a reference to your <tt>SmartPtr</tt>.
+</p>
+
+<p>
+Use code reviews to figure out what&#39;s actually going on with all those smart pointers.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You can&#39;t fake what you don&#39;t have (I think the quote is attributed to S. Cray). C++ doesn&#39;t have safe memory management. <a href="heap.html#fqa-16.22">Faking</a>
+  safe memory management leads to still unsafe memory management, with the important bonus of obfuscation.
+</p>
+
+<p>
+You can absolutely prevent people from subverting the reference counting mechanism by using a programming language
+  that absolutely prevents people from subverting its built-in memory management mechanisms.
+</p>
+
+
+<a name="fqa-16.26"></a>
+<h2>[16.26] Can I use a garbage collector in C++?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.26">FAQ:</a></b>
+ Sure you can. Let&#39;s compare it to smart pointer techniques. Garbage collection is not as portable, but typically
+  more efficient, and it can handle cyclic references, and it works better with others&#39; libraries because
+  you don&#39;t need to explicitly change the pointers from dumb to smart or anything like it. However, sometimes objects
+  can leak - a C++ garbage collector <a href="class.html#fqa-7.2">can't</a> tell a pointer from a random bit sequence that just happens to look like
+  a pointer.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Assuming you live in a free country, what&#39;s there to stop you from using a garbage collector in C++? Sure, there
+  are minor obstacles, for example, it doesn&#39;t really work, but it&#39;s still a free country, isn&#39;t it?
+</p>
+
+<p>
+Suppose you can use garbage collection, which means that you are not worried about interference with real time
+  requirements. <i>Why are you using C++?</i> Why not use a safe language instead? Look - the C++ FAQ admits that
+  garbage collection is <i>more efficient</i> than C++ &quot;smart pointers&quot; all over the place, and more correct (cyclic references),
+  and the single correctness problem it mentions (random bit patterns) vanishes in a managed environment.
+  So what&#39;s the problem?
+</p>
+
+<p>
+If you think you need to use C++, deal with the fact that it doesn&#39;t have garbage collection, and you must manage
+  memory manually. Or you can deal with the other facts. For example, what happens if two libraries relying on
+  <i>different</i> garbage collectors are supposed to work <i>in the same program</i>? What happens if code incompatible
+  with garbage collection (because it does <a href="heap.html#fqa-16.27">"clever"</a> things with pointers, like <tt>one_based_array = (int*)malloc(arr_size)-1</tt>)?
+  What about destructors? C++ garbage collectors don&#39;t know what they&#39;re freeing, so you can&#39;t have finalization
+  functions. What about all those happy custom allocators C++ programmers <a href="dtor.html#fqa-11.14">adore</a> so much? What if a <tt>malloc</tt>ed object
+  points to an object allocated from such a custom pool? The destructor of the outer object with the pointer is not going to be called - so who is going
+  to deallocate the pointed object from the pool?
+</p>
+
+<p>
+C++ does not feel pain. It can&#39;t be reasoned with. Starting a fight is a big mistake. If you want to use C++,
+  you must learn to love it the way it is, in particular, manage your memory manually.
+</p>
+
+
+<a name="fqa-16.27"></a>
+<h2>[16.27] What are the two kinds of garbage collectors for C++?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.27">FAQ:</a></b>
+ There are <i>conservative</i> and <i>hybrid</i> garbage collectors. The conservative ones just look for bit sequences
+  looking like pointers. The hybrid ones require the programmer to specify some layout information explicitly
+  in the code (but they still traverse the call stack conservatively when they look for pointers).
+</p>
+
+<p>
+Garbage collectors may cause memory leaks when a bit pattern looking like a pointer is misinterpreted as a proof
+  that the block pointed by this &quot;pointer&quot; is still in use. And some illegal programs may &quot;confuse&quot; garbage collectors
+  (that&#39;s the word used by the FAQ) by keeping pointers outside of allocated blocks. Why <a href="assign.html#fqa-12.2">can't</a> these programmers
+behave <a href="exceptions.html#fqa-17.10">reasonably</a>?
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Let&#39;s start with a different question: what&#39;s the problem with garbage collection in C++? Answer: there is <a href="class.html#fqa-7.2">no way</a>
+   to inspect the state of a C++ program and tell which blocks are in use. In environments designed to support garbage
+   collection, you can do that by checking if the program can reach the block using one of the pointers it currently
+   keeps in its memory. But in C++, you can&#39;t. First, you don&#39;t know where the program keeps pointers
+   (no real run time type information), and second, pointers that don&#39;t point into a block can be used to compute
+   pointers that do point into that block (unsafe pointer arithmetics).
+</p>
+
+<p>
+So along come the memory leaks, and the &quot;confusion&quot;. And what <i>happens</i> when a garbage collection is &quot;confused&quot;? I&#39;ll tell you what happens - it frees an object
+  which is still in use. The result is a crash or a data corruption. Do you think &quot;confused&quot; is a legitimate euphemism
+  in this context? &quot;Oh, I&#39;m so confused! I think I&#39;ll kill your program now.&quot;
+</p>
+
+<p>
+As to the &quot;unreasonable&quot; programmers - well, adjusting a pointer to point before an allocated block is one efficient way
+   to implement one-based (instead of zero-based) arrays, among other things. Of course you can allocate an extra
+   element and avoid violating the rules. But most people don&#39;t know these rules, because although they are a part
+   of the language definition, they are not enforced in the widespread implementations, and don&#39;t become a part
+   of the mental model developed by programmers as they gain familiarity with the language.
+</p>
+
+<p>
+That is, not only does
+   it <i>work</i> when one implements one-based arrays this way - one <i>doesn&#39;t see a reason for it not to work</i>: experience
+   consistently tells people that C++ pointers are just a kind of integer. Formally,
+   there are reasons for this to be illegal (like, duh, what happens if you want garbage collection?) - but most people are not language
+   lawyers. In practice, what matters is the de facto standard (that&#39;s why it&#39;s called &quot;de facto&quot;).
+</p>
+
+
+<a name="fqa-16.28"></a>
+<h2>[16.28] Where can I get more info on garbage collectors for C++?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/freestore-mgmt.html#faq-16.28">FAQ:</a></b>
+ <a href=http://www.iecc.com/gclist/GC-faq.html>Here</a>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Don&#39;t bother. If garbage collection worked in C++, you would hear about it. C++ has been around for decades, there are hundreds of thousands
+   of C++ programmers, and megatons of C++ code with zillions of memory management bugs. If someone implemented
+   a working solution for this problem, they&#39;d become rich, famous, or both, and the garbage collector(s)
+   would be everywhere.
+</p>
+
+<p>
+<a href="heap.html#fqa-16.26">Why</a> do you think you don&#39;t see too many around?
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

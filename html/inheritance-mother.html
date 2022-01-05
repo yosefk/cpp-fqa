@@ -1,0 +1,559 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Inheritance -- what your mother never told you</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Inheritance -- what your mother never told you</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+Note: section names are copied verbatim from the FAQ. The document is not based on the assumption that it was your mother who told you the other things about inheritance.
+</p>
+
+<ul>
+<li><a href="inheritance-mother.html#fqa-23.1">[23.1] Is it okay for a non-<tt>virtual</tt> function of the base class to call a <tt>virtual</tt> function?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.2">[23.2] That last FAQ confuses me. Is it a different strategy from the other ways to use <tt>virtual</tt> functions? What&#39;s going on?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.3">[23.3] Should I use protected virtuals instead of public virtuals?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.4">[23.4] When should someone use private virtuals?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.5">[23.5] When my base class&#39;s constructor calls a <tt>virtual</tt> function on its <tt>this</tt> object, why doesn&#39;t my derived class&#39;s override of that <tt>virtual</tt> function get invoked?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.6">[23.6] Okay, but is there a way to <i>simulate</i> that behavior as <i>if</i> dynamic binding worked on the <tt>this</tt> object within my base class&#39;s constructor?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.7">[23.7] I&#39;m getting the same mess with destructors: calling a <tt>virtual</tt> on my <tt>this</tt> object from my base class&#39;s destructor ends up ignoring the override in the derived class; what&#39;s going on?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.8">[23.8] Should a derived class redefine (&quot;override&quot;) a member function that is non-<tt>virtual</tt> in a base class?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.9">[23.9] What&#39;s the meaning of, <tt>Warning: Derived::f(char) hides Base::f(double)</tt>?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.10">[23.10] What does it mean that the &quot;virtual table&quot; is an unresolved external?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.11">[23.11] How can I set up my class so it won&#39;t be inherited from?</a></li>
+<li><a href="inheritance-mother.html#fqa-23.12">[23.12] How can I set up my member function so it won&#39;t be overridden in a derived class?</a></li>
+</ul>
+
+<a name="fqa-23.1"></a>
+<h2>[23.1] Is it okay for a non-<tt>virtual</tt> function of the base class to call a <tt>virtual</tt> function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.1">FAQ:</a></b>
+ Sometimes it is. Suppose you have a class <tt>Animal</tt> with a non-<tt>virtual</tt> <tt>getAwfullyExcited()</tt> method.
+In your system, all animals do it similarly:
+</p>
+
+<pre>
+void Animal::getAwfullyExcited()
+{
+  makeExcitedNoises(); // all animals make different noises
+  cout &lt;&lt; &quot;And here comes the dance!&quot; &lt;&lt; endl; // all animals always warn people before they dance
+  danceExcitedly(); // all animals dance differently
+}
+</pre>
+
+<p>
+So there you have it - an orderly hierarchy of animals, each getting excited according to the standard procedure
+in its own unique way.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The trouble with this whole thing in C++ is that you can&#39;t easily tell which functions can be overridden and which can&#39;t,
+and what &quot;override&quot; means.
+</p>
+
+<p>
+The default is &quot;can&#39;t&quot; - you have to explicitly say <tt>virtual</tt> to enable overriding. Unless you derive
+your class from a base class having <tt>virtual</tt> functions - when you override those functions, the <tt>virtual</tt>
+keyword becomes optional. But even if the function in the base class is <i>not</i> virtual, you still <i>can</i> override it -
+except that <a href="inheritance-mother.html#fqa-23.8">now</a> the binding is static: if you call a function through a pointer statically typed as <tt>Base*</tt>,
+the base class implementation is called, but if you call it through a <tt>Derived*</tt>, the derived class implementation
+is called. So it&#39;s a different kind of &quot;overriding&quot;. And naturally you can have more than one link in the chain of derived classes.
+</p>
+
+<p>
+Back to our question, it is generally OK to have a common base class implementation call
+functions defined in the derived classes - in many cases that does exactly what you want.
+However, in the specific case of C++ <tt>virtual</tt> functions it may become hard to figure out which functions
+are <tt>virtual</tt> and which are not.
+</p>
+
+<p>
+So it&#39;s sometimes better to separate <tt>Animal</tt> (having only pure virtual functions) and <tt>EmotionalBehavior</tt>
+(having methods taking an animal and calling its functions to implement various common rituals).
+No, it&#39;s probably <i>not</i> a good idea to add this rule to your local Coding Conventions Document -
+ if the class is relatively small and simple, there&#39;s no point in creating more code by splitting it to several classes.
+The thing is that C++ classes with <i>many</i> methods, some virtual and some not, especially when they are part of complex
+ hierarchies with lots of overriding of both kinds, end up making people wonder why this piece of code was called.
+ Why, why, why?..
+</p>
+
+
+<a name="fqa-23.2"></a>
+<h2>[23.2] That last FAQ confuses me. Is it a different strategy from the other ways to use <tt>virtual</tt> functions? What&#39;s going on?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.2">FAQ:</a></b>
+ Yes, there are two different strategies related to the use of <tt>virtual</tt> functions. In the first case,
+ you have a common non-<tt>virtual</tt> method in the base class, but use <tt>virtual</tt> methods to implement the parts which
+ do differ. In the second case, you have <tt>virtual</tt> methods implemented differently in derived classes,
+ but they call common non-<tt>virtual</tt> methods in the base class. These common bits can also be implemented somewhere
+ else - not necessarily in the base class.
+</p>
+
+<p>
+Sometimes you use both strategies in the same class - one for some of the methods, the other for other methods.
+ That&#39;s OK, too.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Well, sort of, yeah. Is it just me or did we really learn nothing at all? This lengthy discussion follows
+ quite directly from first principles. <tt>virtual</tt> functions allow different derived classes to implement a method
+ differently. All functions, including non-<tt>virtual</tt>, can be called once or more from various places. Does something
+totally obvious from these rules deserve the pompous name &quot;strategy&quot;?
+</p>
+
+<p>
+No, it&#39;s not just the FAQ. This is very common in the &quot;software engineering&quot; community, especially in the C++ subculture.
+Let&#39;s look at an example. You&#39;ve probably seen methods that create new objects of classes derived from a common base. Such methods are useful
+ because their caller doesn&#39;t have to be aware of the different derived classes. For example, you can have a
+ <tt>createMovieReader(filename)</tt> method that checks the file type and creates an <tt>MPEGReader</tt> or an <tt>AVIReader</tt> or whatever,
+ and whoever calls <tt>createMovieReader</tt> doesn&#39;t have to care about the many different kinds of readers.
+ Is this worth a special term
+ accompanied by a whole discussion? Well, it has a term - it&#39;s the Factory Method Design Pattern. Sometimes
+ you have an abstract base class with nothing but Factory Methods. This has a name of its own, too - it&#39;s the Abstract Factory Design Pattern.
+</p>
+
+<p>
+The names used by people reveal a lot about them. For example, the people living close to North Pole have a two-digit
+ number of names for &quot;snow&quot;. Clearly, the reason is that their visual diet is composed primarily of snow, so they
+ know a lot about the different kinds of snow and never confuse them. But trees - those they come across once in a lifetime.
+ No point in having many names for trees. A tree, you know, that dark, high thing with messy stuff sticking out.
+</p>
+
+<p>
+This tells us something about the intellectual diet of people calling trivial combinations of basic language constructs
+ &quot;strategies&quot; and &quot;patterns&quot;. Of course these people love C++ - look at all those different string classes,
+ and all those ways to implement still new ones! So much snow to play with.
+</p>
+
+<p>
+Disclaimer: my knowledge of anthropology is approximately zero. Therefore, it&#39;s better to consider the North Pole example above to be hypothetical
+ than to make critical decisions assuming it&#39;s literally true.
+</p>
+
+
+<a name="fqa-23.3"></a>
+<h2>[23.3] Should I use protected virtuals instead of public virtuals?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.3">FAQ:</a></b>
+ Well, first of all avoid strict rules saying &quot;never do this, always do that&quot;. As a rule of thumb, experience
+ tells that most of the time virtual functions are best made public, with two notable exceptions. First, there
+ are functions which are supposed to be called only from the base class, the way described in the previous two FAQs. And second, there&#39;s
+ the <i>Public Overloaded Non-Virtuals Call Protected Non-Overloaded Virtuals</i> Idiom:
+</p>
+
+<pre>
+class Base
+{
+public:
+  void overloadingTotallyRules(int x)   { butWeDontWantToOverloadVirtualFunctions_int(x); }
+  void overloadingTotallyRules(short x) { butWeDontWantToOverloadVirtualFunctions_short(x); }
+protected:
+  virtual void butWeDontWantToOverloadVirtualFunctions_int(int);
+  virtual void butWeDontWantToOverloadVirtualFunctions_short(short);
+};
+</pre>
+
+<p>
+This solves an important problem: overloading totally rules, but we <a href="inheritance-mother.html#fqa-23.9">don't want</a> to overload virtual functions. The
+ <i>Public Overloaded Non-Virtuals Call Protected Non-Overloaded Virtuals</i> Idiom makes life easy for class
+ users <i>and</i> the implementors of derived classes! Clearly you, the author of the base class,
+ absolutely <i>must</i> clobber your code with this nonsense to make everyone&#39;s life better!
+ Think about the reduced maintenance costs and <a href="operator.html#fqa-13.4">the benefit of the many</a>, you selfish code grinder.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Here&#39;s a simple answer to your question, trivially following from the definitions and without the need to create a taxonomy of
+ rules and exceptions. C++ access control is for clarity: you want to make it clear which parts of the class
+ are supposed to be used and which are just implementation details. This can make it easier to understand
+ your code and prevents people from using the bits that you might want to change later.
+</p>
+
+<p>
+Therefore, if you don&#39;t
+ think that anyone outside of the class hierarchy is going to use a <tt>virtual</tt> method, make it <tt>protected</tt>.
+ Otherwise, make it <tt>public</tt>. In particular, you can start with <tt>protected</tt> and change it to <tt>public</tt>
+ if it turns out you were wrong. That&#39;s all. Why is any special case of this particularly interesting?
+</p>
+
+<p>
+As to the <i>One Kind Of Function Calls Another Kind Of Function Idiom</i> - remember <a href="inheritance-mother.html#fqa-23.2">the snow example</a>?
+ Well, now we are deep inside a pile of snow, coining names for each individual snowflake. I wonder if there&#39;s a <i>Function Is Passed A Parameter
+ To Configure Its Operation Idiom</i>. No, there probably isn&#39;t - after all, it&#39;s not Object-Oriented.
+</p>
+
+<p>
+More importantly, the &quot;idiom&quot; is a non-solution for the problems with overloading.
+All we got is extra layers of code piling up. Ultimately, the people will have to read this code to figure
+ out what the program does, and the layers of indirection adding no functionality at all will confuse them
+ and occupy their short-term memory instead of other, actually useful details. Why not simply
+<i>avoid</i> overloading in this case?
+</p>
+
+<p>
+<a href="friend.html#fqa-14.3">Talking</a> about &quot;reducing maintenance costs&quot; doesn&#39;t by itself actually reduce any maintenance costs, you know.
+</p>
+
+
+<a name="fqa-23.4"></a>
+<h2>[23.4] When should someone use private virtuals?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.4">FAQ:</a></b>
+ Probably never. It confuses people, because they don&#39;t think <tt>private</tt> virtuals can&#39;t be overridden, but they can.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ is right - the behavior of <tt>private virtual</tt> is <a href="inheritance-proper.html#fqa-21.1">ridiculous</a>; it compiles, but for <a href="inheritance-mother.html#fqa-23.5">the wrong reasons</a>. Note that there are <a href="ctors.html#fqa-10.19">many</a>, <a href="templates.html#fqa-35.18">many</a> more
+ things in C++ that primarily confuse people. One excellent reason to avoid C++ altogether. I&#39;m not joking. Nothing
+ funny about it. Well, maybe it is funny that C++ developers are confused for a living, but that&#39;s a cruel kind of humor.
+</p>
+
+
+<a name="fqa-23.5"></a>
+<h2>[23.5] When my base class&#39;s constructor calls a <tt>virtual</tt> function on its <tt>this</tt> object, why doesn&#39;t my derived class&#39;s override of that <tt>virtual</tt> function get invoked?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.5">FAQ:</a></b>
+ Suppose you have a base class called <tt>Base</tt>, calling a virtual function <tt>f</tt> in its constructor. Then, when objects
+ of a derived class called <tt>Derived</tt> are created, <tt>Base::virt</tt> is called from <tt>Base::Base</tt>, not <tt>Derived::f</tt>.
+</p>
+
+<p>
+The reason is that when <tt>Base::Base</tt> executes, the object is still of type <tt>Base</tt>. It only becomes an object of type
+ <tt>Derived</tt> when the code in <tt>Derived::Derived</tt> is entered. If you wonder why C++ works this way, consider the fact that
+ <tt>Derived::f</tt> could access uninitialized members of the class <tt>Derived</tt> if it could be called from <tt>Base::Base</tt>, which
+ runs before <tt>Derived::Derived</tt> initializes the members of <tt>Derived</tt>.
+</p>
+
+<p>
+Luckily, C++ doesn&#39;t let this happen, preventing subtle errors!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Here&#39;s what actually happens. <tt>Derived::Derived</tt> calls <tt>Base::Base</tt>, and then it sets the vptr to point to the <tt>Derived</tt>
+ vtable. Setting the vptr before calling <tt>Base::Base</tt> wouldn&#39;t work, because <tt>Base::Base</tt> sets the vptr to point to the
+ <tt>Base</tt> vtable. <tt>Base::Base</tt> doesn&#39;t know that it&#39;s called in order to ultimately initialize a <tt>Derived</tt> object; the code
+ of <tt>Base::Base</tt> and <tt>Derived::Derived</tt> is compiled separately <i><a class="corr" href="web-vs-fqa.html#correction-1">(correction)</a></i>. That&#39;s what &quot;the object is still of type <tt>Base</tt>&quot; really means.
+</p>
+
+<p>
+Now, there&#39;s a valid argument against describing the mechanisms of the implementation in order to explain the behavior
+ of a system. The system is built by people for other people. Its behavior is supposed to make sense. If it doesn&#39;t,
+and can only be explained by looking into the implementation instead of the needs of the user, it&#39;s a problem in the system.
+ Sometimes such problems seem to be inevitable. But whenever possible, it&#39;s best to discuss why a certain behavior
+is reasonable in the situation as perceived by the user, and  only talk about the implementation when absolutely necessary.
+However, this argument is rarely applicable to C++.
+</p>
+
+<p>
+First, C++ makes very little sense from the user&#39;s perspective. It only
+ makes sense from the perspective of the language designer, provided that several axioms of questionable value are
+ added to it
+ (such as &quot;a language must look compatible with C, although it doesn&#39;t have to <a href="picture.html#fqa-6.11">really be compatible</a>&quot;,
+&quot;all built-in types <a href="exceptions.html#fqa-17.6">should</a> be those found in C, unless they are <a href="function.html#fqa-33.7">a new kind of pointer</a>&quot;, etc.). For example, it is
+ reasonable that <tt>Base::Base</tt> can&#39;t call <tt>Derived::f</tt> (well, sort of - it depends on what you think about the way
+                                                                     C++ handles object construction in general). But is it reasonable that <tt>Base::Base</tt> <i>can</i> call a virtual method <tt>Base::f</tt> by simply saying
+                                                                     <tt>f()</tt>? How often
+ is that what you want? This question is irrelevant, because in C++, if something becomes technically possible as a side-effect
+ of some language mechanism, it tends to be legal. For example, why does <tt>private virtual</tt> from <a href="inheritance-mother.html#fqa-23.4">the previous FAQ</a> compile?
+ The answer is simple: why not?
+</p>
+
+<p>
+The second reason to describe behavior in terms of implementation is that run time errors cause C++ programs to crash in ways
+ undefined at the semantical specification level. It is theoretically possible to read the entire
+ code of the program and find the semantically illegal code. In practice, you&#39;ll have to find the error by looking at the execution of the program
+ (when you are lucky) or at a snapshot of its final state before the death (when you&#39;re not), and trying to understand
+how things can behave this way. And you can&#39;t do that without understanding the implementation.
+</p>
+
+
+<a name="fqa-23.6"></a>
+<h2>[23.6] Okay, but is there a way to <i>simulate</i> that behavior as <i>if</i> dynamic binding worked on the <tt>this</tt> object within my base class&#39;s constructor?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.6">FAQ:</a></b>
+ Yes. It&#39;s an Idiom, of course. Namely, the <i>Dynamic Binding During Initialization Idiom</i>.
+</p>
+
+<p>
+One option is to have a <tt>virtual init</tt> function to be called after construction. Another option is to have a second
+hierarchy of classes, which doesn&#39;t always work, but... (sorry, I couldn&#39;t make it through all the code listings.
+If you like lots of hierarchies of classes and find this solution interesting, please follow the link to the FAQ&#39;s
+answer).
+</p>
+
+<p>
+The first approach has the problem of requiring an extra function call upon initialization. We can rely on the self-discipline
+of the programmers (the self-discipline is especially important when exceptions can be thrown by <tt>init</tt> - make sure you release the allocated object properly),
+or we can wrap the construction and the <tt>init</tt> call in a single <tt>create</tt> function returning a
+pointer to the object. The latter rules out allocation on the stack.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> We seem to be making progress. Let&#39;s see: we got rid of <a href="ctors.html#fqa-10.1">the allocation on the stack</a>, so we no longer
+need to <a href="class.html#fqa-7.4">know</a> the <tt>private</tt> members of classes. And if we had <a href="heap.html#fqa-16.1">garbage collection</a>, <a href="exceptions.html#fqa-17.1">exception safety</a> would no longer be a problem,
+either. Too bad C++ classes and memory management can&#39;t be changed. Or can they?
+</p>
+
+<p>
+How about trying another programming language?
+</p>
+
+
+<a name="fqa-23.7"></a>
+<h2>[23.7] I&#39;m getting the same mess with destructors: calling a <tt>virtual</tt> on my <tt>this</tt> object from my base class&#39;s destructor ends up ignoring the override in the derived class; what&#39;s going on?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.7">FAQ:</a></b>
+ Again, you&#39;re being protected by the compiler. Protected from yourself! You could access members that were
+already destroyed if the compiler let you do what you want.
+</p>
+
+<p>
+When <tt>Base::~Base</tt> is called, the type of the object is changed from <tt>Derived</tt> to <tt>Base</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Thanks for the protection. At least the behavior is <a href="inheritance-mother.html#fqa-23.5">symmetrical</a>.
+</p>
+
+<p>
+Protect me from access to destroyed objects through <a href="heap.html#fqa-16.1">dangling references</a> in <i>the general case</i> next time, will you?
+</p>
+
+
+<a name="fqa-23.8"></a>
+<h2>[23.8] Should a derived class redefine (&quot;override&quot;) a member function that is non-<tt>virtual</tt> in a base class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.8">FAQ:</a></b>
+ You can do that, but you shouldn&#39;t.
+</p>
+
+<p>
+Experienced programmers sometimes do that for various reasons. Remember that the user-visible effects of both versions
+of the functions must be identical.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Here&#39;s a trade secret: not so experienced programmers do that, too. For the <a href="inheritance-mother.html#fqa-23.4">umpteen</a> time: <i>why does this compile</i>?
+This particular case doesn&#39;t seem to be <a href="inheritance-mother.html#fqa-23.5">an unintended side effect</a>; it&#39;s a feature with elaborate design
+(there&#39;s all this nonsense with <tt>using</tt> names from the base class shadowed by functions with the same name, etc.).
+</p>
+
+<p>
+The redefinition-looking-like-an-override is <a href="operator.html#fqa-13.1">overloading</a> on <a href="function.html#fqa-33.10">steroids</a>: it&#39;s even less useful and has even higher
+ obfuscation potential. And it&#39;s only one of the zillions of various <i>name binding rules</i> - the bits of C++
+ making it impossible to decipher what code is actually called by <tt>f(x)</tt>.
+</p>
+
+
+<a name="fqa-23.9"></a>
+<h2>[23.9] What&#39;s the meaning of, <tt>Warning: Derived::f(char) hides Base::f(double)</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.9">FAQ:</a></b>
+ What do you think it means? You&#39;re going to die.
+</p>
+
+<p>
+It&#39;s like this: <tt>Derived::f(char)</tt> doesn&#39;t override <tt>Base::f(double)</tt> - it hides it. In other words, it makes it impossible
+ to call <tt>Base::f(double)</tt> via a <tt>Derived*</tt>. At the same time, <tt>Derived::f(char)</tt> can not be called via <tt>Base*</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> &quot;You&#39;re going to die&quot;, warns the FAQ. Well, according to a popular theory, all of us are. However, this interesting fact doesn&#39;t seem to belong here.
+C++ surely is depressing, but I&#39;m not aware of any data showing a causal relationship between using C++ and suicide
+ or lethal brain damage.
+</p>
+
+<p>
+No, really, why is hiding a name <i>a lethal bug?</i> Sure, it makes the program more obscure, but, duh, this is C++.
+ The worst thing that can happen is that someone will call <tt>Base::f</tt> with a <tt>char</tt> and <tt>Base::f(double)</tt>, not <tt>Derived::f(char)</tt>
+ will get called. So what? Similar things happen with overloading without any inheritance involved. Do you really
+ know the implicit conversion rules between different types, and can predict what happens when you pass an <tt>int</tt>
+ to an overloaded <tt>f</tt> function which only has a <tt>char</tt> and a <tt>double</tt> version? I bet you can&#39;t do it when things
+ get a little bit more complicated. No normal person can.
+</p>
+
+<p>
+C++ overloading is a <a href="operator.html#fqa-13.1">nightmare</a>. Using it is naive or stupid, depending on one&#39;s experience. Many languages, both statically and dynamically typed, don&#39;t
+ have compile time overloading based on argument types. Have you ever heard a programmer using such a language
+ complain about it, or become very enthusiastic about C++ overloading? What problem does overloading solve?
+OK, suppose it improves clarity (a <i>very</i> questionable claim). Do you really think that overloading should come together
+ with a ton of implicit conversion rules, and a type system with a ton of special cases
+ (cv-qualifiers, pointers/arrays/references, single &amp; multiple inheritance, templates...)?
+ When overloading does come with the extra ton of rules, does it <i>still</i> make the program more clear?
+ What&#39;s that? &quot;Compile time polymorphism&quot;, you say? You mean <a href="templates.html#fqa-35.1">C++ templates</a>? I see what you&#39;re up to. Happy debugging, pal.
+</p>
+
+
+<a name="fqa-23.10"></a>
+<h2>[23.10] What does it mean that the &quot;virtual table&quot; is an unresolved external?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.10">FAQ:</a></b>
+ Well, as you know, &quot;unresolved external&quot; means that there&#39;s a function or a global variable that your code declares
+ and uses, but never defines. A virtual table is a global variable declared implicitly by a typical C++ implementation
+ for each class with at least one virtual function.
+</p>
+
+<p>
+Now, normally when you forget to define a virtual function, you&#39;ll get an &quot;unresolved external&quot; error saying that
+ this function is missing. But in many implementations, if you forget the <i>first</i> virtual function, the whole
+ virtual table will become &quot;unresolved&quot;. That&#39;s because these implementations define the virtual table
+ at the translation unit where the first virtual function is implemented.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> GAAA!! So <a href="ctors.html#fqa-10.11">THAT'S</a> why you have to define <tt>static</tt> class variables explicitly in your .cpp file, but <i>don&#39;t</i> have to define vtables
+ explicitly! This is sooo STUPID! I&#39;m shocked. Wait a second. Let me recover.
+</p>
+
+<p>
+OK, here&#39;s how it works. In C++, there&#39;s really no such thing as &quot;a header file defining the class&quot; and &quot;a .cpp file
+ implementing its functions&quot;. It&#39;s just a convention. According to the rules, the definition of the class members
+ can be spread across several &quot;translation units&quot;, and each &quot;translation unit&quot; can in turn be spread across several
+ files <tt>#including</tt> each other. This is inherited from C, and <a href="templates.html#fqa-35.12">interacts badly</a> with the new features in C++.
+</p>
+
+<p>
+For example, consider those virtual functions. You probably <a href="inheritance-virtual.html#fqa-20.3">need a table of those</a>, which is similar to a global
+ C variable. Of course you don&#39;t want to have the C++ programmer implement the table manually, the way they&#39;d do it in C - or else what&#39;s
+ the point of the <tt>virtual</tt> keyword? But <i>where</i> should the vtable be implemented? In the .cpp file of a class? <i>Where&#39;s that?</i>
+</p>
+
+<p>
+With vtables, there&#39;s a &quot;solution&quot;. After all, we don&#39;t need a vtable unless we have some virtual functions, do we?
+ Well, then, one of these functions has to be the first one. Why not place the vtable near the definition of that function?
+This is a good place, because it won&#39;t get <tt>#included</tt> twice (or the user will get a &quot;multiple definition&quot; error anyway).
+</p>
+
+<p>
+And then there are the <tt>static</tt> class variables. Where do we stuff those? Well, um, there seems to be no good place at
+ all; a class could consist of a single <tt>static</tt> member. No anchor in the sea of source code floating in the file system.
+ Oh, well, we&#39;ll have the user choose a place for a duplicate <tt>Type Class::member_name;</tt> variable definition.
+ A little bit more typing is not that bad.
+</p>
+
+<p>
+I wonder what they do with <tt>virtual</tt> functions implemented in the body of a class though. I always wondered about those.
+ Of course they can generate many vtables and throw away all copies but one the way they do with templates. But that
+ won&#39;t work with a linker only supporting C. Maybe they didn&#39;t allow to implement non-<tt>inline</tt> functions in the body
+ of a class before the brave decision to add features to the linker. Anyone knowledgeable about the history of the subject
+ is welcome to enlighten me. However, the knowledge of the history of the subject can&#39;t possibly make this whole business
+ seem less stupid to a language user.
+</p>
+
+
+<a name="fqa-23.11"></a>
+<h2>[23.11] How can I set up my class so it won&#39;t be inherited from?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.11">FAQ:</a></b>
+ You can have the constructors <tt>private</tt>. The objects will have to be created by <tt>public</tt> functions delegating to
+ the constructor.
+</p>
+
+<p>
+Alternatively, you can comment the fact that you don&#39;t want the class to be inherited from: <tt>// if you inherit from
+ this class, I&#39;ll hunt you down and kill you</tt>.
+</p>
+
+<p>
+There&#39;s a third solution (<b>WARNING</b> - this one can rot your brain): you can inherit your class from a <tt>private virtual</tt> base class, which has a <tt>private</tt> constructor
+ and declares your class a <tt>friend</tt>. This way, if someone tries to inherit from you, they&#39;ll need to <a href="inheritance-multiple.html#fqa-25.12">directly
+ call</a> the base class of the constructor, which won&#39;t compile, since the constructor is <tt>private</tt>. This can add an extra word
+ of memory to the size of your objects though.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> C++ doesn&#39;t have <tt>final</tt>. It probably isn&#39;t a big deal, especially considering the fact that if it <i>did</i> have
+ <tt>final</tt>, it would be little more than a comment, just like <tt>private</tt> is <a href="class.html#fqa-7.4">little more than a comment</a>. So the
+ comment-instead-of-a-keyword is probably the best approach.
+</p>
+
+<p>
+The other approaches yield <a href="templates.html#fqa-35.17">cryptic compile time error messages</a>. Many people in the C++ community believe that
+ a cryptic compile time error message is <a href="function.html#fqa-33.4">a good thing</a>. This is probably reasonable if you only care about
+ theory (&quot;early fault detection is good&quot;), and ignore <a href="picture.html#fqa-6.1">practice</a> (<i>easy</i> fault detection is good, and running
+a program <i>should</i> be easier than deciphering <a href="operator.html#fqa-13.1">strongly encrypted</a> C++ compiler error messages, which tend
+to come in large cascades).
+</p>
+
+<p>
+Having no real experience with other languages helps one to stick to this bizarre point of view. C++ compiles <a href="templates.html#fqa-35.12">very
+ slowly</a>, so people who never worked with anything else <i>don&#39;t</i> think that running a program is easy. C++
+ code is also hard to debug, so people develop a fear of run time errors.
+</p>
+
+
+<a name="fqa-23.12"></a>
+<h2>[23.12] How can I set up my member function so it won&#39;t be overridden in a derived class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/strange-inheritance.html#faq-23.12">FAQ:</a></b>
+ Use a <tt>/* final */</tt> comment instead of a <tt>final</tt> keyword. It&#39;s not a technical solution - so what?
+ The important thing is that it works.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> So why does C++ have <tt>private</tt>? It&#39;s <a href="class.html#fqa-7.4">nothing but a comment</a> recognized by the compiler.
+</p>
+
+<p>
+The real answer is as follows. If a function is not <tt>virtual</tt>, it shouldn&#39;t be overridden, as the FAQ itself has already <a href="inheritance-mother.html#fqa-23.8">explained</a>.
+So the lack of a <tt>virtual</tt> keyword is effectively equivalent to a <tt>final</tt> keyword. Now if C++ didn&#39;t allow to
+ override non-<tt>virtual</tt> methods, and if it would consistently require to use the <tt>virtual</tt> keyword in all virtual function
+ declarations, it would be pretty clear which functions shouldn&#39;t be overridden in most cases.
+</p>
+
+<p>
+If you look for non-technical solutions to overriding problems, consider banning non-<tt>virtual</tt> overrides
+ in your organization. I didn&#39;t give this one a deep thought; quite frequently when you try to &quot;fix&quot; C++ by banning
+ some of its features, but not others, your rules <a href="ref.html#fqa-8.6">backfire</a>. And I can&#39;t know whether coding conventions
+ work in your organization at all (believe me, there are <i>huge</i> and <i>very disciplined</i> organizations
+where coding conventions are <i>not</i> really followed, and their primary effect is programmers feeling anger or guilt;
+                                   another nice option is people mindlessly following &quot;best practices&quot;,
+wreaking havoc in an orderly way). All I&#39;m saying is that non-<tt>virtual</tt> override seems both useless
+ and largely independent of the rest of the language at first glance, so not using it looks like a good thing.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

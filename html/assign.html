@@ -1,0 +1,156 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Assignment operators</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Assignment operators</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/assignment-operators.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This section is about <tt>operator=</tt>. It&#39;s rather strange that of all possible things, people only &quot;frequently ask&quot; about self assignment, but those are the only questions listed in the FAQ.
+</p>
+
+<ul>
+<li><a href="assign.html#fqa-12.1">[12.1] What is &quot;self assignment&quot;?</a></li>
+<li><a href="assign.html#fqa-12.2">[12.2] Why should I worry about &quot;self assignment&quot;?</a></li>
+<li><a href="assign.html#fqa-12.3">[12.3] OK, OK, already; I&#39;ll handle self-assignment. How do I do it?</a></li>
+</ul>
+
+<a name="fqa-12.1"></a>
+<h2>[12.1] What is &quot;self assignment&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/assignment-operators.html#faq-12.1">FAQ:</a></b>
+ It&#39;s assigning the object to itself, directly or indirectly. For example:
+</p>
+
+<pre>
+void f(C&amp; x, C&amp; y) { x=y; }
+void g(C&amp; x) { f(x,x); }
+</pre>
+
+<p>
+<b class="FQA">FQA:</b> The tricky part is that the assignment operator may be overloaded, and you are expected to overload it in the
+classes that &quot;own&quot; resources (most frequently memory obtained with <tt>new</tt>). Incidentally, these are exactly
+the cases when self assignment may lead to trouble, which is why we have the next question. Which will also show
+that the FAQ&#39;s definition of &quot;self assignment&quot; is unfortunately too conservative, as &quot;self&quot; is a vague concept.
+</p>
+
+
+<a name="fqa-12.2"></a>
+<h2>[12.2] Why should I worry about &quot;self assignment&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/assignment-operators.html#faq-12.2">FAQ:</a></b>
+ If you don&#39;t, your <tt>operator=</tt> will probably misbehave severely upon self-assignment:
+</p>
+
+<pre>
+YetAnotherSoCalledSmartPointer&amp; YetAnotherSoCalledSmartPointer::operator=(const YetAnotherSoCalledSmartPointer&amp; p)
+{
+  delete _p;
+  _p = new TheThingPointedByTheSmartPointer(*p._p);
+  return *this;
+}
+</pre>
+
+<p>
+Self assignment will first delete <tt>_p</tt>, and then dereference it, which is nasty. And it is all <i>your</i> fault - you
+should have handled self assignment!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Oh, so it&#39;s my fault, isn&#39;t it? Then why isn&#39;t this question listed in any other programming language FAQ on the planet?
+I mean, it&#39;s the same me all the time, it&#39;s the languages that are different. So why don&#39;t we lose the feelings of guilt
+and check what it is about C++ that causes the problem?
+</p>
+
+<p>
+Most languages daring to call themselves &quot;object-oriented&quot; have garbage collection, so you don&#39;t spend your
+time writing stupid functions for deallocating stuff, then copying stuff. These functions are all alike, but
+with C++ you get to write this kind of code over and over again.
+</p>
+
+<p>
+C++ doesn&#39;t have garbage collection, so a problem arises - if people are creating all those objects,
+how are they going to dispose them, especially if they <a href="operator.html#fqa-13.1">overload operators</a> and do things like <tt>a+b+c</tt>, without
+even keeping the pointers to the temporary objects created when sub-expressions are evaluated? The C++ answer is to have an &quot;owner&quot; object for
+each chunk of allocated memory, and let <tt>operator=</tt> and the destructor worry about freeing the memory.
+The most common manifestation of this quite unique language design decision is <a href="heap.html#fqa-16.1">unnecessary copying</a>,
+which happens when objects are passed to functions or returned by value or &quot;cut out&quot; from larger
+data structures.
+</p>
+
+<p>
+The self assignment problem is another manifestation of this same thing. If objects were passed by pointers/references
+and garbage-collected automatically, self assignment (setting the pointer to the value of itself) would be harmless.
+And the worst part is that there are actually more cases of self assignment than <tt>x=x</tt>. For example, consider
+<tt>std::vector::push_back()</tt>. What if someone passes an object from the vector itself, as in <tt>v.push_back(v.back())</tt>?
+<tt>push_back</tt> may need to allocate more memory, which may cause it to free the buffer it already uses, destroying
+its argument. <a href="const.html#fqa-18.2">Where</a> does the &quot;self&quot; of an object end?
+</p>
+
+<p>
+You have to be really smart to get all those smart pointer and container classes right. Too bad it&#39;s still worse
+than good containers <a href="picture.html#fqa-6.2">built into a language</a>.
+</p>
+
+
+<a name="fqa-12.3"></a>
+<h2>[12.3] OK, OK, already; I&#39;ll handle self-assignment. How do I do it?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/assignment-operators.html#faq-12.3">FAQ:</a></b>
+ By adding a test like <tt>if(this==&amp;that) { return *this; }</tt> or by copying the members of the input object before deallocating members
+of <tt>this</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This avoids the destruction of your function argument via self-destruction in <tt>operator=</tt>.
+However, there are <a href="assign.html#fqa-12.2">other cases when that can happen</a> - consider <tt>std::vector::push_back()</tt>.
+</p>
+
+<p>
+When performance is more important to you than simplicity &amp; generality, one way to deal with this family of
+problems is to document them and pass them on to the user of your code
+(&quot;it is illegal to push an element of a vector into that vector, if you need to do it, copy the element explicitly&quot;).
+</p>
+
+<p>
+When simplicity &amp; generality are more important than performance, you can use a language automatically tracking
+references to objects, guaranteeing that used objects won&#39;t get destroyed.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

@@ -1,0 +1,536 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Inheritance -- proper inheritance and substitutability</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Inheritance -- proper inheritance and substitutability</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This section is about using inheritance such that the code really works, not just compiles. Unlike most &quot;OO&quot;-related sections in the FAQ, much of the material is applicable to decent OO systems and not only to C++.
+</p>
+
+<ul>
+<li><a href="inheritance-proper.html#fqa-21.1">[21.1] Should I hide member functions that were public in my base class?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.2">[21.2] Converting <tt>Derived* -&gt; Base*</tt> works OK; why doesn&#39;t <tt>Derived** -&gt; Base**</tt> work?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.3">[21.3] Is a parking-lot-of-<tt>Car</tt> a kind-of parking-lot-of-<tt>Vehicle</tt>?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.4">[21.4] Is an array of <tt>Derived</tt> a kind-of array of <tt>Base</tt>?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.5">[21.5] Does array-of-Derived is-not-a-kind-of array-of-Base mean arrays are bad?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.6">[21.6] Is a <tt>Circle</tt> a kind-of an <tt>Ellipse</tt>?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.7">[21.7] Are there other options to the &quot;<tt>Circle</tt> is/isnot kind-of <tt>Ellipse</tt>&quot; dilemma?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.8">[21.8] But I have a Ph.D. in Mathematics, and I&#39;m sure a Circle is a kind of an Ellipse! Does this mean Marshall Cline is stupid? Or that C++ is stupid? Or that OO is stupid?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.9">[21.9] Perhaps <tt>Ellipse</tt> should inherit from <tt>Circle</tt> then?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.10">[21.10] But my problem doesn&#39;t have anything to do with circles and ellipses, so what good is that silly example to me?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.11">[21.11] How could &quot;it depend&quot;??!? Aren&#39;t terms like &quot;Circle&quot; and &quot;Ellipse&quot; defined mathematically?</a></li>
+<li><a href="inheritance-proper.html#fqa-21.12">[21.12] If <tt>SortedList</tt> has <i>exactly</i> the same public interface as <tt>List</tt>, is <tt>SortedList</tt> a kind-of <tt>List</tt>?</a></li>
+</ul>
+
+<a name="fqa-21.1"></a>
+<h2>[21.1] Should I hide member functions that were public in my base class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.1">FAQ:</a></b>
+ No, no, don&#39;t even think about it, <i>don&#39;t do that</i>, no. Your desire is probably the result of &quot;muddy thinking&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> With all due respect, it is your precious programming language that probably is the result of &quot;muddy thinking&quot;. The question talks
+about overriding base class functions in the <tt>private</tt> section of your derived class. This is trivially and reliably
+detectable at compile time. If you get so excited about how wrong it is, <i>why does it compile</i>?
+</p>
+
+<p>
+Answer: in C++, <a href="inheritance-multiple.html#fqa-25.13">random
+things</a> compile and <a href="templates.html#fqa-35.18">other random things</a> don&#39;t. The language definition is sloppy. What&#39;s that? You think the compiler writers
+made their own job easy by making yours hard? No, C++ is probably the hardest language to compile among those popular today.
+C++ is <i>pointlessly</i> sloppy.
+</p>
+
+<p>
+The reason the FAQ gets so excited will become clear in <a href="inheritance-proper.html#fqa-21.6">the next answers</a>. Basically, when your derived class overrides
+a function as <tt>private</tt>, you violate the substitutability principle: it is no longer true that an object of a derived
+class fully supports the interface of the base class. However, technically the functions from the base class are still
+accessible, because you can cast a pointer to a derived class object to the base class and call the function through the
+vtable (pretty <i>muddy</i>, isn&#39;t it?).
+</p>
+
+<p>
+People define overridden <tt>virtual</tt> functions as <tt>private</tt> to convey the message that objects of the derived class should never be used directly, and
+the purpose of the class is to interact with a framework which works with objects through base class pointers. While the FAQ gets
+overly hysterical about this practice, the polarity of its answer (&quot;no&quot;) is probably right.
+</p>
+
+
+<a name="fqa-21.2"></a>
+<h2>[21.2] Converting <tt>Derived* -&gt; Base*</tt> works OK; why doesn&#39;t <tt>Derived** -&gt; Base**</tt> work?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.2">FAQ:</a></b>
+ Because it shouldn&#39;t. Let&#39;s pretend it does work and see what happens.
+</p>
+
+<p>
+Suppose you have a <tt>Dog* d</tt>. You pass it to a function <tt>void f(Pet** p)</tt> with <tt>f(&amp;d)</tt> - which should be OK,
+        since <tt>Dog</tt> is derived from <tt>Pet</tt>. The function does this: <tt>*p = new Cat;</tt>
+- perfectly legitimate, since <tt>Cat</tt> is derived from <tt>Pet</tt>, too. But now we have a <tt>Dog*</tt> pointing to a <tt>Cat</tt> object. So <tt>d-&gt;bark()</tt>
+will crash the program, or misbehave more severely, since a <tt>Cat</tt> may have a virtual function <tt>scratchFurniture</tt> at that slot
+of the vtable.
+</p>
+
+<p>
+Actually, the FAQ uses a scarier example, which launches nuclear missiles as the result of the mistake. IMHO, nothing can beat
+the following classic in this department:
+</p>
+
+<pre>
+if(status = UNDER_ATTACK) {
+  launch_nuclear_missiles();
+}
+</pre>
+
+<p>
+Best Industry Practice: use peer reviews to increase the quality of your nuclear missiles launching code.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, levels of indirection and static typing interact in non-obvious ways. This is another incarnation of <a href="const.html#fqa-18.2">the problem</a>
+making it impossible to cast <tt>T**</tt> to <tt>const T**</tt>. Basically, <i>a T* is always a S*</i> doesn&#39;t mean <i>a T** is always a S**</i>.
+</p>
+
+<p>
+The problem is that there are many cases where you <i>know</i> that you are doing something legitimate, but the compiler doesn&#39;t. For example, you know
+that it was <i>you</i> who filled this vector of Pets with a bunch of Dogs. You <i>couldn&#39;t</i> use a vector of Dogs because
+you wanted to pass it to a function working with a vector of Pets. And as we&#39;ve just seen, the compiler wouldn&#39;t let
+you pass a vector of Dogs to a function expecting a vector of Pets, and for a good reason. So you ended up
+        with a vector of Pets filled with Dogs.
+        And now you want to fetch a Dog from the vector - but the elements are typed as Pets,
+so you have to use a cast. It wouldn&#39;t be that bad if these cases wouldn&#39;t cause many people to develop a habit of
+aggressive casting to have the compiler shut up, and/or C++ would catch illegal cast operations at run time.
+</p>
+
+<p>
+Moral: static typing (having the compiler validate the code according to a set of rules specifying properties of types and their relationships)
+is hard. A static type system will get in your way. And it only partially compensates you by &quot;validating the interfaces&quot;,
+because only some of interface specification can be modeled statically, as we&#39;ll see <a href="inheritance-proper.html#fqa-21.6">below</a>.
+In particular, consider our example where you had to stuff your Dog objects into a vector of Pet pointers,
+all because the compiler <i>insisted</i> on the looser typing.
+        Now the compiler won&#39;t prevent someone else from adding a Cat pointer to that vector, and
+        then your code fetching a Pet* from the vector and casting it to a Dog* will misbehave.
+</p>
+
+<p>
+I&#39;m not saying that static typing is &quot;bad&quot;, but if you think that <i>dynamic</i> typing is bad, you are very lucky -
+you&#39;re just one step away from a quite noticeable increase in your productivity. Pick a dynamically typed language and give it a try.
+</p>
+
+
+<a name="fqa-21.3"></a>
+<h2>[21.3] Is a parking-lot-of-<tt>Car</tt> a kind-of parking-lot-of-<tt>Vehicle</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.3">FAQ:</a></b>
+ No, because a <tt>Plane</tt> is one kind of <tt>Vehicle</tt>, and you don&#39;t want someone to park it at a cars&#39; parking lot.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> In English, apparently the answer is yes. In OO, the answer is no. In natural language, there&#39;s no strict definition of &quot;kind-of&quot; (or anything
+else, for that matter). OO systems are formal, and they have a precise definition for &quot;kind-of&quot;: <i>B is a kind of A if
+you can do to a B object whatever you can do to A, and it will work correctly</i> (not just compile).
+</p>
+
+<p>
+Programming languages are not natural languages. In particular, the good programming languages don&#39;t try to look
+<a href="operator.html#fqa-13.2">"natural"</a> when such attempts make it hard to understand the formal, precise and dumb stuff the machine actually does.
+If you ever wondered what on Earth the C++ expression <tt>a-&gt;b</tt> does (when <tt>a</tt> is an object of a smart pointer template class with 7 parameters),
+you know what I mean.
+</p>
+
+
+<a name="fqa-21.4"></a>
+<h2>[21.4] Is an array of <tt>Derived</tt> a kind-of array of <tt>Base</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.4">FAQ:</a></b>
+ No. Think of the array as an implementation of a parking lot, and you&#39;ll see that the answer follows from <a href="inheritance-proper.html#fqa-21.3">the previous
+FAQ</a>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Note that the ability of the compiler to figure out whether something is a kind-of something else is limited.
+In particular, it seems to work better with types
+related by inheritance (base and derived classes) than with types related by qualifiers (<tt>const</tt> and non-<tt>const</tt>)
+or by the way they are instantiated from the same templates.
+For example, a <tt>vector&lt;T*&gt;</tt> is apparently a kind-of <tt>const vector&lt;const T*&gt;</tt>, because there&#39;s nothing you can do
+with an all-<tt>const</tt> vector you couldn&#39;t do with an all-non-<tt>const</tt> vector. But the compiler <a href="const.html#fqa-18.17">doesn't know that</a>.
+</p>
+
+<p>
+One way around this is &quot;duck typing&quot; - don&#39;t bother to specify the relationships between the types, just
+pass objects to functions, which will work if the object can do whatever they ask it to do, and raise
+a run time error otherwise.
+&quot;If it walks like a duck then it is a duck&quot; and all that - you don&#39;t have to define a <tt>Duck</tt> interface all
+ducks should follow, just get an object and call methods such as <tt>walkLikeADuck</tt>.
+C++ doesn&#39;t have duck typing because it would require the compiler to rely on non-trivial and not-so-lightweight run time mechanisms,
+which kind of goes against the &quot;spirit&quot; of C++ (not that the run time mechanisms used to implement exceptions are trivial, mind you).
+</p>
+
+<p>
+One could claim that duck typing is incompatible with the &quot;spirit of C++&quot; because it involves run-time dispatching,
+but so do <tt>virtual</tt> functions, which are more efficient but less flexible and much more likely to trigger recompilations - a <a href="picture.html#fqa-6.3">big deal</a> in many situations.
+Or one could claim that duck typing is not &quot;the C++ way&quot; because it leaves out the specification of interfaces,
+but so do templates, which provide &quot;static duck typing&quot; - too bad they are such a pile of toxic waste that the scope of
+this discussion is too narrow to even briefly describe <a href="templates.html#fqa-35.1">why</a>. Or one could claim that with duck typing, you can fail
+at run time because someone provided an object of the wrong type - but nothing prevents someone from simply passing
+a null pointer to a C++ function that can&#39;t handle that and have it crash much harder than any code in a safe dynamic language ever will.
+</p>
+
+<p>
+The true reason making duck typing incompatible with The C++ Way is the 95% Is Nothing Axiom. It goes like this:
+&quot;if something is only useful for 95% of the cases, <i>and</i> it doesn&#39;t map almost directly to C,
+it&#39;s not worth adding to C++&quot;. Other examples of the application of this axiom to the design of C++
+is <a href="heap.html#fqa-16.1">the lack of garbage collection</a>, which &quot;only&quot; handles memory (&gt;95% of all &quot;resources&quot;), and &quot;only&quot; in non-real-time
+applications (&gt;95% of all application code).
+</p>
+
+<p>
+The consequences of this axiom wouldn&#39;t be that bad if the features C++ <i>did</i> add to C were any good.
+</p>
+
+
+<a name="fqa-21.5"></a>
+<h2>[21.5] Does array-of-Derived is-not-a-kind-of array-of-Base mean arrays are bad?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.5">FAQ:</a></b>
+ Yes, arrays are <a href="picture.html#fqa-6.15">evil</a>. Normally you should use <tt>std::vector</tt> instead of arrays. But if you are an enlightened OO
+specialist and so is everyone likely to maintain your code, and you fully understand the interaction of &quot;kind-of&quot;
+and arrays, you may use them.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Huh? Arrays and vectors are synonyms in the context of the &quot;kind-of&quot; issue. What does the cult <a href="ref.html#fqa-8.6">advocating</a>
+the replacement of C features, which have their problems, with new shiny C++ features having much worse problems
+have to do with proper inheritance?
+</p>
+
+<p>
+What&#39;s that? Casting arrays is easier than casting vectors? Try this: <tt>(vector&lt;T&gt;*)&amp;vec_of_something_else_than_T</tt>.
+Seriously, this is one weird question with a strange answer we have here.
+</p>
+
+
+<a name="fqa-21.6"></a>
+<h2>[21.6] Is a <tt>Circle</tt> a kind-of an <tt>Ellipse</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.6">FAQ:</a></b>
+ Sometimes it is, most frequently it isn&#39;t. For example, if an <tt>Ellipse</tt> lets you change the size in a way
+making it asymmetrical, it&#39;s not a <tt>Circle</tt>.
+</p>
+
+<p>
+The point is that if you derive a <tt>Circle</tt> from an <tt>Ellipse</tt> and then someone tries to use an <tt>Ellipse*</tt> which
+really points to a <tt>Circle</tt> object, there&#39;s no way to make it work gracefully. Either the calling code will
+get an error in some form, even though it does something which should be possible to do with an <tt>Ellipse</tt>,
+or the <tt>Circle</tt> object will obey to the caller and become an invalid circle, breaking some other legitimate piece of code which
+does expect it to be a valid circle.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This is just like <a href="inheritance-proper.html#fqa-21.3">the parking lot example</a> in the sense that &quot;kind-of&quot; in English means many different things,
+some of which are incompatible with the precise definition of &quot;kind-of&quot; used in OO. The important point is that
+the interfaces are protocols and implementations must follow them.
+</p>
+
+<p>
+Some people think about inheritance merely
+as another form of &quot;binding&quot; - having the compiler call a function using new syntax. From this point of view,
+everything is legitimate as long as the program compiles and does whatever the end user expects. But this way
+inheritance only makes programming harder (another kind of syntax to decipher). The more restrictive &quot;interfaces
+as a protocol&quot; approach can make programming easier because when you implement a bunch of protocols correctly,
+you can extend a program without tweaking its code (for example, <a href="inheritance-virtual.html#fqa-20.1">add a movie format to a media player</a>). But this
+only works if you <i>really</i> follow the protocol. If you <i>sort of</i> do it (&quot;a Circle is a kind-of Ellipse, well, almost - just don&#39;t call this function&quot;),                                                                        
+the media player will crash.
+</p>
+
+<p>
+There are numerous families of examples where natural languages and OO terms <a href="inheritance-basics.html#fqa-19.2">are not aligned</a>
+(which doesn&#39;t mean OO is bad - it means it&#39;s formal, which is good for computer programming).
+The &quot;parking lot&quot; represents one family (collections); Circle/Ellipse represent another one (parametric representations).
+One family of &quot;positive&quot; examples (where inheritance is likely to be proper) is record types
+(a <tt>CPlusPlusProgrammer</tt> has all the fields of a <tt>Programmer</tt>, plus a couple of new, orthogonal members, such
+ as <tt>headAgainstTheWallBangingFrequency</tt>).
+</p>
+
+
+<a name="fqa-21.7"></a>
+<h2>[21.7] Are there other options to the &quot;<tt>Circle</tt> is/isnot kind-of <tt>Ellipse</tt>&quot; dilemma?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.7">FAQ:</a></b>
+ Well, you need to get rid of <i>some</i> of your original claims to get back to consistency. Either <tt>Ellipse</tt> has no
+<tt>setSize</tt> function which can make a circular <tt>Ellipse</tt> object non-circular, or there&#39;s no inheritance which makes
+it possible to call such a function on a <tt>Circle</tt> object, or you can even choose to live with the fact that some
+of your <tt>Circle</tt> objects will become non-circular (and have the code working with <tt>Circle</tt> objects deal with it).
+</p>
+
+<p>
+Trying to keep all claims and cover up the problem by doing &quot;something reasonable&quot;
+(like calling <tt>abort</tt> when <tt>setSize</tt> is called with a <tt>Circle</tt> object, or &quot;fixing&quot; its arguments)
+is not going to solve the problem, because ultimately it breaks the assumptions behind the calling code.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ answer is apparently correct and complete. Incidentally, this isn&#39;t exclusively about C++, it&#39;s about OO in general.
+</p>
+
+<p>
+One solution is to have <tt>setSize</tt> return a new <tt>Ellipse</tt> object. This way, <tt>Circle::setSize</tt> will return
+a <tt>Circle</tt> unless the new size is asymmetrical, in which case it will return an <tt>Ellipse</tt>. One possible
+ benefit is efficiency - circles have less parameters than ellipses, so if you have lots of operations to do
+ with a bunch of objects, you&#39;d rather have all of the objects that can be represented as <tt>Circle</tt> objects
+ actually <i>be</i> represented that way, not as redundant <tt>Ellipse</tt> objects.
+</p>
+
+<p>
+If you &quot;roll your own OO&quot; (that is, implement inheritance yourself instead of directly relying on language features),
+ you can avoid the creation of a new object and instead dynamically change its type. For example,
+ <tt>setSize</tt> may change the vptr to point to an <tt>Ellipse</tt> vtable when the new size is asymmetrical.
+ This kind of thing is implemented in the <a href="http://www.povray.org/">POV-Ray</a> ray tracer, written in C.
+</p>
+
+<p>
+The fact that you can&#39;t do it in a portable way with C++ inheritance probably <i>doesn&#39;t</i> mean that C++ inheritance
+ is underpowered (surprise!) - you need this kind of thing once in a lifetime, and you must have it very well
+ thought-out to make it really work, and in these rare cases you can go ahead and use function pointers instead
+ of inheritance and implement it. There probably are people that would classify this limitation as a symptom of
+ a deeper problem - having too much logic built into the compiler and too little ways to implement compile time
+ logic in user code - but it&#39;s debatable.
+</p>
+
+
+<a name="fqa-21.8"></a>
+<h2>[21.8] But I have a Ph.D. in Mathematics, and I&#39;m sure a Circle is a kind of an Ellipse! Does this mean Marshall Cline is stupid? Or that C++ is stupid? Or that OO is stupid?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.8">FAQ:</a></b>
+ It means a different thing: your intuition is wrong in the sense that it leads you to make wrong decisions about
+ inheritance. The right way to think about &quot;kind-of&quot; is this: B is a kind of A if you can always substitute a B for an A.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> I like how this question is formulated. Shows spirit. In general, the FAQ can be quite entertaining
+ if you&#39;re into that sort of thing. If I could legitimately quote the answers instead of summarizing them,
+ I&#39;d sure would.
+</p>
+
+<p>
+Which is all nice and dandy, but did you notice the disturbing claim &quot;your intuition is wrong&quot;? Instead of admitting
+ that OO is <i>not</i> <a href="inheritance-basics.html#fqa-19.2">a natural language</a>, and it <i>doesn&#39;t</i> have to <a href="operator.html#fqa-13.2">map directly to a natural language</a>, the FAQ actively tries
+ to persuade you to <i>change</i> the way you use natural language words to make your thinking OO-compatible. Next, they&#39;ll
+ ship patches you should apply to your DNA, and a sticker saying &quot;Designed for C++ Programming&quot; for your skull.
+</p>
+
+<p>
+I think this point is worth discussion because it&#39;s representative of the whole notion of &quot;good&quot; in the C++ world.
+ C++ tries to make the program <i>look</i> natural. See - we add things with the plus sign, and errors are handled <a href="exceptions.html#fqa-17.1">transparently</a>,
+ and resources are managed <a href="exceptions.html#fqa-17.4">automatically</a> - that&#39;s one very high-level language, and it&#39;s efficient, too! But make a single
+ error in your program - and finding it becomes an nightmare. What is <i>really</i> being called by this <tt>a+b</tt> expression?
+ What <i>really</i> happens upon error? And this object we deallocate here - how do we know nobody is keeping a pointer to it?
+ Because all our pointers are &quot;smart&quot;? But look - here we use a library using bare pointers, and here&#39;s one using
+ different smart pointer classes. What is <i>really</i> going on here?
+</p>
+
+<p>
+The basic rule C++ breaks is this: don&#39;t make promises you can&#39;t keep. Don&#39;t say that inheritance is equivalent to
+ the way people think about &quot;kind-of&quot; - introduce it from the beginning in terms of substitutability. Don&#39;t
+ pretend you manage resources &quot;automatically&quot; when in fact it&#39;s the responsibility of everyone to follow non-trivial
+ protocols for this to work, and a single error is fatal - make it visible where resources are acquired and released.
+Or you can <i>really</i> manage them automatically - with garbage collection or reference counting or otherwise. But if you
+ refuse to do it, which may be perfectly legitimate at times, <i>admit it</i>. Changing your terms is more productive than
+ waiting for everyone to change theirs.
+</p>
+
+<p>
+Of course the Circle/Ellipse problem is <i>not</i> an example of &quot;making promises that can&#39;t be kept&quot;. It&#39;s
+ the FAQ&#39;s <a href="inheritance-basics.html#fqa-19.2">claims</a> about OO &quot;capturing the way we think&quot; that are such an example.
+</p>
+
+
+<a name="fqa-21.9"></a>
+<h2>[21.9] Perhaps <tt>Ellipse</tt> should inherit from <tt>Circle</tt> then?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.9">FAQ:</a></b>
+ Probably not. For example, what would the <tt>radius()</tt> accessor do, and how would it be compatible with an assumption
+ that is most likely a part of the <tt>Circle</tt> protocol that you can use <tt>radius()</tt> to compute the <tt>area()</tt>?
+</p>
+
+<p>
+<b class="FQA">FQA:</b> I think it&#39;s very easy to see with a slightly different, but a related example. What is more stupid: to claim
+ that a triangle is a rectangle with two identical vertices, or that a rectangle is a triangle with 4 vertices? It
+ probably sounds equally stupid to most people.
+</p>
+
+<p>
+The major reason making people who themselves would think these claims are stupid to go ahead and derive <tt>Triangle</tt> from <tt>Rectangle</tt>
+ or vice versa is that <i>they don&#39;t think they are in fact making such claims by implementing such inheritance</i>.
+</p>
+
+<p>
+The idea is this: inheritance is not just yet another kind of syntax. Its purpose is <i>not</i> to save a couple of lines
+ of code in the derived class (which you may accomplish by deriving <tt>Triangle</tt> from <tt>Rectangle</tt>). And the compiler <i>can&#39;t</i> check that
+your inheritance is correct
+ (this is really hard for C++ aficionados to accept: <i>the compiler can&#39;t check something!</i>).
+Inheritance is about writing code that follows a protocol, making it possible to call this code from any function
+written to work with objects that follow that protocol, and thus <i>reusing the calling code</i> (possibly <i>a lot</i> of such code - much more than the couple of lines you saved in the derived class).
+</p>
+
+<p>
+And if your inheritance does not guarantee substitutability, then the compiler won&#39;t be able to catch your error
+(it&#39;s type checking <i>assumes</i> that you provide substitutability - that&#39;s why it lets you use pointers
+ to derived class objects in contexts expecting base class object pointers). And you&#39;ll confuse most people
+  (frequently including yourself), who also expect substitutability, especially since the compiler agrees by
+  letting them pass an <tt>Ellipse</tt> where a <tt>Circle</tt> is required. And if you really don&#39;t need substitutability,
+  you don&#39;t really need (public) inheritance, either.
+</p>
+
+
+<a name="fqa-21.10"></a>
+<h2>[21.10] But my problem doesn&#39;t have anything to do with circles and ellipses, so what good is that silly example to me?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.10">FAQ:</a></b>
+ But you see, <i>all</i> examples of improper inheritance are basically equivalent to the <tt>Circle</tt>/<tt>Ellipse</tt>
+  case. Inheritance is bad when a base class provides functionality which a derived class can&#39;t provide
+  (in the <tt>Ellipse</tt> case, that&#39;s asymmetrical resizing). The problem with inheritance in such cases is that
+it comes without substitutability, breaking a basic assumption shared by programmers using the classes
+and the compiler (which automatically allows to use objects of derived classes where base class objects are expected).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Exactly. People <a href="function.html#fqa-33.4">obsessed</a> with compile-time error checking, repeat: the compiler does the static type
+checking (as in &quot;this object is of class <tt>Derived</tt> - OK, it&#39;s a legitimate parameter to function <tt>f(Base&amp;)</tt>&quot;)
+based on assumptions it can not check (&quot;whoever wrote <tt>Derived</tt> made it substitutable for <tt>Base</tt>&quot;).
+Say it again: <i>the compiler does the static type checking based on assumptions it can not check.</i>
+<b> The compiler does the static type checking based on assumptions it can not check. </b>
+</p>
+
+<p>
+Translation: the correctness of an interesting program can not be checked at compile time. All programmers are supposed to <a href="http://en.wikipedia.org/wiki/Halting_problem">know</a> it,
+but some keep forgetting. So is it ultimately better to spend your time on type safety (things like <a href="templates.html#fqa-35.11">making sure</a> that nobody can cast <tt>vector&lt;T&gt;::iterator</tt> to the underlying <tt>T*</tt>)
+or writing tests checking that your code behaves correctly at run time? You be the judge.
+</p>
+
+
+<a name="fqa-21.11"></a>
+<h2>[21.11] How could &quot;it depend&quot;??!? Aren&#39;t terms like &quot;Circle&quot; and &quot;Ellipse&quot; defined mathematically?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.11">FAQ:</a></b>
+ They are, but the <i>classes</i> <tt>Circle</tt> and <tt>Ellipse</tt> have a <i>different</i> definition - the C++ code
+defining the classes. In your program, that&#39;s the definition of <tt>Circle</tt> and <tt>Ellipse</tt>, and that&#39;s
+what you have to look at to validate your inheritance. If you keep thinking about the mathematical connotations,
+let&#39;s replace the class names with <tt>Foo</tt> and <tt>Bar</tt> for the moment; that&#39;s all the same for the compiler.
+</p>
+
+<p>
+Now that we&#39;ve defined the meaning of <tt>Circle</tt> and <tt>Ellipse</tt>, recall that &quot;inherits&quot; means &quot;is substitutable for&quot;
+   (not &quot;is a&quot; or &quot;is a kind of&quot;, which are not precise definitions). With these definitions, you can get
+   the right answer using the previous FAQs.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Exactly - you can&#39;t implement the mathematical notion of &quot;circle&quot; in a programming language,
+   you can only implement a definition (possibly called <tt>Circle</tt>) or a bunch of definitions
+   which model some of the aspects of mathematical circles to a certain extent. And when you reason
+   about the correctness of your program, you have to talk about these definitions, not the original
+   mathematical notion.
+</p>
+
+<p>
+Lots of suffering inflicted by the more talented programmers upon themselves originates at the hope
+   to implement &quot;the ultimate something&quot; (for example, &quot;the ultimate circle class&quot; that captures <i>all</i>
+                                          aspects of mathematical circles, so you&#39;d never
+have to define a circle class again).
+   The <i>ultimate</i> search for &quot;the ultimate something&quot; in programming is probably the search for
+   <i>the ultimate programming language</i>. Arguably, the C++ language is one result of this search -
+   it tries to meet a huge amount of conflicting requirements, the key ones being <a href="http://www.research.att.com/~bs/bs_faq.html#why">"readability, efficiency and generality"</a>
+   of C++ code, as well as <a href="picture.html#fqa-6.11">pseudo-compatibility</a> with C. The result is a large-scale nightmare, and the moral of the story is simple: design
+   the best tool for everything, and you&#39;ll get a tool good for nothing.
+</p>
+
+<p>
+On the bright side, it is probably possible to define a good <tt>Circle</tt> class for your program -
+   if you try to make it good <i>for your program</i> rather than implement the mathematical notion.
+   And this is why the meaning of <tt>Circle</tt> <i>depends</i> on your program.
+</p>
+
+
+<a name="fqa-21.12"></a>
+<h2>[21.12] If <tt>SortedList</tt> has <i>exactly</i> the same public interface as <tt>List</tt>, is <tt>SortedList</tt> a kind-of <tt>List</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/proper-inheritance.html#faq-21.12">FAQ:</a></b>
+ It&#39;s quite unlikely. For instance, consider <tt>List::insert</tt>. Is it defined to insert the element
+   to the end of the list? If it is, there&#39;s no good way to implement it in <tt>SortedList</tt>, because
+   the insertion to the end will usually make the list unsorted.
+</p>
+
+<p>
+The substitutability principle is about the specified behavior, not just function names and parameter types.
+So &quot;exactly the same public interface&quot; in the syntactic sense is not enough - for proper inheritance,
+   the specified run time behavior must be the same.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, compile time type checking can not guarantee proper inheritance, it can only operate under
+   the <a href="inheritance-proper.html#fqa-21.10">assumption</a> that <i>you</i> guaranteed it. That&#39;s why some languages come with contract checking:
+   the base class specifies the behavior using input and output constraints computed at run time,
+   and you can have your run time environment automatically evaluate these constraints when methods of derived
+   classes are called.
+</p>
+
+<p>
+You can simulate this behavior in C++ by writing lots of code. Namely, the base class can have a public
+   non-virtual <tt>insert</tt> method calling a protected virtual <tt>onInsert</tt> method. The <tt>insert</tt> wrapper
+   can then check whether <tt>onInsert</tt> follows the protocol using a bunch of <tt>assert</tt>s before
+   and after the call to <tt>onInsert</tt>. Since &quot;a lot of code&quot; is most frequently bad by itself (because you waste time writing it and then waste much more time reading it together with other people),
+   the benefits are not necessarily worth the trouble. But run time tests (stand-alone or integrated into a larger system)
+   greatly increase the quality of code, and making run time testing simple and painless pays off, especially compared
+   to work spent on compile time error detection.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

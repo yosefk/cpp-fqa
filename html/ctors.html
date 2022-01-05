@@ -1,0 +1,614 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Constructors</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Constructors</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This section is about constructors, which create C++ objects, as well as a large number of problems.
+</p>
+
+<ul>
+<li><a href="ctors.html#fqa-10.1">[10.1] What&#39;s the deal with constructors?</a></li>
+<li><a href="ctors.html#fqa-10.2">[10.2] Is there any difference between <tt>List x;</tt> and <tt>List x();</tt>?</a></li>
+<li><a href="ctors.html#fqa-10.3">[10.3] Can one constructor of a class call another constructor of the same class to initialize the <tt>this</tt> object?</a></li>
+<li><a href="ctors.html#fqa-10.4">[10.4] Is the default constructor for <tt>Fred</tt> always <tt>Fred::Fred()</tt>?</a></li>
+<li><a href="ctors.html#fqa-10.5">[10.5] Which constructor gets called when I create an array of <tt>Fred</tt> objects?</a></li>
+<li><a href="ctors.html#fqa-10.6">[10.6] Should my constructors use &quot;initialization lists&quot; or &quot;assignment&quot;?</a></li>
+<li><a href="ctors.html#fqa-10.7">[10.7] Should you use the <tt>this</tt> pointer in the constructor?</a></li>
+<li><a href="ctors.html#fqa-10.8">[10.8] What is the &quot;Named Constructor Idiom&quot;?</a></li>
+<li><a href="ctors.html#fqa-10.9">[10.9] Does return-by-value mean extra copies and extra overhead?</a></li>
+<li><a href="ctors.html#fqa-10.10">[10.10] Why can&#39;t I initialize my <tt>static</tt> member data in my constructor&#39;s initialization list?</a></li>
+<li><a href="ctors.html#fqa-10.11">[10.11] Why are classes with <tt>static</tt> data members getting linker errors?</a></li>
+<li><a href="ctors.html#fqa-10.12">[10.12] What&#39;s the &quot;static initialization order fiasco&quot;?</a></li>
+<li><a href="ctors.html#fqa-10.13">[10.13] How do I prevent the &quot;static initialization order fiasco&quot;?</a></li>
+<li><a href="ctors.html#fqa-10.14">[10.14] Why doesn&#39;t the construct-on-first-use idiom use a static object instead of a static pointer?</a></li>
+<li><a href="ctors.html#fqa-10.15">[10.15] How do I prevent the &quot;<tt>static</tt> initialization order fiasco&quot; for my <tt>static</tt> data members?</a></li>
+<li><a href="ctors.html#fqa-10.16">[10.16] Do I need to worry about the &quot;<tt>static</tt> initialization order fiasco&quot; for variables of built-in/intrinsic types?</a></li>
+<li><a href="ctors.html#fqa-10.17">[10.17] How can I handle a constructor that fails?</a></li>
+<li><a href="ctors.html#fqa-10.18">[10.18] What is the &quot;Named Parameter Idiom&quot;?</a></li>
+<li><a href="ctors.html#fqa-10.19">[10.19] Why am I getting an error after declaring a <tt>Foo</tt> object via <tt>Foo x(Bar())</tt>?</a></li>
+</ul>
+
+<a name="fqa-10.1"></a>
+<h2>[10.1] What&#39;s the deal with constructors?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.1">FAQ:</a></b>
+ A constructor initializes an object given a chunk of memory having arbitrary (undefined) state, the way &quot;init functions&quot; do. It may acquire resource like memory, files, etc. &quot;Ctor&quot; is a common abbreviation.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s right - constructors <i>initialize</i> objects. In particular, constructors <i>don&#39;t</i> allocate the chunk of memory used for storing the object. This is done by the code calling a constructor.
+</p>
+
+<p>
+The compiler thus has to know the size of a memory chunk needed to store an object of a class
+(this is the value substituted for <tt>sizeof(MyClass)</tt>) at each point where the class is used.
+That means knowing all members (public &amp; private). This is a key reason why changing the <i>private</i> parts of a C++ class
+definition requires <a href="class.html#fqa-7.5">recompilation of all calling code</a>, effectively making the private members a part of the public
+interface.
+</p>
+
+<p>
+This design of C++ constructors is extremely impractical because the smallest change can trigger the largest
+recompilation cycle. This would be less of a problem if C++ compiled fast, and if there was an automatic way to
+detect that code was compiled with an outdated class definition - but it doesn&#39;t, and there isn&#39;t.
+</p>
+
+<p>
+This is one of the many examples where C++ ignores <a href="picture.html#fqa-6.1">practical</a> considerations in an attempt to achieve
+theoretical <a href="picture.html#fqa-6.2">perfection</a> (&quot;language features should <i>never, ever</i> impose any performance penalty!&quot;). Compare this to the approach taken in most object-oriented languages, which normally choose
+true decoupling of interface, sacrificing the efficiency of allocation. Some of these languages provide ways to
+optimize the allocation of <i>public</i> data. This lets you improve performance when you actually need it,
+but without the illusion of <a href="class.html#fqa-7.4">"encapsulation"</a>, and have real encapsulation in the rest of your system.
+</p>
+
+
+<a name="fqa-10.2"></a>
+<h2>[10.2] Is there any difference between <tt>List x;</tt> and <tt>List x();</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.2">FAQ:</a></b>
+ Yes, and it&#39;s a <i>big</i> one. The first statement declares an object of type <tt>List</tt>, the second declares a function returning an object of type <tt>List</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There sure is quite a semantic difference. Too bad it&#39;s not accompanied by an equally noticeable syntactic difference. Which is why the question became a frequently asked one.
+</p>
+
+<p>
+The problem is that it&#39;s hard to tell C++ constructor calls from C/C++ function declarations. The cases discussed here - constructors without arguments - are a relatively moderate manifestation of this problem. All you have to do is memorize a stupid special case: constructor calls look like function calls except when there are no arguments, in which case parentheses must be omitted. There are tons of weird rules in the C++ grammar, and another one doesn&#39;t make much difference.
+</p>
+
+<p>
+But when there <i>are</i> arguments, things get <i>really</i> <a href="ctors.html#fqa-10.19">hairy</a>. Consider the statement <tt>A f(B,C);</tt> - this ought to be a function declaration. Why? B and C are surely classes, look at the capital letters. Um, wait, it&#39;s just a naming convention. What if they are objects? That makes the statement a constructor call. Let&#39;s look up the definition of B and C, that should give us the answer to our question.
+</p>
+
+<p>
+Have you ever looked up C++ definitions (manually or using tools such as IDEs)? Check it out, it&#39;s fun. You can be sure of one thing: template specialization on integer parameters when the instantiation uses the size of a class defined using multiple inheritance and virtual functions as a parameter value doesn&#39;t make definition look-up easy.
+</p>
+
+<p>
+When you get an incomprehensible error message from your C++ compiler, be sympathetic. Parsing C++ is a full-blown, industrial strength nightmare.
+</p>
+
+
+<a name="fqa-10.3"></a>
+<h2>[10.3] Can one constructor of a class call another constructor of the same class to initialize the <tt>this</tt> object?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.3">FAQ:</a></b>
+ No. But you can factor out the common code into a private function. In some cases you can use default parameters to &quot;merge&quot; constructors. Calling placement <tt>new</tt> inside a constructor is very bad, although it can &quot;seem&quot; to do the job in some cases.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You can&#39;t - one of the many good reasons to avoid constructors. And anyway, having more than one constructor may be problematic for another reason: they must all have the same name (that of the class), so in fact you&#39;re dealing with overloading, and C++ overload resolution is a huge can of worms.
+</p>
+
+<p>
+If you&#39;re OK with that, you can surely use the FAQ&#39;s advice to factor out common code, unless you follow <i>another</i> <a href="ctors.html#fqa-10.6">FAQ's advice</a> - the one suggesting to use the ugly colon syntax for initializing member variables. You can&#39;t move these things to a function.
+</p>
+
+<p>
+If you&#39;re in a mood for breaking rules and doing clever tricks, this may be the right time to look for a real problem where such skills are really needed. Breaking C++ rules by calling placement <tt>new</tt> is probably a bad idea - not because C++ rules are any <i>good</i>, but because they are pretty <i>bad</i> (astonishingly and inconsistently complicated). This is not the kind of rules you can get away with breaking - your maze of hacks is doomed to collapse, and there&#39;s enough weight in C++ to bury your entire project when this happens. And anyway, why invest energy into an artificial syntactic problem when there are so many real ones out there?
+</p>
+
+
+<a name="fqa-10.4"></a>
+<h2>[10.4] Is the default constructor for <tt>Fred</tt> always <tt>Fred::Fred()</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.4">FAQ:</a></b>
+ No, the default constructor is the one that can be called without arguments - either because it takes none or because it defines default values for them.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, the rule is that the default constructor is the one that can be called &quot;by default&quot; - that is, when the user of a class didn&#39;t specify any parameters.
+</p>
+
+<p>
+Another neat thing about default constructors is that they get <i>generated</i> &quot;by default&quot;. For example, if the author of class <tt>Fred</tt> didn&#39;t write any constructors for it, a C++ compiler will automatically generate a default constructor for it. You don&#39;t see a <tt>Fred::Fred</tt>, but it still exists - invisible C++ functions are great for readability and debugging. The same will happen with other things, for example the <i>copy constructor</i>. If you think you can use C++ and simply avoid the features you don&#39;t like, you&#39;re in for a rude awakening: the invisible compiler-generated stuff is lethal when your class acquires resources (most frequently memory). In for a penny - in for a pound: if you want to write C++ classes, you have to learn pretty much everything about them, and there&#39;s plenty.
+</p>
+
+<p>
+Where&#39;s all this code generated? At the caller&#39;s side, of course. To generate it near the rest of the class definition, the C++ compiler would have to know where that definition is, and there&#39;s no good way to tell (it may be scattered across as many source files as the author damn pleases). C++ is just like C in this respect - there&#39;s no way to narrow the search range for a definition of an entity based on its name and/or namespace; it can be anywhere in the program. In particular, this means that the default constructor will be automatically generated at all points where a class is used, from scratch - yet another reason why C++ code compiles slowly.
+</p>
+
+<p>
+And what&#39;s needed in order to generate this code? The default constructor generated by default (I hope you follow) calls the default constructors of all class members (which in turn may take auto-generation). Add a private member, and all default constructors generated at the calling code must be regenerated - yet another reason why C++ code must be <a href="class.html#fqa-7.5">recompiled frequently</a>.
+</p>
+
+
+<a name="fqa-10.5"></a>
+<h2>[10.5] Which constructor gets called when I create an array of <tt>Fred</tt> objects?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.5">FAQ:</a></b>
+ The default constructor. If there isn&#39;t any, your code won&#39;t compile. But if you use <tt>std::vector</tt>, you can call any constructor. And you should use <tt>std::vector</tt> anyway since arrays are <a href="picture.html#fqa-6.15">evil</a>. But sometimes you <a href="picture.html#fqa-6.16">need</a> them. In that case, you can initialize each element as in <tt>Fred arr[2] = {Fred(3,4), Fred(3,4)};</tt> if you need to call constructors other than the default. And finally you can use placement new - it will take ugly declarations and casts, you should be careful to align the storage right (which can&#39;t be done portably), and it&#39;s hard to make this exception-safe. See how evil those arrays are? Use <tt>std::vector</tt> - it gets all this complicated stuff right.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> And all you did was asking a simple question! OK, let&#39;s start making our way through the pile of rules, exceptions, amendments and excuses.
+</p>
+
+<p>
+Given syntax like <tt>MyClass arr[5];</tt> the compiler will generate a loop calling the default constructor of <tt>MyClass</tt>. Pick some time when you have a barf bag handy and look at the generated assembly code. There are two nice things: sometimes compilers will emit a loop even when it&#39;s clear that the default constructor has nothing to do; and for automatically generated default constructors, you&#39;ll get inline calls to the constructor of each member (for the latter thing you don&#39;t really need an array, a single object will do). Bottom line: your program gets bigger and bigger and you don&#39;t know why - <i>you</i> didn&#39;t do anything.
+</p>
+
+<p>
+Syntax like <tt>std::vector&lt;Fred&gt; arr(5,Fred(3,4));</tt> gets translated to 5 calls to the copy constructor (in practice - in theory other things could happen; in general, C++ is excellent in theory). This is functionally equivalent to calling <tt>Fred(3,4)</tt> 5 times. The FAQ doesn&#39;t mention that it&#39;s normally slower though - typically the numbers 3 and 4 must be fetched from the memory allocated for the copied object instead of being passed in registers or inlined into the assembly code.
+</p>
+
+<p>
+Of course <tt>std::vector</tt> of a fixed size known at compile time is less efficient than a built-in array anyway. Which is one reason to prefer a built-in array. Initializing such an array with multiple <tt>Fred(3,4)</tt> objects will force you to replicate the initializer, and will produce the biggest possible initialization code. No, the compiler is not likely to notice that you&#39;re doing the same thing over and over again, it will repeat the same code N times. On the other hand, if your class does nothing in the constructor but has an &quot;init function&quot;, you can call it in a loop. Another reason to avoid constructors.
+</p>
+
+<p>
+The horror stories the FAQ tells you about placement new are all true. However, it doesn&#39;t mention that <tt>std::vector</tt> always allocates memory on the free store. And there&#39;s no standard container you can use for allocating memory on the stack, for example, so if you want one, you&#39;ll have to write it yourself. And placement new is necessary to make such containers work with C++ classes without default constructors. Yet another reason to avoid constructors.
+</p>
+
+<p>
+Anyway, saying &quot;use <tt>std::vector</tt> because it gets that horrible placement new stuff right&quot; is a little strange if you consider the following assumptions, one of which must apparently hold:
+</p>
+
+<ul>
+<li>C++ guys want people to build their own container classes - then why is placement new, which is required to do this right, so hard to use?</li>
+<li>C++ guys don&#39;t want people to build their own container classes - then why isn&#39;t <tt>std::vector</tt> built into the language, so that things like aggregate initialization could work with it, and maybe we could get rid of those oh-so-evil arrays?</li>
+</ul>
+
+<p>
+Maybe you can&#39;t expect more consistency from the promoters of a language than there is in that language itself.
+</p>
+
+
+<a name="fqa-10.6"></a>
+<h2>[10.6] Should my constructors use &quot;initialization lists&quot; or &quot;assignment&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.6">FAQ:</a></b>
+ Initialization lists - that&#39;s more efficient, except for built-in types (with initializers, you avoid the construction of an &quot;empty&quot; object and the overhead of cleaning it up at the assignment). And some things can&#39;t be initialized using assignment, like member references and const members and things without default constructors. So it&#39;s best to always use initialization lists even if you don&#39;t have to for the sake of &quot;symmetry&quot;. There are exceptions to this rule. There&#39;s no need for an exhaustive list of them - search your feelings.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There are good reasons to avoid initialization lists:
+</p>
+
+<ul>
+<li>You can&#39;t write most kinds of code in the initialization lists - no local variables to reuse results of computations, no loops... Basically there&#39;s C++ and there&#39;s this initializer land, where you must speak a crippled dialect without any reward for the effort.</li>
+<li>You can&#39;t <a href="ctors.html#fqa-10.3">move initializers to a common function</a> to reuse initialization code.</li>
+<li>If you want to pass a pointer to one member to the constructor of another member, you must make sure its constructor is called first, and these constraints can get complicated.</li>
+<li>To help you manage those constraints, some compilers produce annoying warnings when the order of your initializers differs from the order in which you declare the class members, even when it doesn&#39;t matter.</li>
+<li>The efficiency argument is wrong for a very common case when the default constructor of a member does nothing.</li>
+<li>Typically compilers attribute all code in initializer lists to the same source code line - for example, the one with the opening brace of the constructor body. When a program crashes inside an initializer, you can&#39;t easily tell which one it is using a symbolic debugger.
+<li>Not that it&#39;s very different from the rest of C++, but the colon syntax is just plain ugly.</li>
+</ul>
+
+<p>
+The trouble with initialization lists, like with any duplicate language feature, is that you <i>can&#39;t</i> really avoid using it. For example, there are classes without default constructors, or with relatively heavy ones. So &quot;never use initialization lists&quot; is not a very useful rule, and the best answer, as usual, is that there&#39;s no good answer.
+</p>
+
+<p>
+However, initialization lists are really less than useful, so it&#39;s probably good to avoid them unless you can&#39;t. In particular, avoiding reference and const members and having lightweight default constructors in your classes may help.
+</p>
+
+
+<a name="fqa-10.7"></a>
+<h2>[10.7] Should you use the <tt>this</tt> pointer in the constructor?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.7">FAQ:</a></b>
+ Some people think you can&#39;t since the object is not fully initialized, but you can if you know the rules. For example, you can always access members inside the constructor body (after the opening brace). But you can never access members of a derived class by calling virtual functions (the function call will <a href="inheritance-mother.html#fqa-23.5">invoke the implementation of the class defining the constructor</a>, not that of the derived class). Sometimes you can use a member to initialize another member in an initializer list and sometimes you can&#39;t - you must know the order in which members are initialized.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s right - all problems and questionable scenarios come from tricky C++ things, like initialization lists and virtual function calls from constructors. If you avoid initialization lists and use plain old assignment or initialization function calls in the constructor body, you can be sure all members can be used - you have one problem solved. Use init functions instead of constructors and virtual function calls will <a href="inheritance-mother.html#fqa-23.6">invoke functions of the derived class</a> - another problem solved.
+</p>
+
+<p>
+An alternative to avoiding the dark corners of C++ is to spend time learning them. For example, you can memorize the rules defining the order of initialization, and rely on them heavily in your code. That way people who need to understand and/or maintain your code will have to get pretty good at these things, too, so you won&#39;t end up being the only one around knowing tons of useless obscure stuff. Or they will have to ask you, which increases your weight in the organization. You win big either way, at least as long as nobody chooses the path of physical aggression to deal with the problems you create.
+</p>
+
+
+<a name="fqa-10.8"></a>
+<h2>[10.8] What is the &quot;Named Constructor Idiom&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.8">FAQ:</a></b>
+ It&#39;s when you have static functions (&quot;named constructors&quot;) returning objects in your class. For example, this way you can have two &quot;constructors&quot; returning 2D point objects: one getting rectangular coordinates (2 <tt>float</tt>s), and another getting polar coordinates (also 2 <tt>float</tt>s). With C++ constructors you couldn&#39;t do it because they all have the same name, so that would be ambiguous overloading. And this can be as <i>fast</i> as regular constructors! And you can use a similar technique to enforce an allocation policy, like having all objects allocated with <tt>new</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Three cheers! This is almost like C init functions - a step in the right direction. Namely, this way we don&#39;t have overloading problems, and we can get rid of the pesky <a href="ctors.html#fqa-10.1">separation of allocation from initialization</a> - client code doesn&#39;t really have to <a href="class.html#fqa-7.5">know about our private members</a> anymore.
+</p>
+
+<p>
+The only thing left to do is to ditch the whole class thing, and use C pointers to incomplete types as object handles - that way we can actually modify private members without recompiling the calling code. Or we can use a real object-oriented language, where the problem doesn&#39;t exist in the first place.
+</p>
+
+
+<a name="fqa-10.9"></a>
+<h2>[10.9] Does return-by-value mean extra copies and extra overhead?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.9">FAQ:</a></b>
+ &quot;Not necessarily&quot;. A truly exhausting, though not necessarily exhaustive list of examples follows, with many stories about &quot;virtually all commercial-grade compilers&quot; doing clever things.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Let&#39;s enumerate the possibilities using boring binary logic:
+</p>
+
+<ul>
+<li>You care about performance.</li>
+<li>You don&#39;t care about performance.</li>
+</ul>
+
+<p>
+In the first case, &quot;not necessarily&quot; is not a good answer for you. You don&#39;t want your code to be littered with things like return-by-value and later wonder why your &quot;commercial-grade&quot; compiler emits huge and slow code in some of the performance-critical places. If performance is one of your goals, you&#39;re better off writing code in ways making it as easy as possible to predict performance, without knowing an infinite amount of details specific for each of the compilers you use for production code. And if you have experience with optimization, you&#39;ve probably noticed another thing - most C++ compilers work hard on optimizing the C subset, but are pretty dumb when it comes to C++-specific parts. Compiler writers are probably happy if they can correctly <i>parse</i> C++ code and somehow lower it to C and have the back-end optimize stuff at the C level. Basically to get performance you need C, because that&#39;s what today&#39;s optimizers are best at, and you&#39;re wasting time with C++.
+</p>
+
+<p>
+If you don&#39;t care about performance, you are <i>also</i> wasting time using C++. There are hordes of programming languages designed for managed environments, so you won&#39;t have problems coming from undefined behavior of all kinds. And the vast majority of languages are way simpler and more consistent than C++, so you&#39;ll get another huge burden off your back.
+</p>
+
+<p>
+Of course our boring binary logic fails to represent the <a href="templates.html#fqa-35.10">developers</a> who <i>think</i> they care about performance, although they have a very vague idea about the actual performance of their programs. Those are the people who use the von Neumann model (&quot;you access memory using pointers which are actually indexes of individual bytes&quot;) to think about computers, and call this &quot;the low level&quot;. They are typically less aware of things like instruction caches (which make <i>big</i> programs <i>slow</i>), SIMD instruction sets (which can give performance gains <i>way beyond</i> &quot;generic&quot; template implementations of numerical algorithms), assembly language and optimizers in general (for example, how <tt>restrict</tt> helps optimization but <tt>const</tt> <a href="const.html#fqa-18.14">doesn't</a>). These people engage in lengthy discussions about complicated high-level optimizations, their ultimate goal being very generic code which can be compiled to a very efficient program by a very smart compiler, which will never exist. These people are welcome to waste as much time thinking about return-by-value optimizations as they wish, as long as it prevents them from causing actual damage.
+</p>
+
+
+<a name="fqa-10.10"></a>
+<h2>[10.10] Why can&#39;t I initialize my <tt>static</tt> member data in my constructor&#39;s initialization list?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.10">FAQ:</a></b>
+ Because you must define such data explicitly as in <tt>static MyClass::g_myNum = 5;</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Because it&#39;s meaningless. <tt>static</tt> members are global variables with respect to allocation and life cycle, the only difference is in the name look-up and access control. So they are instantiated and initialized once per program run. Initialization lists initialize the members of objects which are instantiated with each object, which can happen more or less times than once per program run.
+</p>
+
+<p>
+One possible reason making this question frequently asked is that you can <i>assign</i> to static variables in the body of a constructor, as in <tt>g_numObjs++</tt>. People trying to follow the <a href="ctors.html#fqa-10.6">advice</a> to use the crippled C++ subset available in the initialization lists might attempt to translate this statement to initializer-like <tt>g_numObjs(g_numObjs + 1)</tt> or something, which doesn&#39;t work.
+</p>
+
+<p>
+You can probably look at it both ways - &quot;initializers are used to initialize things instantiated per object&quot; and &quot;the subset of C++ available in initialization lists makes it impossible to do almost anything&quot;.
+</p>
+
+
+<a name="fqa-10.11"></a>
+<h2>[10.11] Why are classes with <tt>static</tt> data members getting linker errors?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.11">FAQ:</a></b>
+ Because you must define such data explicitly as in <tt>static MyClass::g_myNum = 5;</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Beyond being annoying, this is quite weird. At the first glance it looks reasonable: after all, C++ is just a thick layer of syntax on top of C, but the basic simpleton mechanisms are the same. For instance, definition look-up is still done using header files holding random declarations and object files holding arbitrary definitions - each function can be declared anywhere (N times) and defined anywhere (1 time).
+</p>
+
+<p>
+So the compiler can&#39;t let you define something which becomes a global variable at the C/assembly level in a header file as in <tt>static int g_myNum = 5;</tt> - that way, you&#39;d get multiple definitions (at each file where the class definition is included). Consequently, the C++ syntax is defined in a way forcing you to solve the compiler&#39;s problem by choosing a source file and stuffing the definition there (most frequently the choice is trivial since a class is implemented in a single source file, but this is a <i>convention</i>, not a rule the compiler can use to simplify definition look-up).
+</p>
+
+<p>
+While this explanation doesn&#39;t make the syntax and the weird &quot;undefined external&quot; errors any nicer, at least it seems to make sense. Until you realize that there are <i>tons</i> of definitions compiled to C/assembly globals in C++ that <i>must</i> be placed at header files. Consider <a href="inheritance-mother.html#fqa-23.10">virtual function tables</a> and template classes. These definitions are compiled over and over again each time a header file gets included, and then the linker must throw away N-1 copies and keep one (if the copies are different because of different compiler settings and/or preprocessor flags, it&#39;s your problem - it won&#39;t bother to check).
+</p>
+
+<p>
+It turns out that C++ <i>can&#39;t</i> be implemented on top of any linker that supports C - the linker must support the &quot;generate N times and throw away N-1 copies&quot; feature (or is it a documented bug?), instead of issuing a &quot;multiple definition&quot; error. In GNU linkers this is called &quot;linkonce&quot; or something. To support C++, you must add features to the linker. Too bad they didn&#39;t think of adding type-safe linkage (checking the consistency of definitions used in different object files) while they were at it.
+</p>
+
+<p>
+The conclusion is that there is no technical reason whatsoever, even inside the twisted C++ universe, to make the syntax harder for the user in this case. On the other hand, there&#39;s no reason to make the syntax <i>easier</i> either. That would just introduce inconsistency with the rest of the language.
+</p>
+
+
+<a name="fqa-10.12"></a>
+<h2>[10.12] What&#39;s the &quot;static initialization order fiasco&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.12">FAQ:</a></b>
+ A subtle, frequently misunderstood source of errors, which are hard to catch because they occur before <tt>main</tt> is called. The errors can happen when the constructor of a global object defined in <tt>x.cpp</tt> accesses (directly or indirectly) a global object defined in <tt>y.cpp</tt>. The order of initialization of these objects is undefined, so you&#39;ll see the problem in 50% of the cases (an error may be triggered by a rebuild). &quot;It&#39;s that simple&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> And it&#39;s <i>that</i> stupid. Just look at this:
+</p>
+
+<ul>
+<li>C++ doesn&#39;t define the order of initialization of global objects.</li>
+<li>C++ lets you write code that depends on the order of initialization of global objects.</li>
+<li>C++ doesn&#39;t have a mechanism to automatically detect these errors, neither at compile time nor at run time.</li>
+<li>C++ doesn&#39;t make the slightest effort to help you debug the problem (for example, go figure in which actual order the objects were initialized).</li>
+</ul>
+
+<p>
+With most duplicate language features, one can&#39;t simply say &quot;avoid the new broken C++ features&quot; because the language <a href="ctors.html#fqa-10.6">works so hard</a> to get you in trouble if you do. But in this particular case it&#39;s probably a good rule. Consider the reasons to avoid instantiating global objects with non-trivial constructors (ones that do more than nothing), and instead use plain old C aggregate initialization:
+</p>
+
+<ul>
+<li>You have to worry about this &quot;fiasco&quot; business, which is quite nasty. With C initializers, once you passed compilation and linkage, there are no problems - the linker creates a snapshot of the initial state of your global variables, and there are no failure modes.</li>
+<li>You have all this initialization code before <tt>main</tt>, with corresponding clean-up code called after <tt>main</tt>. What if you want to clean up and re-initialize things <i>without</i> exiting <tt>main</tt>? People calling <tt>getenv</tt> or accessing the command line using platform-specific tricks in code called before <tt>main</tt> further improve the life of other people working on the project.</li>
+<li>Your program contains a huge bulk of slow initialization code. A C statement like <tt>Point p={4,5};</tt> gets translated to 8 bytes representing the integers 4 and 5 in the executable. A C++ statement like <tt>Point p(4,5);</tt> gets translated to <i>code</i> storing 4 and 5 to <tt>p</tt>. What are the benefits except for getting large programs starting up slowly?</li>
+</ul>
+
+<p>
+Some people believe that you need non-trivial global constructors, or else you&#39;ll have to make your user call an initialization function to work with your module. The fact is that the experienced users <i>prefer</i> to initialize modules explicitly rather than having them autonomously kicking in, possibly crashing the program because of dependency issues, not to mention printing messages and popping up configuration dialogs. All of these implicit things tend to become quite <i>explicit</i> on the day when you least need them to. Quoting the FAQ&#39;s favorite expression, just say no.
+</p>
+
+
+<a name="fqa-10.13"></a>
+<h2>[10.13] How do I prevent the &quot;static initialization order fiasco&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.13">FAQ:</a></b>
+ By using the &quot;Construct On First Use&quot; idiom, as in
+</p>
+
+<pre>
+MyClass&amp; getMyObj()
+{
+  static MyClass* p = new MyClass;
+  return *p;
+}
+</pre>
+
+<p>
+This solution may &quot;leak&quot;. There&#39;s another solution working around this problem, but it creates other problems.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> By not instantiating global objects with constructors doing more than nothing. That prevents this and other kinds of &quot;fiasco&quot;. The technique in the FAQ, frequently referred to as an implementation of &quot;the singleton design pattern&quot; (BTW, you can put quotes wherever you like in that one, for example the &quot;singleton&quot; &quot;design&quot; &quot;pattern&quot;), has the following problems:
+</p>
+
+<ul>
+<li>As mentioned by the FAQ, it leaks memory <i>and possibly other resources</i> (C++ people love to talk about how memory is &quot;just one kind of resource&quot;, overlooking the fact that it accounts for 99% of &quot;resources&quot; actually used by a program, so special, &quot;non-generic&quot; things like <a href="heap.html#fqa-16.1">garbage collection</a> may be appropriate to manage it - but they suddenly forget all about it when it comes to this &quot;construct on first use&quot; business). Practitioners may find it intolerable to have these memory leaks reported by tools designed to detect leaks, even if their platform is capable of disposing the garbage left by a program automatically. People interested in a more theoretical discussion may enjoy the recommendation to violate the C++ rules regarding memory management found in a &quot;standard practice&quot;.</li>
+<li>It is slow, not to mention thread safety. When you have a plain C global initialized by a plain C explicit initialization function, accessing it is quite easy (function arguments may be faster to fetch, or they may be not). In this case, you call a function (which can be inlined - that doesn&#39;t necessarily help though) that contains a hidden <tt>if</tt> statement. You don&#39;t see it? Well, how do you think the clever function manages to only call <tt>new</tt> once? There&#39;s a global boolean (sometimes called &quot;guard variable&quot;) which it checks each time. To access a global, you now need to access two globals. If you find it interesting, you can list the symbols of your program (using a program like <tt>nm</tt>), and then filter the output using a C++ name demangler (like <tt>c++filt</tt>). You may find lots of &quot;guard variable of something&quot; kind of names there.</li>
+</ul>
+
+<p>
+The C++ global initialization and destruction support is broken. As usual, the &quot;idiom&quot; in the FAQ &quot;solves&quot; the problem by creating worse problems.
+</p>
+
+
+<a name="fqa-10.14"></a>
+<h2>[10.14] Why doesn&#39;t the construct-on-first-use idiom use a static object instead of a static pointer?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.14">FAQ:</a></b>
+ It solves one problem and creates another problem. Namely, you avoid the resource leak, but your program can crash because now you achieved &quot;construct-on-first-use&quot;, but not &quot;destroy-after-last-use&quot;, so someone can access a dead object (using <tt>new</tt> means &quot;never destroy&quot;, which is at least guaranteed to be <i>after</i> last use).
+</p>
+
+<p>
+Actually there&#39;s a <i>third</i> approach solving <i>both</i> problems (initialization and destruction order), having &quot;non-trivial cost&quot;. The FAQ author feels &quot;too lazy and busy&quot; to explain - go buy his &quot;C++ FAQ Book&quot; to read about it.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ is right - this variant, known as &quot;the Meyers&#39; singleton&quot;, is also broken. And it&#39;s probably the hardest to work around, too. At least with the <tt>new</tt> variant you <i>can</i> delete the object with <tt>delete &amp;getMyObj();</tt> - increasingly ugly, but it may yield a working (though unmaintainable) program. With the static variable technique, C++ records a pointer to the destructor in some global array, so you won&#39;t be able to control the order of destruction (it&#39;s always the order of construction, reversed - and you <i>didn&#39;t</i> want to control the order of construction, you wanted it to &quot;just work&quot;, right?).
+</p>
+
+<p>
+As to other approaches - I do have enough energy and spare time to repeat a <i>free</i> advice: use explicit initialization and clean-up functions, and realize that the initialization and destruction sequences are part of the <i>design</i> of your modules and your program.
+</p>
+
+<p>
+If it&#39;s hard to get out of the state of mind where you think initialization should somehow work out by itself, as opposed to the really interesting things your program does afterwards (the &quot;steady state&quot;), maybe an analogy with hardware can help. In a simplified model of synchronous hardware design, you have two &quot;trees&quot; of signals (basically wires) reaching almost every place in your system: the <i>clock</i> (which synchronizes things done at the steady state), and the <i>reset</i> (upon which all the initialization is conditioned). A common milestone in hardware design is getting the reset right. When you buy hardware, a large portion of it is devoted to initialization (which is why you can <i>reboot</i> it and it enters a reasonable state - you can&#39;t do that with biological &quot;computers&quot; like the human brain).
+</p>
+
+<p>
+By the way, I didn&#39;t read the C++ FAQ book (I really don&#39;t have time for a C++ FQA book at the moment, so why bother?). But I did read &quot;Modern C++ Design&quot;, which also offers a solution. So if you buy the FAQ book and find the third &quot;solution&quot; and it involves having your singletons instantiated from a hairy template with a global data structure keeping &quot;priorities&quot; or some such and registering <tt>atexit</tt> callbacks which can in turn call <tt>atexit</tt> which detects dark areas in the C and C++ standards because nobody thought anyone would ever do that - if that&#39;s the third way, be sure that the cost is <i>really</i> &quot;non-trivial&quot;.
+</p>
+
+
+<a name="fqa-10.15"></a>
+<h2>[10.15] How do I prevent the &quot;<tt>static</tt> initialization order fiasco&quot; for my <tt>static</tt> data members?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.15">FAQ:</a></b>
+ Using the same techniques <a href="ctors.html#fqa-10.14">just described</a>, except for using static member functions instead of global functions. For some reason a long list of examples follows, as well as a discussion on performance.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There&#39;s no difference between static data members and global variables except for name look-up and access control. So you can either use the broken &amp; slow techniques from the FAQ, or you can avoid non-trivial constructors and live happily ever after.
+</p>
+
+<p>
+There&#39;s no point in having separate discussions on static data members and plain global variables. Well, except for mentioning that static data members are a brand new C++ feature, and it&#39;s particularly nice that C++ recommends to wrap its own syntax with another layer of its syntax for &quot;safety&quot;. An alternative approach to safety is to use zero layers of C++ syntax.
+</p>
+
+
+<a name="fqa-10.16"></a>
+<h2>[10.16] Do I need to worry about the &quot;<tt>static</tt> initialization order fiasco&quot; for variables of built-in/intrinsic types?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.16">FAQ:</a></b>
+ Yes, if you use function calls to initialize them as in <tt>int g = f();</tt> - that way <tt>f</tt> can access <tt>g</tt>, or you can have other dependency problems.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Exactly - and this code doesn&#39;t compile in C. We seem to have a <a href="ctors.html#fqa-10.7">pretty clear picture</a> here, don&#39;t we? As a rule of thumb, the answer to the more general version of the question - &quot;Do I need to worry when I use a C++ feature not available in C?&quot; - is also &quot;Yes&quot;.
+</p>
+
+<p>
+Not that plain C is very safe, mind you. If you <a href="ctors.html#fqa-10.9">don't need the performance</a>, you can always switch to a safer, higher-level language. But at least C doesn&#39;t pretend to be very high-level, and makes less promises it can&#39;t keep (like &quot;go ahead, use whatever code you like to initialize global variables - see how high-level our language is?&quot;).
+</p>
+
+
+<a name="fqa-10.17"></a>
+<h2>[10.17] How can I handle a constructor that fails?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.17">FAQ:</a></b>
+ Throw an exception.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Right.
+</p>
+
+<p>
+Q: What do you do when a ship is on fire?<br>
+A: Drown it. The fire will stop immediately.
+</p>
+
+<p>
+Seriously, <a href="exceptions.html#fqa-17.10">C++ exceptions</a> are a leading candidate for the title &quot;the worst way to handle run time errors ever invented&quot;. But constructors can&#39;t return values. Even though they <i>don&#39;t</i> technically return an object - they merely initialize a chunk of memory they are passed. So they <i>could</i> return status information despite the C/C++ limitation of at most one return value per function. Which itself has no technical justification. This is <a href="ctors.html#fqa-10.5">yet another</a> reason to avoid constructors that do more than nothing. It&#39;s also <a href="ctors.html#fqa-10.12">yet another</a> illustration how <a href="ctors.html#fqa-10.6">hard</a> it is to use only some of C++ features and avoid others (&quot;we want classes, but we don&#39;t need exceptions&quot; - until you want to handle an error in a constructor).
+</p>
+
+<p>
+It is also notable that the C++ standard library <i>doesn&#39;t</i> handle errors in constructors (or overloaded operators, which pose the same problem) using exceptions (for example, consider <tt>ifstream</tt> and <tt>ofstream</tt>).
+</p>
+
+
+<a name="fqa-10.18"></a>
+<h2>[10.18] What is the &quot;Named Parameter Idiom&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.18">FAQ:</a></b>
+ A useful application of method chaining. It works around the fact that C &amp; C++ don&#39;t have keyword arguments, and it does that better than combining the parameters in a string or a bit mask. It works like this:
+</p>
+
+<pre>
+File f = OpenFile(&quot;language-abuse.txt&quot;)
+         .useWeirdLineBreakRules(true)
+         .writeLotsOfGoryDetails(true)
+         .averageNumberOfExcuses(ZILLION);
+/* a sizable implementation with two classes and friends
+   and methods returning *this and what-not omitted */
+</pre>
+
+<p>
+And if method calls are inlined, there&#39;s no speed overhead (but the code size may &quot;slightly&quot; increase - but that&#39;s a long story).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Let&#39;s have a closer look at this Named Parameter Idiocy.
+</p>
+
+<ul>
+<li>The implementation in the FAQ pushes these parameters into a temporary structure, which is normally slower than argument passing.</li>
+<li>And the multiple method calls, inlined or not, are no picnic either. Compare assembly code generated by <tt>printf</tt> and <tt>iostream</tt> calls if you doubt. This way you can compare your notion of &quot;slightly&quot; with that used by the designers of C++.</li>
+<li>All ways to implement this require the author of the class to write a lot of code ultimately doing nothing. Which is OK because in theory, <a href="operator.html#fqa-13.4">each class is written once and used thousands of times</a>. In practice most classes keep changing forever and are used in a couple of places. Which doesn&#39;t matter as long as you only use C++ in theory where it belongs.</li>
+<li>But that would be justified to an extent if it made things easier for the user. But it doesn&#39;t. Try reading the header file with the <tt>class OpenFile</tt> and figuring out how to open files.</li>
+<li>And now that we have this <tt>OpenFile</tt> class, people will start storing objects of this class and passing them around. Which could be a good idea in some cases, except that the class has a stupid function-like name, further enhancing readability.</li>
+<li>Or we could use a different implementation, chaining the methods of <tt>class File</tt> and avoiding the second class. But this way, we can&#39;t detect errors easily, because there&#39;s no point where we see all of the parameters at once, we get them one by one.</li>
+</ul>
+
+<p>
+This syntactic sugar of the bitter kind raises two questions. First, why don&#39;t we have keyword arguments in C++? They are much easier to implement in a compiler than virtually any feature C++ added to C, and are way more useful, too. And second, if for some reason you have to work in C++, what&#39;s the problem with accepting the fact that it doesn&#39;t have keyword arguments, and using a structure of parameters in way at least making it <i>clear</i> that you use a structure of parameters? For example:
+</p>
+
+<pre>
+OpenFileParams params;
+params.useNormalLineBreaks(true);
+params.quitFiddlingWithSyntax(true);
+File file; //trivial constructor
+if(!file.open(&quot;grow-up.txt&quot;,params)) {
+  //handle errors without the &quot;help&quot; of C++ exceptions
+}
+</pre>
+
+<p>
+This doesn&#39;t solve the problems with code speed &amp; size, but at least the code of the class and the code using the class are reasonably readable and writable. And there seem to be no new problems, unless someone considers the fact that our code is now pretty close to C and we no longer rely on C++ method chaining a problem.
+</p>
+
+<p>
+Abusing C++ syntax in order to cover up deficiencies of C++ syntax, thus creating real problems in attempts to solve non-problems, is a popular hobby among C++ professionals. Let&#39;s check if it makes sense by imagining that someone spent the better part of the day writing all this wrapper code doing trivial things. Let&#39;s try to help that someone explain what was accomplished to someone else, and further assume that the other someone has a mind not entirely buried in C++ quirks. &quot;I was writing this... Um, you see, I was opening a file... I wrote this interface of 2 screens of code... And then...&quot; Sheesh, that&#39;s embarrassing.
+</p>
+
+
+<a name="fqa-10.19"></a>
+<h2>[10.19] Why am I getting an error after declaring a <tt>Foo</tt> object via <tt>Foo x(Bar())</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/ctors.html#faq-10.19">FAQ:</a></b>
+ This <i>hurts</i>. <i>Sit down</i>.
+</p>
+
+<p>
+The &quot;simple&quot; explanation: this doesn&#39;t really declare an object; <tt>Foo x = Foo(Bar());</tt> does. The complete explanation for &quot;those caring about their professional future&quot;: this actually declares a function named <tt>x</tt> returning a <tt>Foo</tt>; the single argument of this <tt>x</tt> function is of type &quot;a function with no argument returning a <tt>Bar</tt>&quot;.
+</p>
+
+<p>
+Don&#39;t get all excited about it. Don&#39;t &quot;extrapolate from the obscure to the common&quot;. Don&#39;t &quot;worship consistency&quot;. That&#39;s not &quot;wise&quot;. The FAQ actually says all these quoted things.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Those who use computers to do any useful work are probably immune to brain-crippled syntax, because there are more painful things, like brain-crippled semantics. So sitting down is only necessary if you find it comfortable. For similar reasons, don&#39;t worry about your professional future too much if this looks boring and stupid and you don&#39;t feel like understanding it. It really is what you think it is, and programming is not supposed to be about this kind of thing. If someone rejects you in an <a href="picture.html#fqa-6.14">interview</a> because you don&#39;t know the answer to a question like this, you are lucky - you&#39;ve just escaped a horrible working environment.
+</p>
+
+<p>
+Anyway, if for some reason you <i>are</i> curious to find out why this happens, it turns out the FAQ has no answers, it just presents it as an arbitrary rule. It doesn&#39;t help to understand anything. The statement is ambiguous - you can read it both as a constructor call and a declaration of a peculiar function. How does the compiler know? Let&#39;s try to see.
+</p>
+
+<p>
+Apparently the key problem is that in order to tell a function declaration from a constructor call, you need to know whether the things in the parentheses are objects or types. This makes parsing <tt>A f(B);</tt> <a href="ctors.html#fqa-10.2">non-trivial</a>. In our example, things are complicated by the fact that <tt>Bar()</tt> itself presents <i>the very same problem</i> - is it a function declaration or a constructor call? Worse, this time the darn thing accepts no arguments, so you can&#39;t use them to figure it out. Well, C++ has an arbitrary rule to help the compiler (but not necessarily the user): things with empty parentheses are function declarations, unless that&#39;s entirely impossible (list of special cases follows). That&#39;s why <tt>A x();</tt> declares a function but <tt>A x;</tt> defines an object. And that&#39;s why <tt>Bar()</tt> is interpreted as a function declaration, which means that it&#39;s an argument type, not an object, so the whole statement is actually a function declaration. I think.
+</p>
+
+<p>
+The problem with <tt>Foo</tt> and <tt>Bar</tt> is that the C++ grammar is FUBAR. In a language designed in a more orderly way (which is most of them), there are no such ambiguities. A relatively simple way to make sure there are none is to use a formal grammar specification and feed it to a program that generates a parser for the language, checking the consistency of the grammar on the way. <tt>yacc/bison</tt> is one mature program of this kind; there are newer ones with more features, which can represent more complicated grammars (but AFAIK no generic tool is capable of representing the extremely complicated, inconsistent and actually undecidable C++ grammar).
+</p>
+
+<p>
+It could help the users if the people promoting C++ realized that the consistency of a grammar is not something you &quot;worship&quot;, but a technical property which is far easier to achieve than it is to deal with the consequences of not having it. This example is just one drop in the ocean of such problems. The complexity of the C++ grammar guarantees that compiler error messages will remain cryptic, debuggers will stay ignorant, and IDEs will be unhelpful compared to those available for other languages forever.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

@@ -1,0 +1,472 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Exceptions and error handling</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Exceptions and error handling</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This page is about C++ exceptions - an error handling facility which may be worse than dereferencing a null pointer upon error.
+</p>
+
+<ul>
+<li><a href="exceptions.html#fqa-17.1">[17.1] What are some ways <tt>try / catch / throw</tt> can improve software quality?</a></li>
+<li><a href="exceptions.html#fqa-17.2">[17.2] How can I handle a constructor that fails?</a></li>
+<li><a href="exceptions.html#fqa-17.3">[17.3] How can I handle a destructor that fails?</a></li>
+<li><a href="exceptions.html#fqa-17.4">[17.4] How should I handle resources if my constructors may throw exceptions?</a></li>
+<li><a href="exceptions.html#fqa-17.5">[17.5] How do I change the string-length of an array of <tt>char</tt> to prevent memory leaks even if/when someone throws an exception?</a></li>
+<li><a href="exceptions.html#fqa-17.6">[17.6] What should I throw?</a></li>
+<li><a href="exceptions.html#fqa-17.7">[17.7] What does <tt>throw;</tt> (without an exception object after the <tt>throw</tt> keyword) mean? Where would I use it?</a></li>
+<li><a href="exceptions.html#fqa-17.8">[17.8] How do I throw polymorphically?</a></li>
+<li><a href="exceptions.html#fqa-17.9">[17.9] When I throw this object, how many times will it be copied?</a></li>
+<li><a href="exceptions.html#fqa-17.10">[17.10] Exception handling seems to make my life more difficult; clearly <i>I&#39;m</i> not the problem, am I??</a></li>
+<li><a href="exceptions.html#fqa-17.11">[17.11] I have too many try blocks; what can I do about it?</a></li>
+</ul>
+
+<a name="fqa-17.1"></a>
+<h2>[17.1] What are some ways <tt>try / catch / throw</tt> can improve software quality?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.1">FAQ:</a></b>
+ You&#39;ll have less <tt>if</tt> statements in your code: you won&#39;t have to check for errors
+each time you call a function. Conditional statements are known to contain
+more bugs than other statements. With less <tt>if</tt> tests, you&#39;ll ship a better product, faster.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This is <a href=http://en.wikipedia.org/wiki/Cargo_cult>cargo cult</a> programming. Conditional
+statements are error-prone because they are used to handle complicated scenarios, where an action
+can result in many different outcomes, which affect the next actions. In order to make errors less probable, one has to simplify
+the model of the desired behavior of the software. The problem is the complexity that leads to <tt>if</tt>
+statements, not the <tt>if</tt> keyword, and using different keywords is not going to solve the problem by itself.
+</p>
+
+<p>
+Exceptions are supposed to simplify the error handling model based on the assumption that in most cases,
+a function that detected an error can&#39;t handle it, and has to propagate it to the caller. Finally,
+a &quot;high-level&quot; enough caller is reached and actually makes a decision (pops up an error message, tries a different
+action, etc.).
+</p>
+
+<p>
+Despite its promises, this approach has inherent problems. There&#39;s a &quot;social&quot; problem -
+with exceptions, people are not aware of the different errors that may happen in the code because most
+of the code doesn&#39;t deal with errors. And when people rarely think about a particular aspect of an application,
+ultimately this aspect is unlikely to be handled well. There&#39;s a more &quot;technical&quot; problem - functions essentially
+doing nothing upon error except for propagating errors to the caller still can&#39;t be completely unaware of errors.
+That&#39;s because they may need to release the resources they acquired before returning to the caller, which
+may lead to <i>more</i> errors, which must also be handled. Finally, in practice exception support has run-time overhead, and very
+significant code size overhead, even if exceptions are never raised at run time, and even if they are <i>not mentioned</i> in your code.
+C++ devotees may claim otherwise; you can check by compiling your code with and without exception support (if your compiler
+doesn&#39;t have such a flag, compile code as C and as C++ instead). This is unacceptable in resource-constrained systems.
+</p>
+
+<p>
+Still, in many cases, the benefits of exceptions are more important than their problems. For example, if your
+language manages memory automatically, the problem of releasing acquired resources becomes a small one (you only
+have to care about files, etc., which are a tiny part of the &quot;resources&quot; used by a program - most of the
+&quot;resources&quot; are memory). If your language throws exceptions when you violate its rules (for example, upon
+out-of-bounds array access), these exceptions will help you find lots of bugs, especially if you can get the call stack
+from an exception. If the purpose of an application is automated testing, and/or it&#39;s used as a quick-and-dirty
+internal tool as opposed to a product for an end user, this kind of exceptions is all you need to handle errors of
+almost all kinds. In some languages, you can even resume the execution from the point where the exception was
+raised after fixing the problem at the point where it was caught.
+</p>
+
+<p>
+C++ exceptions offer none of these features. &quot;Exception-safe&quot; C++ code <a href="exceptions.html#fqa-17.3">can't handle errors</a> which happen
+when it tries to release resources; &quot;exception-unsafe&quot; C++ code will <a href="heap.html#fqa-16.1">leak</a> resources, most frequently memory; and once you throw
+an exception, the call stack is <a href="exceptions.html#fqa-17.7">lost</a>. This means that even separating your code to several processes and executing
+code like <tt>*(int*)0 = 0;</tt> upon error is a better way to handle errors than C++ exceptions: at least the memory
+is going to be reclaimed by the operating system, and you can typically have it save a snapshot of the process,
+so that you can open it in a debugger and see where the error happened. A recommendation to &quot;ban&quot; exceptions
+is probably over the edge, but think <i>a lot</i> before using C++ exceptions, <i>or</i> a feature that implicitly depends
+on them, such as <a href="exceptions.html#fqa-17.2">constructors</a> and <a href="operator.html#fqa-13.1">overloaded operators</a>, which have no other way to report an error. What C++ calls
+&quot;exceptions&quot; is as unlikely to give you the benefits people get from exceptions in other languages as what
+C++ calls &quot;classes&quot; is <a href="class.html#fqa-7.1">unlikely</a> to give you the benefits of OO.
+</p>
+
+
+<a name="fqa-17.2"></a>
+<h2>[17.2] How can I handle a constructor that fails?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.2">FAQ:</a></b>
+ As you&#39;d guess from the location of this question in the FAQ, the answer is &quot;by throwing an exception&quot;. Alternatively,
+you can mark the object as a &quot;zombie&quot; by using some kind of validity flag. You can then check that flag in the
+calling code and maybe in the member functions of the object. The latter solution tends to &quot;get ugly&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The inability to gracefully handle errors in C++ constructors is one good reason to <a href="ctors.html#fqa-10.17">avoid</a> constructors
+that do more than nothing, and use initialization functions instead. And C++ exceptions are not a graceful way to
+handle errors, <i>especially</i> in constructors. If your member object constructor throws an exception,
+and you want to catch it in your constructor, the normally <a href="ctors.html#fqa-10.6">ugly</a> colon syntax gets much uglier.
+</p>
+
+<p>
+By the way, the C++ standard library doesn&#39;t throw exceptions in constructors (except for the ones thrown by
+<tt>operator new</tt>). For example, you are supposed to test whether <tt>ofstream</tt> objects are zombies when you pass
+them a filename in the constructor.
+</p>
+
+
+<a name="fqa-17.3"></a>
+<h2>[17.3] How can I handle a destructor that fails?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.3">FAQ:</a></b>
+ Actually you can&#39;t - not beyond logging the problem to a file or the like. In particular, <i>do not</i> throw an exception.
+The problem is that destructors are called when exceptions are thrown so that functions propagating errors to their
+callers can clean up resources. Your destructor can also be called in such a situation. And when an exception is already
+thrown, throwing another one will result in a call to <tt>terminate()</tt>, killing your process. Because you see, what else could C++ do?
+There&#39;s an ambiguity: which exception out of the two do you want caught now?
+</p>
+
+<p>
+Strictly speaking, you can make that &quot;do not throw exceptions in a destructor unless you are sure that it won&#39;t be called
+as a result of an exception already thrown&quot;, but you can rarely be sure of that.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s right, <tt>terminate()</tt>. Solomon-style conflict resolution carried to the end.
+See? Exceptions are not a graceful way to handle errors.
+</p>
+
+<p>
+And &quot;don&#39;t throw exceptions in destructors&quot; actually means &quot;don&#39;t call functions in destructors unless you
+are sure they don&#39;t throw an exception&quot;. The C++ compiler won&#39;t check for you, because it can&#39;t: the language
+doesn&#39;t force a function to declare whether it throws exceptions.
+</p>
+
+<p>
+This is one good reason to avoid destructors
+doing more than nothing: like constructors and operators, they can&#39;t handle errors.
+</p>
+
+
+<a name="fqa-17.4"></a>
+<h2>[17.4] How should I handle resources if my constructors may throw exceptions?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.4">FAQ:</a></b>
+ Well, the destructor of your class will not get called, but the destructors of the successfully constructed
+sub-objects will get called. Conclusion: you should have all the resources allocated by your constructors
+assigned to sub-objects. For example, if you call <tt>new</tt> in a constructor, don&#39;t use a bare member pointer to hold
+the result - use a smart pointer, like <tt>std::auto_ptr</tt>. You can also define your own smart pointer classes to
+point to things like <a href="operator.html#fqa-13.3">disk records</a>! Groovy!
+</p>
+
+<p>
+And you can use <tt>typedef</tt> to make the syntax of using smart pointers easier.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <b>WARNING</b> - cyclic dependency between C++ features detected! You see, exceptions are a must in this language
+so that you can handle errors in all the functions which fail to look like functions, such as constructors &amp; operators.
+Then it turns out that you need <i>constructors</i> to work with <i>exceptions</i> - unless each and every piece of memory
+you acquire is not immediately assigned to some smart pointer, your code is not exception safe. This is known
+as &quot;Resource Allocation Is Initialization&quot; (RAII) in the C++ community; it&#39;s supposed to be a <i>good</i> thing.
+</p>
+
+<p>
+And smart pointers are no picnic, as are virtually all automatic devices with something like &quot;smart&quot;, &quot;simple&quot; or
+&quot;fast&quot; in their name. Sure, you can use <tt>typedef</tt> to simplify the syntax. So can someone else; you&#39;ll end up with
+many different type names for the same thing. This may annoy people, but it&#39;s perfectly OK with the compiler -
+when it spits an <a href="templates.html#fqa-35.17">error message</a>, it simply substitutes the full type names for all <tt>typedef</tt> names. But you can write a program to filter
+the error messages...
+</p>
+
+<p>
+Seriously, the syntax of smart pointers is the small problem. The big problem is their semantics. When you see
+a bare pointer, you know how it works. But a smart pointer can work in <i>a lot</i> of ways. The <a href="http://boost.org">boost</a> libraries allow
+you to instantiate hundreds of different smart pointer classes from a single template (which made it to TR1, so we&#39;re going to see it in the next version of the C++ standard). How are you going to
+figure out whether your program manages resources correctly or not when it&#39;s littered with smart pointers of different kinds,
+especially in case there&#39;s any non-trivial scenario there, like the cases when &quot;ownership&quot; (the right &amp; duty to dispose a resource)
+is passed from object to object, or there are cyclic references in your code, or whatever?
+</p>
+
+<p>
+When every single piece of software is &quot;smart&quot;, and you can&#39;t trust things like <tt>*p</tt> and <tt>p-&gt;x</tt>, the software
+becomes unmanageable.
+</p>
+
+
+<a name="fqa-17.5"></a>
+<h2>[17.5] How do I change the string-length of an array of <tt>char</tt> to prevent memory leaks even if/when someone throws an exception?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.5">FAQ:</a></b>
+ If you want to work with strings, use something like <tt>std::string</tt> instead of <tt>char*</tt>. Otherwise, there&#39;s lots
+of exceptions to catch, and lots of code to manage memory.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ is right about one thing - <tt>char*</tt> is a nasty kind of string, and using it for text processing is very
+tedious. If you&#39;re doing anything not entirely trivial with strings, <tt>std::string</tt> is better than <tt>char*</tt>; using
+a different language than C++ for text processing, one with a good built-in string type, is still better.
+</p>
+
+<p>
+However, the part with exceptions really comes from <tt>operator new</tt>, not from <tt>char*</tt>. You can use <tt>malloc</tt> instead, or
+configure your compiler to disable exceptions.
+</p>
+
+
+<a name="fqa-17.6"></a>
+<h2>[17.6] What should I throw?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.6">FAQ:</a></b>
+ C++ allows you to throw objects of arbitrary types; however, you probably shouldn&#39;t throw objects of built-in
+types. For example, you can derive all your exception classes from <tt>std::exception</tt>, and throw temporary objects
+of your classes.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, C++ allows to throw anything. Too bad you can&#39;t really <i>catch</i> it later. The only way to catch an arbitrary exception
+is to use <tt>catch(...)</tt>, which doesn&#39;t let you find out what was thrown from where, and will even catch
+<i>illegal memory access</i> on some systems. This makes finding code like <tt>throw &quot;C++ is so grand - you can throw anything!!&quot;;</tt>
+a lot of fun (you have to find it on occasions when the uncaught exception crashes your program).
+</p>
+
+<p>
+The FAQ&#39;s advice is thus a good one, as opposed to the language decision to allow to throw anything - a typical example
+of the twisted notion of &quot;generality&quot; used throughout the language design. This decision is completely incomprehensible
+unless you realize that there&#39;s a basic axiom in C++: the language must not force the compiler writer to treat any class
+specially. For example, having a common base class for all user-defined classes which have at least one <tt>virtual</tt> function could
+be quite handy, but it&#39;s incompatible with this implicit axiom. What did the C++ designers gain from following this
+bizarre rule? Apparently nothing, except for an illusion of &quot;generality&quot;, whatever that means.
+</p>
+
+
+<a name="fqa-17.7"></a>
+<h2>[17.7] What does <tt>throw;</tt> (without an exception object after the <tt>throw</tt> keyword) mean? Where would I use it?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.7">FAQ:</a></b>
+ It means &quot;throw the last caught exception&quot;. It may be handy to catch an exception object, add some context information
+and rethrow it; this way you get something like a stack trace. This feature also allows you to factor out several exception
+handlers into a function called from a <tt>catch(...)</tt> block. Inside the function, you list the handlers for various special
+cases and prefix them with <tt>try { throw; }</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Rethrowing the last exception is a useful feature, and many languages have it. It would be equally useful in C++ if C++
+exceptions were any good. In particular, having to use this kind of feature throughout the code to get a <i>call stack</i>
+is an insult to the language user. Unless it&#39;s some kind of &quot;logical&quot; call stack (context information not equivalent to
+the list of C++ functions you&#39;d see in a debugger at the point where the exception was thrown), call stacks should be
+provided by the language.
+</p>
+
+<p>
+If you are using C++ and want to figure out the current call stack, it may be better to
+rely on platform-specific tricks (reading the frame pointer using inline assembly and traversing the linked list pointed
+by it, then translating the instruction pointers using a symbol table) than to litter your code with statements
+duplicating the information that&#39;s already there.
+</p>
+
+
+<a name="fqa-17.8"></a>
+<h2>[17.8] How do I throw polymorphically?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.8">FAQ:</a></b>
+ Suppose you have a <tt>BaseEx</tt> exception class and a <tt>DerivedEx</tt> exception class, which is inherited from <tt>BaseEx</tt>.
+Than the following code might not work as you expect:
+</p>
+
+<pre>
+void f(BaseEx&amp; e)
+{
+  throw e;
+}
+void g()
+{
+  DerivedEx e;
+  try {
+    f(e);
+  }
+  catch(DerivedEx&amp;) {
+    std::cout &lt;&lt; &quot;derived exception caught&quot; &lt;&lt; std::endl;
+  }
+}
+</pre>
+
+<p>
+The program will <i>not</i> enter the <tt>catch</tt> block because you didn&#39;t throw polymorphically. That is, the statement <tt>throw e;</tt>
+throws the object <tt>e</tt> as a <tt>BaseEx</tt>, because that&#39;s the type of <tt>e</tt> in that context; once an object is thrown as a
+<tt>BaseEx</tt>, it will not get caught as a <tt>DerivedEx</tt>. If you prefer the other behavior, you can &quot;easily get it&quot; by having a
+<tt>virtual void raise() { throw *this; }</tt> in your base class <i>and</i> your derived class, and calling <tt>e.raise();</tt> instead of
+<tt>throw e;</tt>. This way <tt>DerivedEx::raise()</tt> is called, and in the context of that function <tt>e</tt> is of type <tt>DerivedEx</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Let&#39;s see. You use C++ exceptions. Moreover, you have a hierarchy of exception classes. Moreover, you <i>pass exception
+objects to functions</i>, in a way relying on an <i>implicit upcast</i>. Looks like you have lots of confidence in your knowledge of
+C++ features. But along comes C++ and beats your common sense once again. The startling inconsistency of the language is
+almost a virtue: maybe this time you will learn the value of simplicity and write something readable.
+</p>
+
+<p>
+The behavior of <tt>throw</tt>, which looks at the static type of its argument expression, is somewhat surprising considering the
+behavior of <tt>catch</tt>, which does &quot;respect&quot; inheritance (to the extent made possible by <tt>throw</tt>). In practice, it is probably
+better to remove some of the complexity in the example rather than add more complexity by mixing the dynamic binding
+of <tt>virtual</tt> with the static binding of <tt>throw</tt>. A human might need to understand the code, you know.
+</p>
+
+<p>
+If you do want
+to memorize the quirks of C++, try to warp your mind to think in terms used by the compiler construction peanut gallery.
+From this perspective, the behavior of <tt>throw</tt> and <tt>catch</tt> <i>is</i> consistent: both only look at things known at compile time
+(the relationships between classes), and ignore things only known at run time (the actual type of an object). Basically
+all of C++ behaves this way except for <tt>virtual</tt>, <tt>dynamic_cast</tt> and <tt>typeid</tt>. I think.
+</p>
+
+
+<a name="fqa-17.9"></a>
+<h2>[17.9] When I throw this object, how many times will it be copied?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.9">FAQ:</a></b>
+ Zero or more. There&#39;s no universal answer. The compiler has to make sure a thrown object provides a copy constructor,
+even if it doesn&#39;t actually copy anything.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If you care about performance, C++ exceptions are probably no good for you. Exception support translates to a huge
+mountain of code in your executable, and slows down function calls throughout your program. If you didn&#39;t care about
+performance, you wouldn&#39;t ask this question. If you <i>think</i> that you <a href="ctors.html#fqa-10.9">care</a> about performance, but never actually measure
+it or look at the performance implications of the techniques you use in your code, feel free to entertain yourself with
+any fake answer that suits your emotional needs.
+</p>
+
+
+<a name="fqa-17.10"></a>
+<h2>[17.10] Exception handling seems to make my life more difficult; clearly <i>I&#39;m</i> not the problem, am I??</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.10">FAQ:</a></b>
+ <i>Of course</i> you can be the problem!
+</p>
+
+<p>
+Here are some habits that may prevent you from utilizing the power of C++ exception handling:
+</p>
+
+<ul>
+<li> <i>Return codes style</i>: people may put try blocks around every function call as if exceptions were error codes. </li>
+<li> <i>The Java style</i>: using try/finally instead of RAII, cluttering the code with clean-up statements. </li>
+<li> <i>Organizing exceptions around the location of the error rather than its reason</i>: this way you need to handle
+the same error many times and convert between types of exceptions. </li>
+<li> <i>Categorizing errors using data members of exception classes rather than types</i>: this way you catch more errors
+than you can handle in the given <tt>catch</tt> blocks, and rethrow exceptions after a test. </li>
+<li> <i>Using different exception classes in different subsystems</i>: the FAQ decides to repeat the point before
+previous, probably to create an impression that there are so many wrong mindsets out there. </li>
+<li> <i>Using bare pointers instead of smart pointer classes</i>: a special case of avoiding RAII, admits the FAQ, but
+it can&#39;t fight the temptation to list yet another &quot;wrong mindset&quot;. </li>
+<li> <i>Confusing bugs with run time errors</i>: if someone passes a null pointer to a function when that&#39;s illegal,
+the code must be fixed. Throwing an exception without fixing the calling code doesn&#39;t solve the problem. </li>
+</ul>
+
+<p>
+There are other wrong mindsets as well.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yeah, you know how it is with those humans. They always <a href="assign.html#fqa-12.2">fail to realize</a> <i>they</i> are the problem, and keep asking the
+wrong questions. You give them a helpful and powerful language, and all they do is shooting themselves in the feet. Clearly
+it&#39;s their flawed minds that must be fixed.
+</p>
+
+<p>
+Let&#39;s look a little closer at the impressive list of &quot;wrong mindsets&quot; compiled by the FAQ:
+</p>
+
+<ul>
+<li> <i>Return codes style</i> is surely a wrong way to use exceptions, but it&#39;s one of the best ways to use <i>C++ exceptions</i>,
+because otherwise the chance to manage resources correctly is not very high. Of course using real return codes is somewhat
+cleaner, but what if exceptions are thrown by third-party libraries? </li>
+<li> <i>The Java style</i> is suited quite well to a managed environment like Java, because most of the so-called resources
+are in fact <i>memory</i>, and you only need try/finally blocks for stuff like files, of which there are few. This style
+is problematic in C++ which <a href="heap.html#fqa-16.1">lacks garbage collection</a>, but so is <a href="exceptions.html#fqa-17.4">RAII</a> which forces you to wrap everything with
+&quot;smart pointers&quot; in a language which
+only has built-in dumb pointers. The truth is that with C++ exceptions, you can&#39;t win. </li>
+<li> <i>Organizing exceptions around the location of the error rather than its reason</i>: suppose you have 2 parsers in
+your system. Would you prefer a single <tt>ParseError</tt> exception, or 2 separate classes, <tt>HtmlParseError</tt> and
+<tt>ConfigFileParseError</tt>? Two different modules may raise exceptions for <i>similar</i> reasons, but rarely <i>the same</i> reason -
+or else why are they different modules? An obvious exception to this rule are errors detected at the language level,
+things like <tt>ArrayIndexOutOfBoundsException</tt>. Luckily, the C++ language run time environment does not detect errors,
+so we don&#39;t need to discuss this kind of thing. </li>
+<li> <i>Categorizing errors using data members of exception classes rather than types</i> is not necessarily bad. C++ is
+centered around the <a href="io.html#fqa-15.1">assumption</a> that you can represent almost anything using types (class hierarchies or template &quot;pattern matching&quot;)
+more than any other popular statically typed language. However, this assumption is frequently refuted by reality,
+and sticking to it is counter-productive in many cases. For instance, if a subsystem throws exceptions of a single class,
+and you figure out the kind of error from looking at the object members or even inspecting error strings, you may end
+up with less problems compared to the case where you have several dozens of classes in your exception inheritance tree.
+This is a special case where modeling an aspect of your program using the language static type system may or may not be
+optimal. </li>
+<li> <i>Using different exception classes in different subsystems</i>: WOW, this is so <i>nasty</i>! Of course all subsystems
+should share exception classes and other important common types. All subsystems of all systems in the world should be written
+in close coordination between the implementers. This way, we&#39;ll finish the Tower of Babel in no time! That&#39;s why a
+language should have no good way to pass an object of arbitrary type through a &quot;subsystem&quot;.
+Trust us: we are the people advocating a language without a <i>common string type</i>.
+We sure know a thing or two about the issue.
+<li> <i>Using bare pointers instead of smart pointer classes</i>: how about starting with the language and the standard
+library? When <tt>operator new</tt> returns a smart pointer, and <tt>&quot;abc&quot;</tt> has the type <tt>std::string</tt>, we&#39;ll have something
+to discuss. Until then, why should anyone manually emulate a high-level language on top of a low-level one throughout
+one&#39;s code? </li>
+<li> <i>Confusing bugs with run time errors</i>: this has absolutely nothing to do with exceptions. It&#39;s equally applicable
+to any run time error handling strategy. Unless, of course, your environment throws exceptions upon events like null pointer dereferencing,
+which C++ doesn&#39;t. </li>
+</ul>
+
+
+<a name="fqa-17.11"></a>
+<h2>[17.11] I have too many try blocks; what can I do about it?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/exceptions.html#faq-17.11">FAQ:</a></b>
+ Maybe you have a &quot;return codes mindset&quot; even though syntactically you use exceptions. There are many special cases
+of this problem in which you can organize the code differently to reduce the amount of try blocks (the FAQ lists several cases).
+If you can&#39;t solve the problem yourself, get a mentor.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Alternatively, you can stop throwing C++ exceptions so you won&#39;t have to catch them.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

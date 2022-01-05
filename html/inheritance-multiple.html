@@ -1,0 +1,538 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Inheritance -- multiple and virtual inheritance</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Inheritance -- multiple and virtual inheritance</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This section is about multiple inheritance. While inheritance and <tt>virtual</tt> functions are among the most useful (that is, <a href="inheritance-virtual.html#fqa-20.1">the least useless</a>) C++ features, C++ multiple inheritance is at the other end of the spectrum.
+</p>
+
+<ul>
+<li><a href="inheritance-multiple.html#fqa-25.1">[25.1] How is this section organized?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.2">[25.2] I&#39;ve been told that I should never use multiple inheritance. Is that right?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.3">[25.3] So there are times when multiple inheritance isn&#39;t bad?!??</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.4">[25.4] What are some disciplines for using multiple inheritance?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.5">[25.5] Can you provide an example that demonstrates the above guidelines?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.6">[25.6] Is there a simple way to visualize all these tradeoffs?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.7">[25.7] Can you give another example to illustrate the above disciplines?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.8">[25.8] What is the &quot;dreaded diamond&quot;?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.9">[25.9] Where in a hierarchy should I use virtual inheritance?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.10">[25.10] What does it mean to &quot;delegate to a sister class&quot; via virtual inheritance?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.11">[25.11] What special considerations do I need to know about when I use virtual inheritance?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.12">[25.12] What special considerations do I need to know about when I inherit from a class that uses virtual inheritance?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.13">[25.13] What special considerations do I need to know about when I use a class that uses virtual inheritance?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.14">[25.14] One more time: what is the exact order of constructors in a multiple and/or virtual inheritance situation?</a></li>
+<li><a href="inheritance-multiple.html#fqa-25.15">[25.15] What is the exact order of destructors in a multiple and/or virtual inheritance situation?</a></li>
+</ul>
+
+<a name="fqa-25.1"></a>
+<h2>[25.1] How is this section organized?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.1">FAQ:</a></b>
+ The FAQ section contains both &quot;high-level&quot; issues (the meaning &amp; purpose of the language constructs) and &quot;low-level&quot; issues
+(the detailed semantics &amp; implementation of the language constructs), in that order. Be sure to understand the high-level stuff before
+delving into the low-level stuff.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This FQA section is organized exactly like the other FQA sections - by copying the structure of the FAQ sections.
+</p>
+
+<p>
+The FAQ&#39;s note about the two levels of discussion is equally applicable to all C++ features/programming languages/software systems/formal definitions in the world. But it&#39;s located here and not elsewhere for a reason. The reason is
+that C++ multiple inheritance makes very little sense even by C++ standards. In other words, the cases where you
+can express a useful high-level idea using the actual features used to implement multiple inheritance in C++ are rare.
+So people end up not using it, or abusing it, but fail to use it &quot;right&quot;, because it&#39;s unclear what &quot;right&quot; means
+in this context.
+</p>
+
+<p>
+The FAQ apparently believes that this situation can be fixed by explaining what &quot;right&quot; means.
+Let&#39;s sit back and watch.
+</p>
+
+
+<a name="fqa-25.2"></a>
+<h2>[25.2] I&#39;ve been told that I should never use multiple inheritance. Is that right?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.2">FAQ:</a></b>
+ THESE PEOPLE REALLY BOTHER ME!! How can they know what you should do without knowing what you want done?!?!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This rage may provoke some sympathy. We&#39;ve all met people who don&#39;t seem to be doing anything useful
+themselves and compensate for it by getting in others&#39; way and telling them how to do their job, their ultimate goal apparently being to stop
+any useful work around them. In particular, language features which should really <i>never</i> be used are rare. However,
+language features which should be used really rarely and with careful consideration are <a href="inheritance-mother.html#fqa-23.12">more common</a>, and C++ multiple
+inheritance is one of them.
+</p>
+
+<p>
+There are two kinds of problems with multiple inheritance - &quot;static&quot; and &quot;dynamic&quot;.
+</p>
+
+<p>
+The &quot;static&quot; problems have to do with
+compile-time name lookup. Suppose you derive a class C from classes A and B, and both have a method called <tt>name</tt>. Which one
+will get called when someone calls <tt>name</tt> using a pointer to a C object? If you override <tt>name</tt> in the class C, did you
+override <tt>A::name</tt>, <tt>B::name</tt> or both? What happens if the two <tt>name</tt> functions accept arguments of the same type?
+What happens if they don&#39;t?
+</p>
+
+<p>
+The &quot;dynamic&quot; problems have to do with the way objects of the class C are actually built, and the run time effects
+related to it. Basically, a C object will contain an A sub-object, and a B sub-object, and those two will be
+completely unrelated. So if you have a pointer to a C object, and you (silently) upcast it to A*, and write code assuming
+that you get an object which is derived from both A and B, and cast the A* to B*, the program will crash or worse. What you
+should have done is first cast the object to C* and <i>then</i> to B*, since without knowing the definition of C, there&#39;s
+<a href="mixing.html#fqa-32.8">no way</a> to figure out the location of the B sub-object given the location of the A sub-object. This is one trap
+even a pretty experienced C++ programmer can fall into.
+</p>
+
+<p>
+You can memorize the sharp edges, or you can stay away from the whole thing. Pick your poison.
+</p>
+
+
+<a name="fqa-25.3"></a>
+<h2>[25.3] So there are times when multiple inheritance isn&#39;t bad?!??</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.3">FAQ:</a></b>
+ Sure! Sometimes (but not always) using multiple inheritance will lower all kinds of costs. If this is so in your case,
+use it! If it isn&#39;t, don&#39;t blame multiple inheritance - &quot;good workmen never blame their tools&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> No, there are no such times, it&#39;s a poorly designed language feature. But it could be that sometimes the other options
+available in C++ are even worse.
+</p>
+
+<p>
+While we&#39;re at it, let&#39;s clarify the whole blame issue. If you <i>choose</i> to use a tool not suitable for your job,
+you shouldn&#39;t blame the tool. Well, actually, you should blame the vendor of the tool if it was advertised
+as something it wasn&#39;t. Was C++ ever advertised that way, for example, what about
+<a href="class.html#fqa-7.1">support for object-oriented programming</a>?
+</p>
+
+<p>
+Well, we don&#39;t even need to discuss that, because a programming language is not exactly a tool. It is more accurately
+described, well, as a <i>language</i>. The key difference between tools and languages in the context of &quot;blame&quot; is <i>choice</i>.
+You probably don&#39;t choose to speak English - you do so in order to communicate with all the other people speaking
+English. When a bunch of people do something because other people do it, too, it&#39;s called &quot;network effects&quot;.
+For example, if you want to work on a project for reasons having nothing to do with computer linguistics,
+and the project uses C++, you&#39;ll have to use C++, too. No choice.
+</p>
+
+<p>
+So that&#39;s the difference between a language and a tool. Still, you wouldn&#39;t blame English because it&#39;s
+so hard to learn or inconsistent or whatever, would you? Well, the difference between a programming language
+and a natural language is that the latter is, um, natural, so there&#39;s nobody to blame, while the former
+was actually designed by someone (well, usually). The other difference is <i>the cost of an error</i>. People
+usually recover from bad English, computers tend to be less tolerant.
+</p>
+
+<p>
+And this is why you seem to have more ground to &quot;blame the language&quot; than to &quot;blame the tools&quot; in the general case.
+Of course you may not like the whole attitude of &quot;blaming&quot; things, etc.; everybody is free to feel
+any way they feel like or something. But that
+has nothing to do with being a &quot;good workman&quot; (which itself has an irksome sound to it, mind you).
+</p>
+
+
+<a name="fqa-25.4"></a>
+<h2>[25.4] What are some disciplines for using multiple inheritance?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.4">FAQ:</a></b>
+ There&#39;s a long answer saying 3 things. First, you should normally do it to achieve polymorphism, not base class code reuse.
+Second, the classes you multiply inherit from should normally be pure abstract. Third, you should consider using
+the &quot;bridge pattern&quot; or &quot;nested generalization&quot; - alternatives to MI described <a href="inheritance-multiple.html#fqa-25.5">below</a>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The guidelines are pretty good, except for maybe &quot;nested generalization&quot;, which is really a way to work around the
+deficiencies of the C++ object system rather than a reasonable way to model anything.
+</p>
+
+<p>
+If you like &quot;disciplines&quot; without any reasoning having to do with the actual problem at hand, here&#39;s some more for you.
+The FAQ&#39;s guidelines are a special case of &quot;don&#39;t use designs which would only work in one programming language&quot;
+(footnote: <i>especially</i> if that language is C++). Specifically, the FAQ&#39;s guidelines pretty much summarize the <i>rules</i> for using
+multiple inheritance in Java, so your design would be implementable in at least two languages, which is a good sign.
+The reasoning behind the avoid-designs-tied-to-one-language rule is that if something is really good, many languages would have it, and if your design
+depends on something only available in one language, it&#39;s probably bad because it probably depends on a bad thing.
+This is the point where people loving the unique feature of language X scream that this reasoning is completely
+<i>moronic</i>, but we already knew that, because we promised our reasoning wouldn&#39;t refer to the specific problem at hand, which isn&#39;t very
+bright by itself.
+</p>
+
+<p>
+If you&#39;re into real reasoning and not just &quot;disciplines&quot;, one nice thing about having the base classes pure is that this way,
+you don&#39;t have to think about a whole class of questions related to reimplementation of methods. For example, if you
+inherit a <tt>RectangularWindow</tt> from a <tt>Rectangle</tt> and a <tt>Window</tt>, and <tt>Rectangle</tt> isn&#39;t pure and it has a perfectly
+good <tt>resize</tt> method, is this method still good for <tt>RectangularWindow</tt> or do you want it to resize the window, which
+the implementation in the base class obviously won&#39;t do? And what if you can&#39;t <a href="inheritance-mother.html#fqa-23.8">really</a> override the <tt>Rectangle::resize</tt>
+method because it isn&#39;t <tt>virtual</tt>? The problem with reusing code from the base class is that
+multiple inheritance frequently breaks that code.
+</p>
+
+<p>
+However, following these guidelines won&#39;t necessarily eliminate the problems with multiple inheritance mentioned <a href="inheritance-multiple.html#fqa-25.2">above</a>.
+</p>
+
+
+<a name="fqa-25.5"></a>
+<h2>[25.5] Can you provide an example that demonstrates the above guidelines?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.5">FAQ:</a></b>
+ There&#39;s a very long discussion of an example with different kinds of vehicles having different kinds of engines.
+The FAQ proposes to use MI, or the &quot;bridge pattern&quot; or &quot;nested generalization&quot;. &quot;Bridge pattern&quot; means that vehicle objects keep pointers to engine objects,
+and users can pass many different kinds of engine to an object of the same vehicle class. &quot;Nested generalization&quot;
+means that you have many classes derived from <tt>Vehicle</tt> (like <tt>Plane</tt>), and then for each such derived class there&#39;s a bunch of
+classes derived from it to represent the different kinds of engine (like <tt>OilPoweredPlane</tt>). Trade-offs are discussed
+in great detail.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The &quot;bridge pattern&quot; (<a href="inheritance-mother.html#fqa-23.2">a fancy name</a> for the special case of aggregation when your member object has <tt>virtual</tt> functions) looks good here, since, um,
+a vehicle has an engine and stuff. And hence multiple inheritance looks wrong, since an <tt>OilPoweredPlane</tt> isn&#39;t a kind
+of an <tt>OilPoweredEngine</tt>.
+</p>
+
+<p>
+I don&#39;t feel like arguing with the FAQ&#39;s lengthy statements, since the issue isn&#39;t worth it. The cases when you deal with the definition of
+non-trivial object models are relatively rare. And when you do it, you have enough time to consider what stuff you
+really want the model to support, and then think about the different possibilities to define the model and check if each possibility really supports that stuff.
+I think that trying to memorize special cases (call them &quot;patterns&quot; or whatever) of object models is basically like
+trying to formalize common sense, which doesn&#39;t really work.
+</p>
+
+<p>
+Are you still with me after this blasphemy? Then let&#39;s look at one non-problem mentioned by the FAQ - the fact that with
+aggregation (&quot;bridge pattern&quot;), you can&#39;t specialize algorithms such that a specific combination of vehicle and engine
+exhibits a special behavior. In languages which support multimethods, doing that is trivial (multimethods are like <tt>virtual</tt>
+functions, but they are dispatched at run time based on the types of all arguments, not just the first argument).
+And in C++, you can emulate multimethods using double dispatching (ugly, especially when it becomes triple, quadruple
+                                                                   and other such kinds of dispatching, but still possible).
+</p>
+
+
+<a name="fqa-25.6"></a>
+<h2>[25.6] Is there a simple way to visualize all these tradeoffs?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.6">FAQ:</a></b>
+ Here&#39;s a matrix with cute smilies for ya. Just don&#39;t apply it naively.
+</p>
+
+<p>
+<i>Cute matrix omitted to avoid copyright problems, as well as cuteness problems</i>
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <b>WARNING:</b> there&#39;s no known way to represent common sense in a tabular form at the time of writing.
+Therefore, if you choose to store the cute matrix anywhere in your brain, you do it at your own risk.
+</p>
+
+
+<a name="fqa-25.7"></a>
+<h2>[25.7] Can you give another example to illustrate the above disciplines?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.7">FAQ:</a></b>
+ Yes - consider the case with land &amp; water vehicles, when you also need to support amphibious vehicles. This case
+is more &quot;symmetric&quot; than the <a href="inheritance-multiple.html#fqa-25.5">previous</a> example, so multiple inheritance becomes more preferable. Still,
+you have to make sure you really want it by asking various questions (for the list of questions, follow the link to the FAQ).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Um, &quot;symmetry&quot; is an interesting aspect of this to focus on, but anyway, an amphibious vehicle is both a land vehicle
+and a water vehicle, while an oiled powered plane is a plane, but is <a href="inheritance-multiple.html#fqa-25.5">not</a> an oil powered engine. So yes, multiple
+inheritance seems more appropriate, and yes, it&#39;s wise to think about the things you ultimately want your object
+model to support before defining it.
+</p>
+
+<p>
+We&#39;ll use the opportunity to show how to model this problem effectively using multiple inheritance
+(implementation of multiple interfaces by the same class) without really using C++ multiple inheritance
+(and thus avoiding some of its <a href="inheritance-multiple.html#fqa-25.2">problems</a>). I&#39;m not saying that this always better
+ than real C++ multiple inheritance, just that it sometimes can be.
+</p>
+
+<pre>
+class AmphibiousVehicle {
+  class WaterVehicleImpl : public WaterVehicle {
+    WaterVehicleImpl(AmphibiousVehicle* p) { /* save p */ }
+    ...
+  };
+  // similarly, there&#39;s a LandVehicleImpl class derived from WaterVehicle
+  WaterVehicleImpl _water;
+  LandVehicleImpl _land;
+public:
+  AmphibiousVehicle() : _water(this), _land(this) {}
+  WaterVehicle&amp; getWaterVehicleIF() { return _water; }
+  LandVehicle&amp; getLandVehicleIF() { return _land; }
+};
+</pre>
+
+<p>
+This way, you write more code than with multiple inheritance, which is bad.
+It gets even uglier if you want to simulate <a href="inheritance-multiple.html#fqa-25.9">virtual inheritance</a>,
+which is bad if <tt>WaterVehicle</tt> and <tt>LandVehicle</tt> inherit from a non-abstract base class <tt>Vehicle</tt>
+ (<a href="inheritance-multiple.html#fqa-25.4">not necessarily recommended</a> by itself).
+ And you have to call <tt>get</tt> functions
+ instead of implicit upcasts, which may be considered good or bad.
+ And there are no problems such as collisions
+ between names of the members of the base classes (which is good).
+</p>
+
+
+<a name="fqa-25.8"></a>
+<h2>[25.8] What is the &quot;dreaded diamond&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.8">FAQ:</a></b>
+ It&#39;s when there are circles in the inheritance graph. Here&#39;s the simplest case: <tt>Derived1</tt> and <tt>Derived2</tt> are
+ inherited from <tt>Base</tt>, and <tt>Join</tt> is inherited from both <tt>Derived1</tt> and <tt>Derived2</tt>. The circle in the graph may look
+ like a diamond if your imagination works that way.
+</p>
+
+<p>
+The problem is that <tt>Join</tt> objects have <i>two</i> <tt>Base</tt> sub-objects, so each data member is kept twice. Which is why
+ the diamond is called &quot;dreaded&quot;.
+</p>
+
+<p>
+The resulting ambiguities can be resolved. For example, when you have a <tt>Join</tt> object and refer to its <tt>_x</tt> variable inherited from <tt>Base</tt>,
+ you can tell the compiler which one you mean using <tt>Derived1::_x</tt> or <tt>Derived2_::x</tt>. When you upcast from <tt>Join*</tt>
+ to <tt>Base*</tt>, you can pick one of the two <tt>Base</tt> sub-objects by first casting the pointer to <tt>Derived1*</tt> or <tt>Derived2*</tt>.
+ But this is almost always not the right thing to do. The right thing to do is usually to
+ <a href="inheritance-multiple.html#fqa-25.9">tell the compiler to keep a single sub-object</a>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Most C++ programmers out there don&#39;t understand why would anyone say <tt>(Derived1*)pJoin</tt> in a context where
+ a <tt>Base*</tt> is expected. This by itself is a good reason to avoid having two sub-objects of <tt>Base</tt> in <tt>Join</tt>.
+</p>
+
+<p>
+If you feel that things are getting pointlessly complicated at this point, it may be an indication of good taste.
+</p>
+
+
+<a name="fqa-25.9"></a>
+<h2>[25.9] Where in a hierarchy should I use virtual inheritance?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.9">FAQ:</a></b>
+ At the top of the dreaded diamond - when you derive from <tt>Base</tt>, you should say:
+</p>
+
+<pre>
+class Derived1 : public virtual Base { ... };
+class Derived2 : public virtual Base { ... };
+</pre>
+
+<p>
+Note: when you define <tt>Join</tt>, you can&#39;t convince the compiler to keep a single <tt>Base</tt> sub-object - it will
+ do whatever the definitions of <tt>Derived1</tt> and <tt>Derived2</tt> tell it to do. That is, when you define the
+ classes derived from <tt>Base</tt>, you must plan ahead to support circles in the inheritance graph.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Let&#39;s put aside the question whether the support for both options - one and two <tt>Base</tt> sub-objects -
+ is a good thing, and concentrate on the way C++ gives you to choose between these options. Doing it
+ &quot;at the top of the diamond&quot; is annoying, because you have to think about the entire hierarchy when you
+ define the classes close to its top. That is, either <i>all</i> derived classes will have several <tt>Base</tt> sub-objects or
+ <i>all</i> of them will have one (forcing the <a href="inheritance-multiple.html#fqa-25.13">users</a> and the <a href="inheritance-multiple.html#fqa-25.12">implementers</a> of derived classes to deal with the problems of virtual inheritance).
+</p>
+
+<p>
+In general, it is a special case of the generic C++ principles of specifying everything in terms
+ of <a href="io.html#fqa-15.1">types and their attributes</a>, as well as having the user <a href="mixing.html#fqa-32.8">deal with the low-level details</a>
+ related to underlying language feature implementation.
+</p>
+
+
+<a name="fqa-25.10"></a>
+<h2>[25.10] What does it mean to &quot;delegate to a sister class&quot; via virtual inheritance?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.10">FAQ:</a></b>
+ If you have a <a href="inheritance-multiple.html#fqa-25.9">diamond-like hierarchy with virtual inheritance</a>, and <tt>Base</tt> has two virtual functions f and g,
+ then <tt>Derived1</tt> can implement f, <tt>Derived2</tt> can implement g and <tt>Derived1::f</tt> can call <tt>Derived2::g</tt> by simply
+ saying <tt>g();</tt> or (more verbosely and equivalently) <tt>Base::g();</tt> - that is, without knowing anything about
+ the existence of <tt>Derived2</tt>.
+</p>
+
+<p>
+This is a &quot;powerful technique&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> &quot;Powerful&quot;. What exactly can you do this way that can&#39;t be done equally well or better in ways more clear
+ to the average developer?
+</p>
+
+<p>
+What&#39;s that? You say that you only care about the enlightened wizards (variant: the set of wizards consists of a single person - yourself),
+ not the mediocre droids from the rank-and-file? Well, I&#39;ll leave the interesting discussion of your personality aside.
+ I&#39;ll leave it aside in order to point out that some of the people whose programming abilities I admire can&#39;t be bothered to
+ learn the quirks of C++ anywhere near my level. My level, in turn, isn&#39;t itself anywhere near &quot;complete&quot; knowledge
+ of this wonderful language.
+</p>
+
+
+<a name="fqa-25.11"></a>
+<h2>[25.11] What special considerations do I need to know about when I use virtual inheritance?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.11">FAQ:</a></b>
+ Usually virtual inheritance is a good idea only if the virtual base class and classes derived from it have little
+ or no data.
+</p>
+
+<p>
+BTW, even if they have no data at all, using virtual inheritance can still be better than non-virtual inheritance.
+ For example, if you have two <tt>Base</tt> sub-objects (with no members), you can end up with two pointers to the
+ different sub-objects, and comparing them would tell you that these are two different objects, which they aren&#39;t,
+ at some level. Quote: &quot;Just be careful - very careful&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yeah. Be vewy, vewy caweful...
+</p>
+
+<p>
+The FAQ&#39;s advice is a special case of its <a href="inheritance-multiple.html#fqa-25.4">other</a> advice about inheritance - data in base classes
+ interacts badly with MI. And as the FAQ correctly points out, not having data in base classes
+ doesn&#39;t solve all of the problems.
+</p>
+
+
+<a name="fqa-25.12"></a>
+<h2>[25.12] What special considerations do I need to know about when I inherit from a class that uses virtual inheritance?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.12">FAQ:</a></b>
+ Derived classes call the constructors of their virtual base classes directly. In particular, when a virtual
+ base class has no default constructor, you have to call its constructor explicitly in the initialization
+ lists of the constructors of the derived class.
+</p>
+
+<p>
+If the base class follows <a href="inheritance-multiple.html#fqa-25.11">the FAQ's advice</a> about not having data in virtual base classes, then the base class probably has a trivial default
+ constructor and you don&#39;t have to care about the issue when you define derived classes.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If the base class follows
+<a href="ctors.html#fqa-10.6">the FQA's advice</a> to avoid non-trivial constructors and use
+initialization functions when needed, you don&#39;t have to worry about initialization of derived classes
+with virtual base classes, either.
+</p>
+
+
+<a name="fqa-25.13"></a>
+<h2>[25.13] What special considerations do I need to know about when I use a class that uses virtual inheritance?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.13">FAQ:</a></b>
+ Don&#39;t use downcasts using the C-like syntax <tt>(Derived*)pBase</tt>. Use <tt>dynamic_cast&lt;Derived*&gt;(pBase)</tt>.
+</p>
+
+<p>
+The answer is unfinished according to a &quot;TODO&quot; remark in it.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The problem seems to be that with virtual inheritance, the offset that must be added to <tt>pBase</tt> to make
+ it <tt>pDerived</tt> depends on the classes <i>derived from Derived</i>
+ (like the <tt>Join</tt> class from the <a href="inheritance-multiple.html#fqa-25.8">"dreaded diamond"</a> example). So the compiler can&#39;t generate code
+ adding a constant offset, which is what C-style casts do when it comes to class hierarchies (upcasting and downcasting).
+</p>
+
+<p>
+Why does the code silently compile to a wrong program, despite the fact that C++
+ <a href="inheritance-multiple.html#fqa-25.9">already forced us</a> to inform the compiler that we have virtual inheritance at the definitions of
+ the classes involved in the cast operation
+ (not the definition of the <tt>Join</tt> class which isn&#39;t necessarily visible at the context where the cast operation is compiled)?
+Why doesn&#39;t the compiler produce an error message or generates correct code as if we used <tt>dynamic_cast</tt>?
+</p>
+
+<p>
+The answer is simple: in C++, the compiler compiles random meaningless things because it
+<a href="inheritance-mother.html#fqa-23.5">can't be bothered</a> not to.
+</p>
+
+
+<a name="fqa-25.14"></a>
+<h2>[25.14] One more time: what is the exact order of constructors in a multiple and/or virtual inheritance situation?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.14">FAQ:</a></b>
+ So and so.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> I don&#39;t want to summarize it, because why would anyone want to know that? Well, except maybe to suppress
+ stupid compiler warnings about the orders of things in initialization lists not matching the actual order of construction.
+</p>
+
+<p>
+Well, <a href="inheritance-multiple.html#fqa-25.12">why</a> would you use initialization lists?
+</p>
+
+
+<a name="fqa-25.15"></a>
+<h2>[25.15] What is the exact order of destructors in a multiple and/or virtual inheritance situation?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/multiple-inheritance.html#faq-25.15">FAQ:</a></b>
+ The reverse order of construction.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Right. But you probably shouldn&#39;t write code that depends on these things. Your colleagues may get annoyed.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

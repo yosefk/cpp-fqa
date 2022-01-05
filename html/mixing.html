@@ -1,0 +1,436 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: How to mix C and C++</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>How to mix C and C++</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+These questions are about mixing C and C++, which may be harder than you&#39;d expect from the names of those languages, but easier than, say, <a href="mixing.html#fqa-32.1">mixing C++ and C++</a>. Stay tuned.
+</p>
+
+<ul>
+<li><a href="mixing.html#fqa-32.1">[32.1] What do I need to know when mixing C and C++ code?</a></li>
+<li><a href="mixing.html#fqa-32.2">[32.2] How can I include a standard C header file in my C++ code?</a></li>
+<li><a href="mixing.html#fqa-32.3">[32.3] How can I include a non-system C header file in my C++ code?</a></li>
+<li><a href="mixing.html#fqa-32.4">[32.4] How can I modify my own C header files so it&#39;s easier to #include them in C++ code?</a></li>
+<li><a href="mixing.html#fqa-32.5">[32.5] How can I call a non-system C function <tt>f(int,char,float)</tt> from my C++ code?</a></li>
+<li><a href="mixing.html#fqa-32.6">[32.6] How can I create a C++ function <tt>f(int,char,float)</tt> that is callable by my C code?</a></li>
+<li><a href="mixing.html#fqa-32.7">[32.7] Why is the linker giving errors for C/C++ functions being called from C++/C functions?</a></li>
+<li><a href="mixing.html#fqa-32.8">[32.8] How can I pass an object of a C++ <tt>class</tt> to/from a C function?</a></li>
+<li><a href="mixing.html#fqa-32.9">[32.9] Can my C function directly access data in an object of a C++ <tt>class</tt>?</a></li>
+<li><a href="mixing.html#fqa-32.10">[32.10] Why do I feel like I&#39;m &quot;further from the machine&quot; in C++ as opposed to C?</a></li>
+</ul>
+
+<a name="fqa-32.1"></a>
+<h2>[32.1] What do I need to know when mixing C and C++ code?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.1">FAQ:</a></b>
+
+ You should check your vendor&#39;s documentation. Most frequently the rules are:
+</p>
+
+<ul>
+<li> You must compile <tt>main</tt> with your C++ compiler.</li>
+<li> You must link everything with your C++ linker.</li>
+<li> Your C and C++ compiler should be compatible, which probably means they should have the same vendor and version.</li>
+</ul>
+
+<p>
+And you&#39;ll need to read the rest of this section so that your C functions can call your C++ functions and vice versa.
+</p>
+
+<p>
+Or you can compile the C code with your C++ compiler - you may need to change the code, but you may also find bugs this
+way, so it&#39;s a good thing to do. Unless you don&#39;t have the C code in source form, of course.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You have little chances to successfully apply the rules unless you understand
+the underlying technical problem the rules try to address. The problem is in all the things
+in C++ that can not be translated to C straight-forwardly (mostly exceptions), and the things
+which can be translated in <i>several</i> ways (initialization of global variables before <tt>main</tt>
+and finalization after <tt>main</tt>, mangling names of overload &amp; template functions, virtual
+function calls, constructor prototypes, layout of derived classes, RTTI - this list is quite
+large). Many languages which are easy to mix with C have such features. However, unlike C++
+they also come with a formal or a de-facto standard defining the ABI (application binary interface)
+or a source-level interface for C interoperability. The C++ standard doesn&#39;t bother.
+</p>
+
+<p>
+Most of these things can only cause problems when a particular C++ function is explicitly called.
+This kind of things is addressed in the rest of the questions in this section. However,
+the global initialization &amp; finalization sequences are never explicitly called - hence the
+requirement about compiling <tt>main</tt> and linking the program with the C++ compiler. As to the
+need to use C and C++ compilers from the same vendor - this is true in theory, but in practice
+C compilers for a given hardware/OS configuration will interoperate smoothly. So will the
+C++ compilers as long as the C subset of the calling conventions is involved. However, this requirement
+is almost always a must when <i>mixing C++ and C++</i> - for example, when <a href="picture.html#fqa-6.3">third-party libraries with C++ interfaces</a> are involved.
+Think about it: mixing C and C++ is easier than mixing C++ and C++. Isn&#39;t this <i>amazing</i>?
+</p>
+
+<p>
+This situation is one excellent reason <i>not</i> to follow the FAQ&#39;s advice to compile your C code
+with a C++ compiler: C code is more portable. There are other reasons to keep C code in C, such
+as compilation time, better accessibility (there&#39;s no name mangling so functions bundled into
+a shared library are easier to call), etc.
+</p>
+
+
+<a name="fqa-32.2"></a>
+<h2>[32.2] How can I include a standard C header file in my C++ code?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.2">FAQ:</a></b>
+
+ Like this: <tt>#include &lt;cstdio&gt;</tt>, and then <tt>std::printf(&quot;I like std::!\n&quot;)</tt>. If you don&#39;t like
+<tt>std::</tt>, get over it. That&#39;s the way standard names are accessed.
+</p>
+
+<p>
+If you compile old C code with a C++ compiler, the following will also work: <tt>#include &lt;stdio.h&gt;</tt>,
+and then <tt>printf(&quot;No std::!\n&quot;);</tt> - all due to the magic of namespaces.
+</p>
+
+<p>
+If you want to include a <i>non-standard</i> C header, see the next questions.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Um, if <tt>printf</tt> and <tt>std::printf</tt> both work, what&#39;s there to get over? <tt>printf</tt> is so standard
+that there seems to be little point in mentioning it over and over again. As to the &quot;magic of namespaces&quot;,
+this particular case doesn&#39;t really seem to have anything to do with it. For some reason, the global
+unmangled <tt>extern &quot;C&quot; printf</tt> is also made accessible via <tt>namespace std</tt> by the C++ standard. What&#39;s
+so mysterious or amusing here? Perhaps the FAQ meant &quot;the magic of standards&quot;.
+</p>
+
+<p>
+If you want to include a non-standard C header, basically you&#39;ll have to <a href="mixing.html#fqa-32.3">tweak</a> them the same way your
+compiler vendor tweaked the standard C headers.
+</p>
+
+
+<a name="fqa-32.3"></a>
+<h2>[32.3] How can I include a non-system C header file in my C++ code?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.3">FAQ:</a></b>
+
+ Like this:
+</p>
+
+<pre>
+extern &quot;C&quot; {
+#include &quot;foo.h&quot;
+}
+</pre>
+
+<p>
+If <tt>foo.h</tt> is your header, you can change it to make inclusion from C++ easier.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The reason you have to do this is that C function names are not <i>mangled</i> - in C, there&#39;s
+no overloading, so <tt>printf</tt> is known to the linkers, debuggers, etc. as <tt>printf</tt>. But in C++
+there may be several functions with the same name. So the compiler has to make up a unique name using an encoding
+of the argument types. For example, the GNU C compiler generates
+an assembly function called <tt>_Z6printfPKc</tt> from C++ source code defining <tt>int printf(const char*)</tt>.
+Different C++ compilers will do the name mangling differently - one of the many reasons making
+them incompatible with each other.
+</p>
+
+<p>
+Theoretically there may be more differences between C and C++ functions, and <tt>extern &quot;C&quot;</tt>
+is your way to tell your C++ compiler &quot;these are C functions, deal with all the differences&quot;.
+In practice, the problem is name mangling. Too bad there&#39;s no <tt>extern &quot;C++ compiled with a different compiler&quot;</tt>.
+</p>
+
+
+<a name="fqa-32.4"></a>
+<h2>[32.4] How can I modify my own C header files so it&#39;s easier to #include them in C++ code?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.4">FAQ:</a></b>
+
+ Like this:
+</p>
+
+<pre>
+#ifdef __cplusplus
+extern &quot;C&quot; {
+#endif
+void foo();
+void bar();
+#ifdef __cplusplus
+}
+#endif
+</pre>
+
+<p>
+Ew, macros are <i>evil</i>, <a href="picture.html#fqa-6.16">wash your hands</a> when you are done.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Together with the usual <tt>#ifndef,#define,#endif</tt> trinity, we&#39;ve just used 7 preprocessor
+directives to define a single interface. And these seven directives contain zero information
+specific to that interface. And they don&#39;t help the compiler to do things compilers of other
+languages can do, like locating the implementation of the interface.
+</p>
+
+<p>
+If you want to wash your hands after each preprocessor directive you touch in C++ and have
+some time left to do anything else with those hands, you&#39;ll have to work in a bathroom.
+</p>
+
+
+<a name="fqa-32.5"></a>
+<h2>[32.5] How can I call a non-system C function <tt>f(int,char,float)</tt> from my C++ code?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.5">FAQ:</a></b>
+
+ Prefix its prototype with <tt>extern &quot;C&quot;</tt> when you declare it. You can declare
+a whole bunch of C functions by surrounding the declarations with an <tt>extern &quot;C&quot; { ... }</tt>
+block.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yeah, we&#39;ve <a href="mixing.html#fqa-32.4">been</a> through this already. It doesn&#39;t matter whether a declaration
+is in a header file or not. Neither C nor C++ syntax is <a href="inheritance-mother.html#fqa-23.10">aware</a> of header files or other
+preprocessor-related things. Header files are just an <a href="templates.html#fqa-35.12">automated copy-paste mechanism</a>.
+</p>
+
+
+<a name="fqa-32.6"></a>
+<h2>[32.6] How can I create a C++ function <tt>f(int,char,float)</tt> that is callable by my C code?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.6">FAQ:</a></b>
+
+ Prefix the declaration and the definition with <tt>extern &quot;C&quot;</tt>. You can&#39;t have
+more than one <tt>f</tt> C-callable function since C has no overloading.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Oh, how simple! <i>And what if the function throws an exception</i>? You didn&#39;t think you were going
+to escape <i>that</i> easily, did you?
+</p>
+
+<p>
+I&#39;ve just tried this with the GNU C and C++ compilers. When a C++ function calls a C function
+which calls a C++ function which throws an <a href="exceptions.html#fqa-17.1">exception</a>, you can&#39;t even catch it at the first
+C++ function, not to mention disposing the resources allocated by the C function.
+</p>
+
+<p>
+So, make sure you catch all possible exceptions in your C-callable C++ functions. By the way, C++ exceptions
+can be of <a href="exceptions.html#fqa-17.6">any built-in or user-defined type</a>, and you can&#39;t catch an arbitrary exception and check
+what kind of exception it is at run time, and <tt>operator new</tt> <a href="heap.html#fqa-16.6">can throw exceptions</a>. Enjoy.
+</p>
+
+
+<a name="fqa-32.7"></a>
+<h2>[32.7] Why is the linker giving errors for C/C++ functions being called from C++/C functions?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.7">FAQ:</a></b>
+
+ You probably forgot <tt>extern &quot;C&quot;</tt>, so the linker looks for a <a href="mixing.html#fqa-32.3">mangled</a> C++ name instead
+of an unmangled C name.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Quiz: does a typical C++ linker <i>try to check</i> whether the unmangled C name is defined,
+and if in fact it is, ask you something like &quot;did you forget <tt>extern &quot;C&quot;</tt>?&quot; Hint: if it actually did this simple thing,
+how frequently would this question be asked?
+</p>
+
+<p>
+You see, one of the advantages of using C++ is that you get to work with <a href="picture.html#fqa-6.1">mature</a>,
+industrial-strength tool chains.
+</p>
+
+
+<a name="fqa-32.8"></a>
+<h2>[32.8] How can I pass an object of a C++ <tt>class</tt> to/from a C function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.8">FAQ:</a></b>
+
+ You can use <tt>class Fred</tt> in C++ (<tt>#ifdef __cplusplus</tt>), and a <tt>typedef struct Fred Fred;</tt> otherwise.
+Then you can define <tt>extern &quot;C&quot;</tt> functions which accept <tt>Fred*</tt> (the FAQ contains two screens of code
+illustrating this point, including both ANSI and K&amp;R C function prototypes).
+</p>
+
+<p>
+Note that this way, C++ code will be able to tell whether two pointers to class objects point to
+the same object, and C code won&#39;t. That&#39;s because when a pointer to a base class object is compared to
+a pointer to a derived class object, the compiler may need to do some pointer arithmetics before the
+comparison. In C++, this is done implicitly when the expression <tt>p == q</tt> is compiled.
+</p>
+
+<p>
+Note that if you convert pointers to objects of classes to <tt>void*</tt> and compare them, neither C
+nor C++ compilers will be able to do the right pointer adjustments.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <i>Please</i> don&#39;t follow this advice! This FAQ keeps telling how <a href="picture.html#fqa-6.15">evil</a> the preprocessor is,
+and then it proudly presents this <i>really nasty</i> scheme. Defining type names to mean different
+things based on a preprocessor flag is as close to &quot;evil preprocessor abuse&quot; as it gets. Especially
+with all these pointer equality subtleties involved (these are <a href="inheritance-multiple.html#fqa-25.11">ridiculous</a> by themselves - seriously,
+if you can shoot yourself in the foot by simply <i>comparing two pointers to objects</i>, how &quot;object-oriented&quot;
+is the language?).
+</p>
+
+<p>
+Here&#39;s a pretty straight-forward solution: in the header file which is supposed to be used from C,
+declare a <tt>struct FredObj</tt> or something (just <i>use a different name</i> than <tt>Fred</tt>, so that people can
+at least figure out what each name means! Sheesh!). In the C++ implementation file, define the structure
+to hold a single member - a <tt>Fred</tt> object. This doesn&#39;t lead to any run-time overhead. The extra
+syntax needed for dereferencing is worth the benefits -  you can compare pointers and have fun in safety.
+</p>
+
+<p>
+And if you <i>really</i> need to return objects of classes
+derived from Fred - <i>just define a structure with a single member of type</i> <tt>Fred*</tt> <i>and never mind
+the tiny run-time overhead</i>. If you are using class hierarchies to implement functionality so simple
+that this tiny run-time overhead is comparable to the actual work done by the classes,
+<i>throw these class hierarchies away</i> and stop messing
+up the lives of your innocent users.
+</p>
+
+<p>
+Why do these people have to make everything cryptic <i>and</i> dangerous?
+</p>
+
+
+<a name="fqa-32.9"></a>
+<h2>[32.9] Can my C function directly access data in an object of a C++ <tt>class</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.9">FAQ:</a></b>
+
+ Yes, if the class has no <tt>virtual</tt> functions or non-public members, and so do all objects
+it contains by value. The FAQ outlines the way inheritance and virtual functions are implemented
+at a level allowing you to do the pointer arithmetics in order to access member data from C in
+these clearly illegal cases.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <i>&quot;Can&quot;</i> may mean many things: &quot;can do it with a particular version of C &amp; C++ compilers&quot;,
+&quot;can do it with all compilers which are actually out there&quot;, &quot;can do it with any standard-conforming
+compilers&quot;, and even &quot;should normally do it because provisions were made to make it easy&quot;.
+</p>
+
+<p>
+The short answer is that you should only do it with the so-called POD types
+(which basically means &quot;structures
+defined using C syntax&quot; for people who are not professional language lawyers). The only reasonable
+cases when breaking the rules is not an entirely moronic act are (1) when you play around with the language
+to see what&#39;s inside, (2) when you have to retrieve data from classes with definitions only available
+in binary form (you may want to check if your actions are legal first) and (3) you are implementing a debugger
+or the like, in which case you&#39;re writing legitimately non-portable code.
+</p>
+
+<p>
+In case (2), you could also ask &quot;Can my C++ function directly access private data in an
+ object of a C++ class&quot;. Most often it can if you add a <tt>#define private public</tt> preprocessor directive
+ at the top of your <tt>.cpp</tt> file. This works quite portably and does not depend on the layouts of C++ classes in your particular compiler.
+</p>
+
+<p>
+People who want their C code to directly access data of a C++ class object for &quot;speed&quot; or something
+probably don&#39;t have enough real problems. The artificial problems they create for themselves will
+teach them a good lesson pretty soon.
+</p>
+
+
+<a name="fqa-32.10"></a>
+<h2>[32.10] Why do I feel like I&#39;m &quot;further from the machine&quot; in C++ as opposed to C?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/mixing-c-and-cpp.html#faq-32.10">FAQ:</a></b>
+
+ You are! C++ is a high-level language. In C, you can see where every clock cycle is spent;
+on the other hand, in C++ you can work at higher levels of abstraction and write more compact programs.
+Of course you can still write bad code - the idea is not to prevent bad programmers from doing it,
+but make it possible for the reasonable ones to write superior code!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> What is this question doing here? Presumably people try to mix C and C++, and have an <tt>extern &quot;C&quot;</tt>
+function implemented in C++ throw an exception, or the initialization stuff before <tt>main</tt> never gets
+called, or they compare pointers to C++ class objects from C and it doesn&#39;t work, and they don&#39;t know why
+or how to even start figuring it out. The real question
+probably is &quot;why do I feel like I&#39;m underneath the machine, not just close to it as opposed to C&quot;?
+</p>
+
+<p>
+C++ is not a higher-level language than C. The damage caused by low-level errors is still not limited. You
+still have to think about pointers and object life cycles and integer endianness and many other things.
+But on top of that, there&#39;s a huge amount of things done implicitly, like global initialization and
+destruction, stack unwinding, base/derived classes pointer adjustment, and many more things - and all of them
+combine with the low-level errors into a single deep, wide tar pit with the programmer in the middle.
+</p>
+
+<p>
+A good high-level language allows you to forget about many small details of program execution.
+A good low-level language allows you to control the many small details of program execution. C++ is not much
+of a high-level language, but it&#39;s not a very good low-level language either.
+</p>
+
+<p>
+As to the remark about &quot;seeing every cycle spent in C programs&quot;, I really believe that the FAQ author knows
+ that you can&#39;t see that,
+since that&#39;s a pretty basic fact. You can&#39;t &quot;see every cycle&quot; spent in <i>assembly</i> programs in most cases - you
+have to know the exact target processor variant and the system configuration and a zillion other things. The FAQ
+is probably just being poetical.
+</p>
+
+<p>
+But there&#39;s more to this remark than factual inaccuracy - it concentrates on a moderate problem, failing
+to mention an arguably more severe one. Consider the C++ code <tt>p = obj.getVec().begin();</tt>.
+The run-time of this code is unclear because it depends on whether <tt>obj</tt> is a value or a reference (the
+latter may be slower); in C it would be more clear. But there&#39;s another issue: is this code correct
+at all? If <tt>getVec()</tt> returns a reference to <tt>std::vector</tt> object, maybe it is correct, but if it returns it
+by value, it is certainly wrong. The compiler won&#39;t even warn you, and you won&#39;t <a href="ref.html#fqa-8.6">notice</a> the problem in the code without
+checking the definition of <tt>getVec</tt>. Not only is it hard to figure out how much time a C++ program runs,
+it is hard to even tell what it <i>does</i>, which is not supposed to be typical of high-level languages.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

@@ -1,0 +1,444 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Pointers to member functions</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Pointers to member functions</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+This is basically about the lack of function objects and closures in C++.
+</p>
+
+<ul>
+<li><a href="function.html#fqa-33.1">[33.1] Is the type of &quot;pointer-to-member-function&quot; different from &quot;pointer-to-function&quot;?</a></li>
+<li><a href="function.html#fqa-33.2">[33.2] How do I pass a pointer-to-member-function to a signal handler, X event callback, system call that starts a thread/task, etc?</a></li>
+<li><a href="function.html#fqa-33.3">[33.3] Why do I keep getting compile errors (type mismatch) when I try to use a member function as an interrupt service routine?</a></li>
+<li><a href="function.html#fqa-33.4">[33.4] Why am I having trouble taking the address of a C++ function?</a></li>
+<li><a href="function.html#fqa-33.5">[33.5] How can I avoid syntax errors when calling a member function using a pointer-to-member-function?</a></li>
+<li><a href="function.html#fqa-33.6">[33.6] How do I create and use an array of pointer-to-member-function?</a></li>
+<li><a href="function.html#fqa-33.7">[33.7] Can I convert a pointer-to-member-function to a <tt>void*</tt>?</a></li>
+<li><a href="function.html#fqa-33.8">[33.8] Can I convert a pointer-to-function to a <tt>void*</tt>?</a></li>
+<li><a href="function.html#fqa-33.9">[33.9] I need something like function-pointers, but with more flexibility and/or thread-safety; is there another way?</a></li>
+<li><a href="function.html#fqa-33.10">[33.10] What the heck is a functionoid, and why would I use one?</a></li>
+<li><a href="function.html#fqa-33.11">[33.11] Can you make functionoids faster than normal function calls?</a></li>
+</ul>
+
+<a name="fqa-33.1"></a>
+<h2>[33.1] Is the type of &quot;pointer-to-member-function&quot; different from &quot;pointer-to-function&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.1">FAQ:</a></b>
+ It is.
+</p>
+
+<p>
+If you have a non-member function <tt>void f(int)</tt>, then <tt>&amp;f</tt> is of type <tt>void (*)(int)</tt>.
+</p>
+
+<p>
+If you have a non-<tt>static</tt> member function <tt>void C::f(int)</tt>, then <tt>&amp;C::f</tt> is of type <tt>void (C::*)(int)</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Ahem.
+<tt>::*)(</tt> - line noise creeps in. There&#39;s more of it in the rest of this section.
+</p>
+
+<p>
+Anyway, the reason the types <i>should</i> be different is that a member function accepts a hidden
+parameter - <tt>this</tt>. And the types of function pointers are derived from the types
+      of the arguments and the return value. Obviously, the self-documenting bit of syntax <tt>C::*</tt>
+      says that the function gets a <tt>this</tt>
+      parameter of type <tt>C</tt>.
+</p>
+
+
+<a name="fqa-33.2"></a>
+<h2>[33.2] How do I pass a pointer-to-member-function to a signal handler, X event callback, system call that starts a thread/task, etc?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.2">FAQ:</a></b>
+ You don&#39;t. A member function can&#39;t be used without an object of the class, so the whole thing can&#39;t work.
+What you can do is write a non-member function wrapping your pointer-to-member-function call.
+</p>
+
+<p>
+For example,
+      thread creation callbacks usually have a <tt>void*</tt> argument. You could pass an object pointer
+      in that argument to the callback (which has to be a non-member). The callback would then cast the <tt>void*</tt> down to the actual type and call
+      the object&#39;s method.
+</p>
+
+<p>
+Some functions, like <tt>signal</tt>, use callbacks without a <tt>void*</tt> argument or anything similar. In that case, you have
+      no choice but save a pointer to the object in a global variable. The callback can get the object
+      pointer from that global variable and call the method.
+</p>
+
+<p>
+<tt>static</tt> member functions <i>can</i> be used in the contexts where a C callback is expected, if
+      they are <tt>extern &quot;C&quot;</tt>. Although on most compilers it would probably work without <tt>extern &quot;C&quot;</tt>,
+      the standard says it doesn&#39;t have to work.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The picture painted by the FAQ isn&#39;t very pretty, but the reality can get even worse - that is,
+      more code to write. For example, you may want to call <i>any</i> method of an object - to select
+      the method to call at run time, not compile time. <i>That</i> would really mean
+      that you want to pass a pointer-to-member-function as a callback, which is what the question
+      is all about. In the scenario in the FAQ,
+      your problem is <i>passing the object pointer</i>, but there&#39;s actually <i>no pointer to a member function</i>.
+</p>
+
+<p>
+Anyway, in this &quot;full-blown&quot; use case, passing just the object pointer via the
+      <tt>void*</tt> argument is not enough. You&#39;d have to wrap the two pointers (the object pointer and the function pointer)
+      in a structure, pass a <tt>void*</tt> to that structure to your callback and unpack the structure in that callback.
+      Simple, but quite verbose. Pretty much like implementing function calls in assembly.
+</p>
+
+<p>
+This illustrates the fact that C++ is a very low-level language. When you have a Python object <tt>obj</tt>
+      with a method <tt>func</tt>, and you want someone expecting a callback to call <tt>obj.func()</tt>, you can create the callback object
+      with the expression <tt>obj.func</tt>. As simple as that. In some high-level languages doing this is equally easy
+      and in some it&#39;s more verbose, but <i>never, ever</i> would you have to save a pointer to your
+      object to a global variable (and worry about making it thread-local when relevant, etc.).
+</p>
+
+<p>
+The problem is that in C++, there&#39;s no single concept of a &quot;callable object&quot; - instead, there are <a href="function.html#fqa-33.7">unrelated</a>
+      low-level mechanisms for calling functions. For example, non-member function pointers work differently
+      from member function pointers. There are ubercompetent people out there who actually think they
+      can get away with casting <tt>void (C::*p)(int)</tt> to type <tt>void (*)(C*,int)</tt>, because, you know,
+      what we need is to pass <tt>this</tt> as the first parameter. This can work with many compilers, until
+      you need to pass a pointer to a <tt>virtual</tt> function. Outsmarting compilers is usually dumb,
+      especially C++ compilers. There really <i>is</i> more than one function call mechanism, and the different
+      kinds of function pointer are not convertible - you have to implement adapters of varying
+      degrees of clumsiness.
+</p>
+
+<p>
+Regarding the <tt>static</tt>-members-as-callbacks issue: if your implementation uses different binary calling conventions for C functions and C++ <tt>static</tt> member
+      functions, call the support and inform them that their developers consume mind-altering chemicals at work.
+</p>
+
+
+<a name="fqa-33.3"></a>
+<h2>[33.3] Why do I keep getting compile errors (type mismatch) when I try to use a member function as an interrupt service routine?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.3">FAQ:</a></b>
+ This is a special case of the <a href="function.html#fqa-33.2">previous</a> question.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It is. So we&#39;ll use the opportunity to - surprise! - point out that handling interrupts in C++ can be done
+      <i>just as well</i> as anything else. <i>Not much of a compliment</i>, really, but worth noting.
+</p>
+
+<p>
+One of the problems
+      with C++ is all the <i>unjustified</i> criticism. For example, some people will scream something like
+      &quot;What?! Handling interrupts in C++?!&quot; - possibly followed by (false) claims about C++ being
+      a &quot;high-level language&quot; (yeah, right) and maybe remarks about your mental health and stuff.
+      These people don&#39;t know what they&#39;re talking about, and can make other people believe that C++
+      only looks like a bad thing if one doesn&#39;t know what he&#39;s talking about.
+</p>
+
+<p>
+Clarifications: of course you shouldn&#39;t throw exceptions in interrupt handlers, or call <tt>new</tt>, etc. Of course
+      doing the job in C would be better, but this isn&#39;t special to interrupts. Of course
+      many C++ features can do more damage when you <a href="operator.html#fqa-13.3">use them
+      to talk to hardware</a> than elsewhere. All I&#39;m saying is that when you criticize something,
+you either accompany your claims with some reasoning or you have no chance to convince people
+      (at least not the ones worth the effort).
+</p>
+
+
+<a name="fqa-33.4"></a>
+<h2>[33.4] Why am I having trouble taking the address of a C++ function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.4">FAQ:</a></b>
+ Mmmm, you&#39;re trying to take the address in order to use it as a C function pointer, aren&#39;t you? Well,
+<a href="function.html#fqa-33.2">don't do that</a>.
+      And don&#39;t try to cast your way out of this, it won&#39;t work.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ didn&#39;t answer your question, did it? Instead, it assumed it knew what your problem was,
+ and then answered a different question.
+ Well, you could also ask your original question for a different reason.
+ Specifically, you are already aware of the fact that <tt>&amp;C::f</tt> <a href="function.html#fqa-33.1">has a different type</a> than <tt>&amp;f</tt>, but you don&#39;t know
+how to spell that type. So you&#39;re doing something semantically sensible, but you can&#39;t get the syntax right,
+ because C++ has <a href="templates.html#fqa-35.16">so much syntax making so little sense</a>.
+</p>
+
+<p>
+Well, I don&#39;t know the type of <tt>&amp;C::f</tt> either, because it depends on the arguments;
+ I only know it&#39;s something like <tt>T1 (C::*)(T2,T3,T4)</tt>. So here&#39;s a way to find out the type of an arbitrary C++ expression:
+</p>
+
+<pre>
+ template&lt;class T&gt;
+ void show_type(const T&amp;)
+ {
+   int eat_flaming_death[-1];
+ }
+ void test_func()
+ {
+   show_type(&amp;C::f);  
+ }
+</pre>
+
+<p>
+The compiler will then say something like <tt>In void show_type&lt;TheTypeYouWantedToFigureOut&gt;(): arrays of negative size are not allowed</tt>.
+In our case, <tt>TheTypeYouWantedToFigureOut</tt> will be substituted with the type of <tt>&amp;C::f</tt>.
+</p>
+
+<p>
+Here&#39;s the best part: there&#39;s a large <a href="http://www.boost.org/doc/html/boost_staticassert.html">"compile time assertions"</a> movement promoting a plethora of arcane macros
+ and templates which,
+ like <tt>show_type</tt>, will cause the compiler to fail with an error message hopefully mentioning something
+ related to the problem. This kind of thing is a <i>best practice</i> in C++. Isn&#39;t life amazing?
+</p>
+
+
+<a name="fqa-33.5"></a>
+<h2>[33.5] How can I avoid syntax errors when calling a member function using a pointer-to-member-function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.5">FAQ:</a></b>
+ With a <tt>typedef</tt>, making the type name readable, and a <tt>#define</tt> macro, making the <tt>((obj).*(func))</tt> syntax readable.
+ Ewww, macros are <a href="picture.html#fqa-6.15">evil</a>!
+</p>
+
+<p>
+There were <i>hundreds</i> of postings to <tt>comp.lang.c++</tt> about this, says the FAQ. The layer of syntax proposed above
+ could save the traffic.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ actually proposes to use the old and oh-so-evil C macros to cover up the brand new syntax introduced in C++. The FQA
+ will avoid further comments on this advice, since the target is too easy.
+</p>
+
+<p>
+The amazing part about the hundreds of messages is not the fact that people can&#39;t get the C++ syntax right.
+ The amazing part is the fact that people <i>wanted to use</i> pointers to member functions, despite the fact
+ that they are pretty useless. What you really need quite frequently is &quot;delegates&quot; or &quot;functors&quot; or &quot;closures&quot; - well,
+ anything that represents <i>both</i> the code (a function/an expression/...) and the data
+ (an object/bound local variables/...). C++
+ <a href="function.html#fqa-33.10">doesn't</a> support these things very well. Perhaps the <tt>comp.lang.c++</tt> posters tried to implement
+  something like this on top of C++ object and member function pointers. Maybe even something generic,
+  with templates inheriting from abstract base classes involved. Yeah, that sounds quite like
+  the favorite pass-time of C++ developers.
+</p>
+
+
+<a name="fqa-33.6"></a>
+<h2>[33.6] How do I create and use an array of pointer-to-member-function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.6">FAQ:</a></b>
+ First, <a href="function.html#fqa-33.5">add</a> a <tt>typedef</tt> and a macro. Then, use <tt>FuncPtrType arr[] = {&amp;C::f, &amp;C::g, &amp;C::h};</tt>
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Hey, why are we using an <a href="picture.html#fqa-6.15">evil</a> C array? Me not like this. How about:
+</p>
+
+<pre>
+std::vector&lt;FuncPtrType&gt; arr;
+arr.push_back(&amp;C::f);
+arr.push_back(&amp;C::g);
+arr.push_back(&amp;C::h);
+</pre>
+
+<p>
+There, it&#39;s much better now. Wait till you see the full type name of <tt>arr</tt> in a <a href="templates.html#fqa-35.17">compiler error message</a>.
+</p>
+
+
+<a name="fqa-33.7"></a>
+<h2>[33.7] Can I convert a pointer-to-member-function to a <tt>void*</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.7">FAQ:</a></b>
+ No, and if it seems to work on some platform, it doesn&#39;t make it legal.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Listen to the FAQ. This isn&#39;t just language lawyer talk - it <i>really</i> isn&#39;t going to work.
+  Check out <a href="http://www.codeproject.com/cpp/FastDelegate.asp">this article</a> - it has a lot of material
+  on C++ member function pointers. <b>WARNING:</b> this stuff can be used to scare little children.
+</p>
+
+<p>
+The bottom line is that unlike a global function pointer,
+ a member function pointer is not just the address of the first instruction of the function in most implementations,
+  apparently with the exception of the compiler by <a href="http://www.digitalmars.com/">Digital Mars</a>
+  (the company behind <a href="http://www.digitalmars.com/d/index.html">the D language</a>). That compiler generates &quot;thunk code&quot; which handles the differences
+  between various dispatching mechanisms (<tt>virtual</tt> vs. statically dispatched functions, different kinds of inheritance),
+  and uses the address of that thunk code to represent member function pointers. Quote from the article
+  about this implementation: &quot;Why doesn&#39;t everyone else do it this way?&quot;
+</p>
+
+<p>
+So, really, don&#39;t cast these things to <tt>void*</tt> - you can&#39;t even sensibly cast them to non-member function pointers.
+</p>
+
+
+<a name="fqa-33.8"></a>
+<h2>[33.8] Can I convert a pointer-to-function to a <tt>void*</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.8">FAQ:</a></b>
+ Stop that. No. And don&#39;t tell me it worked for you. It&#39;s illegal.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> C and C++ strongly separate between code and data (so do many languages and hardware processor implementations).
+  A pointer to a data object is not the same as a pointer to a function. However, in the vast majority of implementations
+  their sizes are going to be the same, so it&#39;s possible to convert a function pointer to a <tt>void*</tt>, and
+  then somewhere else convert it back and call the function.
+</p>
+
+<p>
+This violates the language rules. So does code assuming 2&#39;s complement integers and IEEE floating point.
+  The chance of both kinds of code to actually fail on an interesting platform is low. Admittedly, the
+  code-pointers-are-just-like-data-pointers assumption is less useful than
+  the signed-numbers-can-be-divided-using-right-shift assumption, though.
+  So typically one wouldn&#39;t do this kind of cast, after all.
+</p>
+
+
+<a name="fqa-33.9"></a>
+<h2>[33.9] I need something like function-pointers, but with more flexibility and/or thread-safety; is there another way?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.9">FAQ:</a></b>
+ A functionoid is what you need.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> &quot;Functionoid&quot; rhymes with <a href="http://foldoc.org/?marketroid">"marketroid"</a>, and is a term local to the FAQ,
+  used instead of the standard term
+  <a href="function.html#fqa-33.10">"functor"</a>.
+</p>
+
+
+<a name="fqa-33.10"></a>
+<h2>[33.10] What the heck is a functionoid, and why would I use one?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.10">FAQ:</a></b>
+ It means &quot;a function on steroids&quot;, of course. The FAQ goes on to describe a class with a single <tt>virtual</tt> function
+  called <tt>doit</tt>. An object of this class is basically just like a function except you can pass it arguments in its constructor,
+  and it can keep state between calls without thread-unsafe global variables. The discussion is very lengthy and didactic, there are lots of
+  examples. If you didn&#39;t say to yourself something like &quot;Oh, yeah, that problem&quot;, you can follow the link
+to the real FAQ&#39;s answer to see what this is all about.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> A &quot;functionoid&quot;
+(or functor, as it&#39;s normally called) is basically a manual emulation of
+ <a href="http://en.wikipedia.org/wiki/Closure_(computer_science)">closures</a>. Closures can save all those little
+ classes people create in order to have a function-pointer-plus-some-context. For example,
+ the following code, which tries to use a higher-order function (<tt>for_each</tt>) in a language without
+ closures (C++), is completely ridiculous:
+</p>
+
+<pre>
+struct Printer
+{
+  std::ostream&amp; out;
+  Printer(std::ostream&amp; o) : out(o) {}
+  template&lt;class T&gt;
+  void operator()(const T&amp; x) const { out&lt;&lt;x&lt;&lt;std::endl; }
+};
+void print_them(const std::vector&lt;int&gt;&amp; them)
+{
+  std::for_each(them.begin(), them.end(), Printer(std::cout));
+}
+</pre>
+
+<p>
+Clearly, a <tt>for</tt> loop wouldn&#39;t be nearly as bad. However, if we had closures, we could do something like this:
+</p>
+
+<pre>
+void print_them(const std::vector&lt;int&gt;&amp; them)
+{
+  std::for_each(them.begin(), them.end(), lambda(x) { std::cout &lt;&lt; x &lt;&lt; std::endl; });
+}
+</pre>
+
+<p>
+This would still be verbose because of smaller problems (<tt>std::</tt>, mentioning <tt>them</tt> twice),
+ but at least the stupid <tt>Printer</tt> class is now replaced with code generated implicitly by the compiler.
+</p>
+
+<p>
+Check out the monstrous <a href="http://www.boost.org/doc/html/lambda.html">boost lambda library</a> designed to work around the lack of closures in C++
+ in a desperate attempt to make higher-level functions of the kind defined at <tt>&lt;algorithm&gt;</tt> not
+ entirely useless. When I tried it, <tt>gcc</tt> wouldn&#39;t compile it without <tt>-ftemplate-depth=40</tt>
+ (the default template nesting depth limit, 17, is not enough for this library),
+ and I got <i>5 screens</i> of error messages from <i>a single line of code using the thing</i>. See also <a href="http://groups.google.com/group/comp.lang.c++.moderated/browse_thread/thread/100dd325c6d9ef77/a4444dc5dc9d94c0">this thread</a>,
+ especially the part where they explain how <tt>cout &lt;&lt; _1 &lt;&lt; endl</tt> works
+ but <tt>cout &lt;&lt; &quot;\t&quot; &lt;&lt; _1 &lt;&lt; endl</tt> doesn&#39;t (to get there quick, search for &quot;fails miserably&quot;, then continue to the reply).
+</p>
+
+
+<a name="fqa-33.11"></a>
+<h2>[33.11] Can you make functionoids faster than normal function calls?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/pointers-to-members.html#faq-33.11">FAQ:</a></b>
+ Sure! Instead of <tt>virtual</tt> functions, use <tt>inline</tt> member functions and make the code using the
+ &quot;functionoid&quot; a template.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This way the &quot;functionoid&quot; will compile slower than &quot;normal function calls&quot; though, not to mention
+ the loss of flexibility at run time.
+ The run time speed impact of the obsolete approach to inlining used by C++ is discussed <a href="inline.html#fqa-9.3">here</a>.
+ The compile time speed impact of C++ templates is discussed <a href="templates.html#fqa-35.12">here</a>.
+ The fact that it&#39;s <i>your</i> job to make sure things are inlined properly in this family of scenarios
+ is one problem with the lack of closures in C++ discussed <a href="function.html#fqa-33.10">above</a>.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

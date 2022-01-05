@@ -1,0 +1,323 @@
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<html>
+  <head>
+  <title>C++ FQA Lite: Classes and objects</title>
+  
+  <style type='text/css'>
+  <!--
+  body { font-family: arial; color: black; background: white }
+  h2   { color: black; background-color: #ddeeff }
+  h1   { color: black; background-color: #ddeeff }
+  h5   { background-color: #eeeeee }
+  pre  { background-color: #eeeeee }
+  .part{ color: gray }
+  .FQA { background-color: blue; color: gold }
+  .FAQ { background-color: gold; color: blue }
+  .corr{ color: red }
+  -->
+  </style>
+
+  </head>
+  <body>
+  <h1>Classes and objects</h1>
+  <small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html">FAQ</a></b><small class="part"> links.</small><hr>
+  
+<p>
+One of the stated goals of C++ is support for object-oriented programming. This page introduces C++ classes and outlines the tactics they use to defeat their purpose.
+</p>
+
+<ul>
+<li><a href="class.html#fqa-7.1">[7.1] What is a class?</a></li>
+<li><a href="class.html#fqa-7.2">[7.2] What is an object?</a></li>
+<li><a href="class.html#fqa-7.3">[7.3] When is an interface &quot;good&quot;?</a></li>
+<li><a href="class.html#fqa-7.4">[7.4] What is encapsulation?</a></li>
+<li><a href="class.html#fqa-7.5">[7.5] How does C++ help with the tradeoff of safety vs. usability?</a></li>
+<li><a href="class.html#fqa-7.6">[7.6] How can I prevent other programmers from violating encapsulation by seeing the <tt>private</tt> parts of my class?</a></li>
+<li><a href="class.html#fqa-7.7">[7.7] Is Encapsulation a Security device?</a></li>
+<li><a href="class.html#fqa-7.8">[7.8] What&#39;s the difference between the keywords <tt>struct</tt> and <tt>class</tt>?</a></li>
+</ul>
+
+<a name="fqa-7.1"></a>
+<h2>[7.1] What is a class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html#faq-7.1">FAQ:</a></b>
+ In OO software, &quot;the fundamental building block&quot;.
+</p>
+
+<p>
+A class is a type - a representation for a set of states (much like a C <tt>struct</tt>) and a set of operations for
+changing the state (moving from one state to another). Classes are similar to built-in types in this sense
+(for example, an <tt>int</tt> holds a bunch of bits and provides operations like + and *).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s a correct theoretical definition. It&#39;s equally applicable to all OO languages, but they
+are different when it comes to more specific, practical aspects of their particular implementation of classes.
+</p>
+
+<p>
+How do I create objects? And <a href="heap.html#fqa-16.1">what happens</a> when they are no longer needed? Is it <i>my</i> job to figure out which ones
+are unused and deallocate them? Bad.
+</p>
+
+<p>
+<a href="class.html#fqa-7.2">What happens</a> if I have bugs? If I have a pointer to an object, can it be invalid (be a random bit pattern, point to a dead object)?
+It can? The program will <i>crash</i> or worse?
+What about arrays of objects and out-of-bounds indexes? Crash or a modification of some other random object?
+You call that encapsulation? Bad.
+</p>
+
+<p>
+<a href="class.html#fqa-7.4">What happens</a> if I change/add/remove a private value, without changing the interface?
+All code using the class has to be <i>recompiled</i>? I bet you call that encapsulation, too. Bad.
+</p>
+
+<p>
+I don&#39;t like C++ classes.
+</p>
+
+
+<a name="fqa-7.2"></a>
+<h2>[7.2] What is an object?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html#faq-7.2">FAQ:</a></b>
+ A chunk of memory with certain semantics. The semantics are defined by the class of the object.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> They are also defined by the bugs which cause the code to overwrite data of these objects without bothering
+to use the interface defined by the class. People who think that real programmers write code without bugs need
+to upgrade to a human brain.
+</p>
+
+<p>
+Still, it sounds interesting: the memory of our C++ program is apparently broken into chunks storing
+objects of various classes, with &quot;defined semantics&quot;. Looks very promising, that.
+For example, we could ask a debugger about the kind of object located at such a chunk and inspect its data
+(as in &quot;this is a Point with x=5 and y=6&quot;). We could even take this one step further and implement things like
+garbage collectors, which can check whether an object is used by looking for pointers to it in the places which
+are <i>supposed</i> to store pointers.
+</p>
+
+<p>
+Unfortunately, you can&#39;t tell the class of a C++ object given a pointer to it at run time. So if you debug
+a crashed C++ program and find a pointer somewhere in its guts, and you don&#39;t know its type, you&#39;ll have
+to guess that &quot;0000000600000005&quot; is a Point. Which is completely obvious, because that&#39;s the way a pair of
+adjacent integers looks like in hexadecimal memory listings of a little endian 32 bit machine. And two adjacent integers might be a Point.
+Or some other two-integer structure. Or a part of a three-integer-and-a-float structure.
+Or they might be two unrelated numbers which just happen to be adjacent.
+</p>
+
+<p>
+Which is why you can&#39;t automatically collect the garbage of C++ programs.
+</p>
+
+
+<a name="fqa-7.3"></a>
+<h2>[7.3] When is an interface &quot;good&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html#faq-7.3">FAQ:</a></b>
+ It is good when it hides details, so that the users see a simpler picture. It should also speak the language
+of the user (a developer, not the customer).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Um, sometimes you want the interface to expose the many details and speak the language of the machine,
+although it&#39;s probably not very common. The generic answer is something like &quot;an interface is good if it gets the user somewhere&quot;.
+</p>
+
+<p>
+For example, using <a href="http://www.opengl.org">OpenGL</a> you can render nifty 3D stuff at real time frame rates.
+<a href="http://www.fftw.org">FFTW</a> delivers, well, the Fastest Fourier Transform in the West.
+With <a href="http://trolltech.com/products/qt">Qt</a>, you can develop cross-platform GUI, and &quot;cross-platform&quot; won&#39;t mean
+&quot;looking like an abandoned student project&quot;.
+Writing that stuff from scratch is lots of work; using the libraries can save lots of work.
+Apparently learning the interfaces of these libraries is going to pay off
+for many people.
+</p>
+
+<p>
+For a negative example, consider <tt>&lt;algorithm&gt;</tt>. Does <tt>std::for_each</tt> get us anywhere compared to a bare <tt>for</tt> loop,
+except that now we need to define a <a href="function.html#fqa-33.10">functor</a> class? That&#39;s a bad interface, because learning it
+doesn&#39;t make it easier to achieve anything useful.
+</p>
+
+
+<a name="fqa-7.4"></a>
+<h2>[7.4] What is encapsulation?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html#faq-7.4">FAQ:</a></b>
+ The prevention of &quot;unauthorized access&quot; to stuff.
+</p>
+
+<p>
+The idea is to separate the implementation (which may be changed) from the interface (which is supposed to be stable).
+Encapsulation will force users to rely on the interface rather than the implementation. That will make changing
+the implementation cheaper, since the code of the users won&#39;t need to be changed.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s a nice theoretical definition. Let&#39;s talk about practice - the properties of the C++ keywords <tt>private</tt>
+and <tt>protected</tt>, which actually implement encapsulation.
+</p>
+
+<p>
+These keywords will cause the compiler to produce an error message upon access to a non-public member outside
+of the class. However, they will not cause the compiler to prevent &quot;unauthorized access&quot; by buggy code,
+for example upon buffer overflow. If you debug a crashed or misbehaving C++ program, forget about encapsulation.
+There&#39;s just one object now: the memory.
+</p>
+
+<p>
+As to the cost of changes to the the private parts - they trigger recompilation of all code that <tt>#include</tt>s your class
+definition. That&#39;s typically an order of magnitude more than &quot;code actually using your class&quot;, because everything ends
+up including everything.
+&quot;The key money-saving insight&quot;, as the business-friendly-looking FAQ puts it, is that <i>every time you change a class definition,
+you are recompiling the programs using it</i>. Here&#39;s another simple observation: C++ compiles slowly. And what do we get
+now when we put two and two together? That&#39;s right, kids - with C++ classes, the developers get paid primarily to wait for
+recompilation.
+</p>
+
+<p>
+If you want software that is &quot;easy to change&quot;, <a href="class.html#fqa-7.5">stay away</a> from C++ classes.
+</p>
+
+
+<a name="fqa-7.5"></a>
+<h2>[7.5] How does C++ help with the tradeoff of safety vs. usability?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html#faq-7.5">FAQ:</a></b>
+ In C, stuff is either stored in <tt>struct</tt>s (safety problem - no encapsulation), or it is declared <tt>static</tt> at the file
+implementing an interface (usability problem - there is no way to have many instances of that data).
+</p>
+
+<p>
+With C++ classes, you can have many instances of the data (many objects) <i>and</i> encapsulation (non-<tt>public</tt> members).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This is <i>wildly wrong</i>, and the chances that the FAQ author didn&#39;t know it are <i>extremely low</i>.
+That&#39;s because you can&#39;t use <tt>FILE*</tt> from <tt>&lt;stdio.h&gt;</tt> or <tt>HWND</tt> from <tt>&lt;windows.h&gt;</tt> or in fact any widely used and/or decent C library
+without noticing that the FAQ&#39;s claim is wrong.
+</p>
+
+<p>
+When you need multiple instances and encapsulation
+in C, you use a forward declaration of a <tt>struct</tt> in the header file, and define it in the implementation file.
+That&#39;s actually <i>better</i> encapsulation than C++ classes - there&#39;s still no <i>run-time</i> encapsulation (memory can be accidentally/maliciously overwritten),
+but at least there&#39;s <i>compile-time</i> encapsulation (you don&#39;t have to recompile the code using the interface when you change the implementation).
+</p>
+
+<p>
+The fact that a crude C technique for approximating classes is better than the support for classes built into the C++ language is really
+<i>shameful</i>. Apparently so shameful that the FAQ had to distort the facts in an attempt to save face
+(or else the readers would wonder whether there&#39;s any point to C++ classes at all). The FQA hereby declares that it will
+not go down this path. Therefore, we have to mention this: the forward declaration basically makes it impossible for the
+calling code to reserve space for the object at compile time. This means that a <tt>struct</tt> declared in a header file
+or a C++ class can sometimes be allocated more efficiently than a forward-declared <tt>struct</tt>. However, this is really
+ about a <i>different</i> tradeoff - safety vs. <i>efficiency</i>, and there&#39;s no escape from this tradeoff. Either the caller knows
+ about the details such as the size of an object at compile time - which <i>breaks</i> compile-time encapsulation - or it doesn&#39;t,
+ so it can&#39;t handle the allocation.
+</p>
+
+<p>
+Anyway, here&#39;s the real answer to the original question: C++ helps with the tradeoff of safety vs. usability by eliminating both.
+</p>
+
+<p>
+C++ is extremely unsafe because every pointer can be used to modify every piece of memory from any point in code.
+C++ is extremely unusable due to cryptic syntax, incomprehensible semantics and endless rebuild cycles.
+Where&#39;s your tradeoff now, silly C programmers?
+</p>
+
+
+<a name="fqa-7.6"></a>
+<h2>[7.6] How can I prevent other programmers from violating encapsulation by seeing the <tt>private</tt> parts of my class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html#faq-7.6">FAQ:</a></b>
+ Don&#39;t bother. The fact that a programmer knows about the inner workings of your class isn&#39;t a problem. It&#39;s
+ a problem if <i>code</i> is written to depend on these inner workings.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s right. Besides, people can always access the code if a machine can. Preventing people from &quot;seeing&quot; the code
+ in the sense that they can access it, but not understand it is obfuscation, not encapsulation.
+</p>
+
+
+<a name="fqa-7.7"></a>
+<h2>[7.7] Is Encapsulation a Security device?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html#faq-7.7">FAQ:</a></b>
+ No. Encapsulation is about error prevention. Security is about preventing purposeful attacks.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Depends on the kind of &quot;encapsulation&quot;. Some managed environments rely on their support for run time encapsulation,
+ which makes it technically impossible for code to access private parts of objects, to implement security mechanisms.
+C++ encapsulation evaporates at run time, and is almost non-existent even at compile time
+ - use <tt>#define private public</tt> before including a header file and there&#39;s no more encapsulation <i><a class="corr" href="web-vs-fqa.html#correction-3">(correction)</a></i>. <a href="class.html#fqa-7.4">It's hardly
+  "encapsulation" at all</a>, so of course it has no security applications - security is harder than encapsulation.
+</p>
+
+<p>
+The capital E and S in the question are very amusing. I wonder whether they are a manifestation of Deep Respect for
+  Business Values or Software Engineering; both options are equally hilarious.
+</p>
+
+
+<a name="fqa-7.8"></a>
+<h2>[7.8] What&#39;s the difference between the keywords <tt>struct</tt> and <tt>class</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/classes-and-objects.html#faq-7.8">FAQ:</a></b>
+ By default, <tt>struct</tt> members and base classes are <tt>public</tt>. With <tt>class</tt>, the default is <tt>private</tt>. Never rely
+  on these defaults! Otherwise, <tt>class</tt> and <tt>struct</tt> behave identically.
+</p>
+
+<p>
+But the important thing is how developers <i>feel</i> about these keywords. <tt>struct</tt> conveys the feeling that its members
+  are supposed to be read and modified by the code using it, and <tt>class</tt> feels like one should use the class
+  methods and not mess with the state directly. This difference is the important one when you decide which keyword to use.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <tt>struct</tt> is a C keyword. <tt>class</tt> was added to C++ because it is easier than actually making the language object-oriented.
+  And it does a good job when it comes to the <i>feeling</i> of a newbie who heard that &quot;OO is good&quot;.
+</p>
+
+<p>
+Check out the emotional discussion about which keyword should be used in the FAQ. The more similar two duplicate C++
+  features are, the more heated the argument about the best option to use in each case becomes. Pointers/references,
+  arrays/vectors... Yawn.
+</p>
+
+<p>
+By the way, <a href="class.html#fqa-7.5">the forward-declaration-of-struct thing</a> works in C++, and it&#39;s better than a <tt>class</tt> without <tt>virtual</tt>
+  functions most of the time.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>
