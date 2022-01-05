@@ -1,4 +1,4 @@
-#!/opt/python-2.3.5_mob/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''convert a C++ FQA page to HTML'''
 import sys

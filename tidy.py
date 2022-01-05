@@ -1,4 +1,4 @@
-#!/opt/python-2.3.5_mob/bin/python
+#!/usr/bin/env python3
 import os,subprocess
 
 fqas = [f for f in os.listdir('.') if f.endswith('.fqa')]
