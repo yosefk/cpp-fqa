@@ -19,6 +19,17 @@ def getoutput(cmd):
   f.close()
   return r
 
+# NOTE_: we have cleaned up some of the html and now get no warnings from tidy
+# on most of the files. web-vs-c++.html gives 20 warnings because of Russian characters.
+# tidy does only error checking here which is a good thing because it will replace
+# those characters and they will be unreadable:
+# Character codes 128 to 159 (U+0080 to U+009F) are not allowed in HTML;
+# even if they were, they would likely be unprintable control characters.
+# Tidy assumed you wanted to refer to a character with the same byte value in the 
+# specified encoding and replaced that reference with the Unicode equivalent.
+# See: tidy -f qqq.txt -o xxx.html web-vs-c++.html
+# ALSO: web-vs-c++.fqa was UTF-8 with BOM which tidy also mangles. We have changed it
+# to UTF-8 like all the other files.
 def tidy(f):
   o=getoutput('tidy -e %s 2>&1 | grep "errors were found"'%(f))
   if ' 0 errors were found' or 'No warnings or errors were found' in o:
