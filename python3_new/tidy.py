@@ -35,7 +35,7 @@ for f in files:
     contents = contents.replace('<p>\n<%s>'%t,'<%s>'%t)
     contents = contents.replace('</%s>\n</p>\n'%t,'</%s>\n'%t)
   
-  fd=open(f,'w')
+  fd=open(f,'wb')
   fd.write(contents)
   fd.close()
 

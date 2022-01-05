@@ -12,15 +12,15 @@ name2alt = {
   'cat': "[Cat++, a superset of cat]",
 }
 
-for k,v in list(name2alt.items()):
+for k,v in name2alt.items():
   s = '''<a href="http://yosefk.com/c++fqa">
 <img src="http://yosefk.com/c++fqa/images/%s.png"
      alt="%s" border=0>
 </a>'''%(k,v)
   
-  print("`%s`"%s)
-  print("@\n%s\n@"%s.replace('/','\\/'))
-  print()
+  print "`%s`"%s
+  print "@\n%s\n@"%s.replace('/','\\/')
+  print
   
 
 

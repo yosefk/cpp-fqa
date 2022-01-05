@@ -1,5 +1,5 @@
 #!/opt/python-2.3.5_mob/bin/python
-import os,subprocess
+import os,commands
 
 fqas = [f for f in os.listdir('.') if f.endswith('.fqa')]
 htmls = [f[:-4] + '.html' for f in fqas] + ['fqa.html']
@@ -23,7 +23,7 @@ def tidy(f):
   o=getoutput('tidy -e %s 2>&1 | grep "errors were found"'%f)
   if ' 0 errors were found' not in o:
     raise Exception('ERRORS FOUND IN %s: %s'%(f,o[:-1]))
-  print(f+':',o[:-1])
+  print f+':',o[:-1]
 
 for f in files:
   fd=open(f)
@@ -35,7 +35,7 @@ for f in files:
     contents = contents.replace('<p>\n<%s>'%t,'<%s>'%t)
     contents = contents.replace('</%s>\n</p>\n'%t,'</%s>\n'%t)
   
-  fd=open(f,'w')
+  fd=open(f,'wb')
   fd.write(contents)
   fd.close()
 

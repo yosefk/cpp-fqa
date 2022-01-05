@@ -1,11 +1,17 @@
 import os
-import imp
-f2h = imp.load_source('f2h','fqa2html.py')
-h2toc=imp.load_source('h2toc','toc.py')
+#import imp
+import importlib
+#import shutil
+
+#f2h = importlib.load_source('f2h','fqa2html.py')
+#h2toc=importlib.load_source('h2toc','toc.py')
+f2h = importlib.machinery.SourceFileLoader('f2h','fqa2html.py').load_module()
+h2toc = importlib.machinery.SourceFileLoader('h2toc','toc.py').load_module()
+
 def doit():
     fqa = [f for f in os.listdir('.') if f.endswith('.fqa')]
     for f in fqa:
-        print f,'...'
+        print(f,'...')
         f2h.doit(f[:-4])
 
     f2h.singlepage('fqa.html')
@@ -17,7 +23,16 @@ def doit():
         'web-vs-fqa.html':'correction',
         'web-vs-c++.html':'misfeature',
     }
-    for k,v in tocs.items():
+    for k,v in list(tocs.items()):
         h2toc.gentoc(k,v)
 doit()
-execfile('tidy.py')
+exec(compile(open('tidy.py', "rb").read(), 'tidy.py', 'exec'))
+
+#RG: move html files to html dir
+html = [f for f in os.listdir('.') if f.endswith('.html')]
+cwd = os.getcwd() + '/'
+if not os.path.isdir(cwd + 'html'):
+    os.mkdir(cwd + 'html')
+for f in html:
+    os.rename(cwd + f, cwd + 'html/'+f)
+    #shutil.move(cwd + f, cwd + 'html/'+f)

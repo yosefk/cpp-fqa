@@ -33,7 +33,7 @@ import datetime
 ga = open('ga.js').read()
 end_of_doc = '''
 <hr>
-<small class="part">Copyright &copy; 2007-%d <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<small class="part">Copyright \xc2\xa9 2007-%d <a href="http://yosefk.com">Yossi Kreinin</a><br>
 <tt>revised %s</tt></small>
 %s
 </body>
@@ -83,7 +83,7 @@ def run_to(arg,stream,sp=False):
     sys.stdout = oldout
 
 def doit(arg):
-  run_to(arg+'.fqa',open(arg+'.html','w'))
+  run_to(arg+'.fqa',open(arg+'.html','wb'))
   
 def run(arg,sp=False):
   fqa = open(arg)
@@ -145,10 +145,10 @@ def run(arg,sp=False):
     op = ''
     i = 0
     esc2state = {}
-    ek = list(esc2mark.keys())
+    ek = esc2mark.keys()
     for k in ek:
       esc2state[k]=0
-    pk = list(plain2html.keys())
+    pk = plain2html.keys()
     asis = False
     while i<len(p):
       c = p[i]
@@ -182,17 +182,17 @@ def run(arg,sp=False):
     return str2html(p.strip())
 
   def print_paragraph(p):
-    print('<p>')
-    print(p)
-    print('</p>')
-    print()
+    print '<p>'
+    print p
+    print '</p>'
+    print
 
   # first line: page title
   title = fqa.readline()[:-1]
 
   def print_heading(faq_page):
     if sp:
-      print('''<h1>%s</h1>'''%replace_html_ent(title))
+      print '''<h1>%s</h1>'''%replace_html_ent(title)
       return
     if faq_page:
       below_heading = '''<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
@@ -207,7 +207,7 @@ def run(arg,sp=False):
     if 'Main page' in title:
       title_titag = 'C++ Frequently Questioned Answers'
       title_h1tag = 'C++ FQA Lite: Main page'
-    print('''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    print '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <html>
   <head>
   <title>%s</title>
@@ -216,7 +216,7 @@ def run(arg,sp=False):
   <body>
   <h1>%s</h1>
   %s
-  '''%(replace_html_ent(title_titag),style,replace_html_ent(title_h1tag),below_heading))
+  '''%(replace_html_ent(title_titag),style,replace_html_ent(title_h1tag),below_heading)
 
   # second line: attributes
   attrs = eval(fqa.readline())
@@ -232,7 +232,7 @@ def run(arg,sp=False):
       if p:
         print_paragraph(p)
       else:
-        if not sp: print(end_of_doc)
+        if not sp: print end_of_doc
         return
   #print 'formatting C++ FQA page %s (FAQ page: %s, section number %d)'%(title,faq_page,section)
 
@@ -307,17 +307,17 @@ def run(arg,sp=False):
     q = read_question()
 
   # generate a table of contents
-  print('<ul>')
+  print '<ul>'
   for i,q in enumerate(qs):
-    print(q.toc_line(i+1))
-  print('</ul>')
+    print q.toc_line(i+1)
+  print '</ul>'
 
   # print the questions
 
   for i,q in enumerate(qs):
     n=i+1
-    print()
-    print(q.title_lines(n))
+    print
+    print q.title_lines(n)
 
     q.replace_faq(n)
     for p in q.faq:
@@ -328,7 +328,7 @@ def run(arg,sp=False):
       print_paragraph(p)
 
   # end
-  if not sp: print(end_of_doc)
+  if not sp: print end_of_doc
 
 secindex = [
 ("picture",'Big Picture Issues'),
@@ -400,31 +400,31 @@ The single page version does not include most "metadata" sections such as [http:
 
 def singlepage(outname):
   '''generate a single HTML page with: intro & index, Defective C++, Q&A sections, and FQA errors.'''
-  outf = open(outname,'w')
-  print('''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  outf = open(outname,'wb')
+  print >> outf, '''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <html>
   <head>
   <title>C++ Frequently Questioned Answers</title>
   </head>
   %s
   <body>
-'''%style, file=outf)
+'''%style
 
   tmpfile = 'sp-index.tmp.fqa'
-  tf=open(tmpfile,'w')
+  tf=open(tmpfile,'wb')
   tf.write(singlepageindex%{'sp':outname})
   tf.close()
   run_to(tmpfile,outf,sp=outname)
   os.remove(tmpfile)
 
   def sec_ancor(secfname):
-    print('<a name="fqa-%s"></a>'%secfname[:-4], file=outf)
+    print >> outf, '<a name="fqa-%s"></a>'%secfname[:-4]
   import imp
   h2toc=imp.load_source('h2toc','toc.py')
   def sec_with_toc(filename,name):
     sec_ancor(filename)
     tmpfile = 'sec-with-toc.tmp.html'
-    tmp=open(tmpfile,'w')
+    tmp=open(tmpfile,'wb')
     run_to(filename,tmp,sp=outname)
     tmp.close()
     h2toc.gentoc(tmpfile,name,outname)
@@ -435,6 +435,6 @@ def singlepage(outname):
     sec_ancor(sec+'.fqa')
     run_to(sec+'.fqa',outf,sp=outname)
   sec_with_toc('web-vs-fqa.fqa','correction')
-  print(end_of_doc, file=outf)
+  print >> outf, end_of_doc
   outf.close()
 

@@ -33,7 +33,7 @@ import datetime
 ga = open('ga.js').read()
 end_of_doc = '''
 <hr>
-<small class="part">Copyright &copy; 2007-%d <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<small class="part">Copyright \xc2\xa9 2007-%d <a href="http://yosefk.com">Yossi Kreinin</a><br>
 <tt>revised %s</tt></small>
 %s
 </body>
@@ -83,7 +83,7 @@ def run_to(arg,stream,sp=False):
     sys.stdout = oldout
 
 def doit(arg):
-  run_to(arg+'.fqa',open(arg+'.html','w'))
+  run_to(arg+'.fqa',open(arg+'.html','wb'))
   
 def run(arg,sp=False):
   fqa = open(arg)
@@ -400,7 +400,7 @@ The single page version does not include most "metadata" sections such as [http:
 
 def singlepage(outname):
   '''generate a single HTML page with: intro & index, Defective C++, Q&A sections, and FQA errors.'''
-  outf = open(outname,'w')
+  outf = open(outname,'wb')
   print('''<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
 <html>
   <head>
@@ -411,7 +411,7 @@ def singlepage(outname):
 '''%style, file=outf)
 
   tmpfile = 'sp-index.tmp.fqa'
-  tf=open(tmpfile,'w')
+  tf=open(tmpfile,'wb')
   tf.write(singlepageindex%{'sp':outname})
   tf.close()
   run_to(tmpfile,outf,sp=outname)
@@ -424,7 +424,7 @@ def singlepage(outname):
   def sec_with_toc(filename,name):
     sec_ancor(filename)
     tmpfile = 'sec-with-toc.tmp.html'
-    tmp=open(tmpfile,'w')
+    tmp=open(tmpfile,'wb')
     run_to(filename,tmp,sp=outname)
     tmp.close()
     h2toc.gentoc(tmpfile,name,outname)

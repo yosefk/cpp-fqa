@@ -3,7 +3,7 @@ import re
 h2re = re.compile('<h2>(.*)</h2>')
 def gentoc(filename,name,visname=None):
     if visname==None:
-        visname = filename
+	visname = filename
     f=open(filename)
     orig=f.read()
     f.close()
@@ -33,6 +33,6 @@ def gentoc(filename,name,visname=None):
     toc += '</ul>'
     changed[where] = toc
 
-    f = open(filename,'w')
+    f = open(filename,'wb')
     f.write('\n'.join(changed))
     f.close()
