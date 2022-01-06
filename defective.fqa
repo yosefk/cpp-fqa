@@ -177,7 +177,7 @@ In C++, we have standard and compiler-specific built-in types, structures, enume
   multiple, virtual and non-virtual inheritance, |const| and |volatile| qualifiers, pointers, references and arrays,
   |typedef|s, global and member functions and function pointers, and /templates/, which can have specializations on (again) /types/ (or integral constants),
   and you can "partially specialize" templates by /pattern matching their type structure/
-  (for example, have a specialization for |std::vector<MySillyTemplate<T> >| for arbitrary values of |T|), and each template can have base classes
+  (for example, have a specialization for |std::vector<MyRetardedTemplate<T> >| for arbitrary values of |T|), and each template can have base classes
   (in particular, it can be /derived from its own instantiations recursively/, which is a /well-known practice documented
    in books/), and inner |typedef|s, and... We have lots of kinds of types.
 
