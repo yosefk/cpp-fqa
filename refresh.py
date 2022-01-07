@@ -31,6 +31,24 @@ def doit():
 
 
 doit()
+# RG: fqa.html still OK here with correct <p>
+# After this <p> removed and incorrect, so tidy DOES change file?
+# NONO: tidy itself is only used for checking but in tidy.py some
+# incorrect contents.replace are done for <p> which leaves a single 
+# </p> in the file preventing our goal of 0 tidy warnings.
+# OKOK: contents.replace are needed otherwise tidy complains about <p>
+# But one incorrect single </p> is left in both index.html and fqa.html
+# NONO: tidy itself is incorrect for fqa.html
+# It gives 244 warnings for fqa.html on all correct matching <p>s
+# tidy gives line 35 column 1 - Warning: inserting implicit <p> for
+# 33 <p>
+# 34 <h2>Table of contents</h2>
+# 35 </p>
+# Looks like correct HTML
+# Yossi is trying to shut up tidy by removing those <p>s but makes one
+# mistake leaving one single </p> in index.html and fqa.html
+# DONE: put the backtick immediately after </ul> in index.fqa and in 
+# fqa2html.py
 exec(compile(open("tidy.py", "rb").read(), "tidy.py", "exec"))
 
 # RG: move html files to html dir

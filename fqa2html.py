@@ -69,7 +69,7 @@ num2sec = {
     27: "smalltalk",
     32: "mixing",
     33: "function",
-    35: "templates",
+    35: "templates"
 }
 
 
@@ -397,7 +397,7 @@ secindex = [
     ("inheritance-multiple", "Inheritance - multiple and <tt>virtual</tt> inheritance"),
     ("mixing", "How to mix C and C++"),
     ("function", "Pointers to member functions"),
-    ("templates", "Templates"),
+    ("templates", "Templates")
 ]
 
 singlepageindex = """C++ Frequently Questioned Answers
@@ -412,7 +412,7 @@ The single page version does not include most "metadata" sections such as [http:
 
 `<ul>
 <li><a href="%(sp)s#fqa-defective">Defective C++</a> - a list of major language defects
-<li>C++ Q&A, structured similarly to C++ FAQ Lite, with links to the original FAQ answers
+<li>C++ Q&amp;A, structured similarly to C++ FAQ Lite, with links to the original FAQ answers
 <ul>
 <li><a href="%(sp)s#fqa-picture">Big Picture Issues</a></li>
 <li><a href="%(sp)s#fqa-class">Classes and objects</a></li>
@@ -439,10 +439,10 @@ The single page version does not include most "metadata" sections such as [http:
 </ul>
 </li>
 <li><a href="%(sp)s#fqa-web-vs-fqa">`FQA errors`</a> found by readers</li>
-</ul>
-`
+</ul>`
 """
-
+# RG: the closing shitter ` on a new line was preventing correct removal of
+# a closing </p> in fqa.html
 
 def singlepage(outname):
     """generate a single HTML page with: intro & index, Defective C++, Q&A sections, and FQA errors."""

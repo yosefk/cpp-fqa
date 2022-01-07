@@ -399,7 +399,7 @@ inline my_class operator&amp;&amp;(my_class,int){return my_class(0);}
 int main(void)
 {
   double x = std::pow(1.0, 1.0);
-  (void) x; <i></i> to avoid unused variable warning
+  (void) x; // to avoid unused variable warning
 }
 </pre>
 
@@ -410,7 +410,7 @@ The error message is:
 <pre>
 $ g++ -Wall -pedantic-errors simple_test.cpp
 simple_test.cpp: In function ‘int main()’:
-simple_test.cpp:11: error: ambiguous overload for operator&&' in std::__traitor&lt;std::__is_integer&lt;double&gt;, std::__is_floating&lt;double&gt; &gt;::__value &amp;&amp; std::__traitor&lt;std::__is_integer&lt;double&gt;, std::__is_floating&lt;double&gt; &gt;::__value&#39;
+simple_test.cpp:11: error: ambiguous overload for operator&amp;&amp;' in std::__traitor&lt;std::__is_integer&lt;double&gt;, std::__is_floating&lt;double&gt; &gt;::__value &amp;&amp; std::__traitor&lt;std::__is_integer&lt;double&gt;, std::__is_floating&lt;double&gt; &gt;::__value&#39;
 simple_test.cpp:11: note: candidates are: operator&amp;&amp;(bool, bool) &lt;built-in&gt;
 simple_test.cpp:7: note:                 my_class operator&amp;&amp;(my_class, int)
 </pre>
@@ -450,7 +450,7 @@ Tracing a few header files up brings us to <tt>bits/cpp_type_traits.h</tt>:
   template&lt;class _Sp, class _Tp&gt;
     struct __traitor
     {
-      enum { __value = bool(_Sp::__value) <tt></tt> bool(_Tp::__value) };
+      enum { __value = bool(_Sp::__value) || bool(_Tp::__value) };
       typedef typename __truth_type&lt;__value&gt;::__type __type;
     };
 </pre>
@@ -492,7 +492,7 @@ in similar situations). But we can&#39;t define <tt>operator&amp;&amp;(int,int)<
 
 <hr>
 <small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
-<tt>revised 06 January 2022</tt></small>
+<tt>revised 07 January 2022</tt></small>
 <script type="text/javascript">
 var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
 document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
