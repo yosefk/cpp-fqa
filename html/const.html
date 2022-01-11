@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: Const correctness</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>Const correctness</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html">FAQ</a></b><small class="part"> links.</small><hr>
+
+<p>
+This is about the <tt>const</tt> keyword, which makes you write your program twice (or more, depending on your luck).
+</p>
+
+<ul>
+<li><a href="const.html#fqa-18.1">[18.1] What is &quot;<tt>const</tt> correctness&quot;?</a></li>
+<li><a href="const.html#fqa-18.2">[18.2] How is &quot;<tt>const</tt> correctness&quot; related to ordinary type safety?</a></li>
+<li><a href="const.html#fqa-18.3">[18.3] Should I try to get things <tt>const</tt> correct &quot;sooner&quot; or &quot;later&quot;?</a></li>
+<li><a href="const.html#fqa-18.4">[18.4] What does &quot;<tt>const Fred* p</tt>&quot; mean?</a></li>
+<li><a href="const.html#fqa-18.5">[18.5] What&#39;s the difference between &quot;<tt>const Fred* p</tt>&quot;, &quot;<tt>Fred* const p</tt>&quot; and &quot;<tt>const Fred* const p</tt>&quot;?</a></li>
+<li><a href="const.html#fqa-18.6">[18.6] What does &quot;<tt>const Fred&amp; x</tt>&quot; mean?</a></li>
+<li><a href="const.html#fqa-18.7">[18.7] Does &quot;<tt>Fred&amp; const x</tt>&quot; make any sense?</a></li>
+<li><a href="const.html#fqa-18.8">[18.8] What does &quot;<tt>Fred const&amp; x</tt>&quot; mean?</a></li>
+<li><a href="const.html#fqa-18.9">[18.9] What does &quot;<tt>Fred const* x</tt>&quot; mean?</a></li>
+<li><a href="const.html#fqa-18.10">[18.10] What is a &quot;<tt>const</tt> member function&quot;?</a></li>
+<li><a href="const.html#fqa-18.11">[18.11] What&#39;s the relationship between a return-by-reference and a <tt>const</tt> member function?</a></li>
+<li><a href="const.html#fqa-18.12">[18.12] What&#39;s the deal with &quot;<tt>const</tt>-overloading&quot;?</a></li>
+<li><a href="const.html#fqa-18.13">[18.13] What do I do if I want a <tt>const</tt> member function to make an &quot;invisible&quot; change to a data member?</a></li>
+<li><a href="const.html#fqa-18.14">[18.14] Does <tt>const_cast</tt> mean lost optimization opportunities?</a></li>
+<li><a href="const.html#fqa-18.15">[18.15] Why does the compiler allow me to change an <tt>int</tt> after I&#39;ve pointed at it with a <tt>const int*</tt>?</a></li>
+<li><a href="const.html#fqa-18.16">[18.16] Does &quot;<tt>const Fred* p</tt>&quot; mean that <tt>*p</tt> can&#39;t change?</a></li>
+<li><a href="const.html#fqa-18.17">[18.17] Why am I getting an error converting a <tt>Foo**</tt> to <tt>const Foo**</tt>?</a></li>
+</ul>
+
+<a name="fqa-18.1"></a>
+<h2>[18.1] What is &quot;<tt>const</tt> correctness&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.1">FAQ:</a></b>
+ Oh, that&#39;s a great thing. You declare an object as <tt>const</tt> and prevent it from being modified.
+</p>
+
+<p>
+For example, if you pass a <tt>std::string</tt> object to a function by <tt>const</tt> pointer or reference, the function
+won&#39;t modify it and it won&#39;t be copied the way it happens when the object is passed by value.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Interesting. What about vector of pointers to objects? Let&#39;s see. If the vector itself is declared
+<tt>const</tt> (as in <tt>const std::vector&lt;T*&gt;</tt>), then you can&#39;t modify the vector, but you can modify the objects.
+If the pointers are declared <tt>const</tt> (as in <tt>std::vector&lt;const T*&gt;</tt>), then you can modify the vector,
+but not the objects. Now suppose you have a vector of non-<tt>const</tt> objects, and you want to pass them to a function
+that accepts a <tt>const</tt> vector of <tt>const</tt> objects. Oops, can&#39;t do that - the vectors are two different unrelated types
+as far as the compiler is concerned (no, C++ weenies, it actually <a href="const.html#fqa-18.17">doesn't</a> make sense, think again). You&#39;ll have to create a temporary vector of the right type and copy
+the pointers (which will compile just fine since <tt>T*</tt> is silently convertible to <tt>const T*</tt>).
+</p>
+
+<p>
+That&#39;s what <tt>const</tt> correctness is all about: increasing the readability of your program and protecting
+you from errors without any performance penalties.
+</p>
+
+<p>
+By the way, not using <tt>const</tt> in C++ is quite likely <i>not</i> a very good idea. Of all questionable C++ features, <tt>const</tt> probably
+does the most visible damage when avoided. Any piece of code using <tt>const</tt> forces every other piece touching it to use
+<tt>const</tt>, or else you won&#39;t be able to work with the objects it gives you. And here&#39;s the funny part: every
+piece of code <i>not</i> using <tt>const</tt> forces every other piece touching it <i>to not use it, either</i> - or else you
+won&#39;t be able to pass objects to it. So if you have one <tt>const</tt> particle and one anti-<tt>const</tt> particle,
+there&#39;s a big shiny explosion of <tt>const_cast</tt> in your code. Since <tt>const</tt> is hard-wired into the
+language (no way to pass a temporary to a function that gets a non-const reference, for example) and the standard library
+(<tt>iterator</tt> and <tt>const_iterator</tt>), using <tt>const</tt> is usually a safer bet than avoiding it.
+</p>
+
+
+<a name="fqa-18.2"></a>
+<h2>[18.2] How is &quot;<tt>const</tt> correctness&quot; related to ordinary type safety?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.2">FAQ:</a></b>
+ It&#39;s one form of type safety. You can think about <tt>const std::string</tt> as an <i>almost</i> separate type that lacks
+certain operations of a string, like assignment. If you find type safety useful, you&#39;ll also like <tt>const</tt> correctness.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It&#39;s related to ordinary type safety in a pretty complicated way. <tt>const</tt> and <tt>volatile</tt> are special cases
+in the type system - they are &quot;type qualifiers&quot;. The relation between a qualified type and a non-qualified type
+is different from any other relation between types in the language. This is one of the very many complications
+in the implicit conversion and overload resolution rules.
+</p>
+
+<p>
+It works smoothly for the simple cases, especially if there are no other complications. It breaks pretty hard
+whenever you have a pointer-like object. Pointers can get <i>two</i> const qualifiers, one for the pointer and one for the pointed values.
+This is awkward and unreadable and when you have pointers to pointers and three const qualifiers, you may need
+cryptic explicit casts, but at least there&#39;s syntax for all the levels of constness. With &quot;smart pointers&quot; (the
+things you should stuff into <a href="exceptions.html#fqa-17.4">every possible hole</a> because pointers are <a href="picture.html#fqa-6.15">evil</a>), there&#39;s no such syntax. That&#39;s why
+we have <tt>iterator</tt> and <tt>const_iterator</tt> - saying <tt>const iterator</tt> says that the iterator is immutable, but not
+what it points to. Exercise: implement a vector-like class that can get the storage pointer from the user,
+in a const-correct way that supports attaching both to constant and mutable storage areas.
+</p>
+
+<p>
+And of course a vector of <tt>const</tt> pointers is compiled to a different bulk of (identical) assembly code
+than a vector of mutable pointers. At least here the compiler is writing the same program twice, which is
+better than having to do this yourself. Which also happens - <tt>const_iterator</tt> is one family of examples.
+</p>
+
+
+<a name="fqa-18.3"></a>
+<h2>[18.3] Should I try to get things <tt>const</tt> correct &quot;sooner&quot; or &quot;later&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.3">FAQ:</a></b>
+ As soon as possible, because when you add <tt>const</tt> to a piece of code, it triggers changes in every place
+related to it.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> That&#39;s right. Since you can&#39;t get out of the tar pit, the best strategy is to climb right into the middle
+and make yourself comfortable from the beginning. No kidding, I actually agree with the FAQ.
+See also the advice <a href="const.html#fqa-18.1">above</a> about <i>not</i> avoiding <tt>const</tt>.
+</p>
+
+
+<a name="fqa-18.4"></a>
+<h2>[18.4] What does &quot;<tt>const Fred* p</tt>&quot; mean?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.4">FAQ:</a></b>
+ A pointer to a <tt>const Fred</tt> object. The object can&#39;t be changed, for example, you can&#39;t call methods not qualified
+as <tt>const</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Right. But don&#39;t count on it when you debug code. <tt>const</tt> can be cast away in a snap (pretty much like everything
+else in C++), and there&#39;s the <tt>mutable</tt> keyword for creating members that can be modified by methods qualified as <tt>const</tt>.
+And of course someone can have <i>another</i>, non-const pointer to the same <tt>Fred</tt> object. <i>And</i> the <tt>const</tt>-qualified methods may modify
+data pointed by its member pointers and references or by pointers kept in things pointed by its member pointers, etc.
+</p>
+
+<p>
+The pointer aliasing issue is one reason that the compiler <i>can&#39;t</i> really optimize code because it sees a pointer declared
+as <tt>const</tt>. And when it <i>can</i> figure out there are no aliases, it <i>doesn&#39;t need</i> your const declarations to help it. You
+can explain the difference between data flow analysis and type qualification to the next <a href="ctors.html#fqa-10.9">pseudo-performance-aware</a>
+person who advocates declaring every local integer as <tt>const</tt>. See also a <a href="const.html#fqa-18.14">correct FAQ answer</a> to this question below.
+</p>
+
+
+<a name="fqa-18.5"></a>
+<h2>[18.5] What&#39;s the difference between &quot;<tt>const Fred* p</tt>&quot;, &quot;<tt>Fred* const p</tt>&quot; and &quot;<tt>const Fred* const p</tt>&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.5">FAQ:</a></b>
+ In the first example, the object is immutable. In the second example, the pointer is immutable. In the third example,
+both are immutable.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Um, right. Remember: <tt>const</tt> makes your programs readable.
+</p>
+
+
+<a name="fqa-18.6"></a>
+<h2>[18.6] What does &quot;<tt>const Fred&amp; x</tt>&quot; mean?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.6">FAQ:</a></b>
+ It&#39;s a reference to an immutable Fred object.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Which is similar to a pointer to an immutable Fred object. However, the FAQ holds the <a href="ref.html#fqa-8.6">"references are NOT pointers"</a>
+religion (specifically, it belongs to the &quot;pointers are <a href="picture.html#fqa-6.15">evil</a>&quot; faction), so it dutifully replicates the explanation given
+in the <a href="const.html#fqa-18.4">answer</a> about the pointer case, replacing &quot;pointer&quot; with &quot;reference&quot;.
+</p>
+
+
+<a name="fqa-18.7"></a>
+<h2>[18.7] Does &quot;<tt>Fred&amp; const x</tt>&quot; make any sense?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.7">FAQ:</a></b>
+ No. It says that you can change the object, but not the reference. But you can never change a reference anyway, it will
+always refer to a single object.
+</p>
+
+<p>
+Don&#39;t write such declarations, it confuses people.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> So <a href="inheritance-multiple.html#fqa-25.13">why does this compile</a>? Wait, I don&#39;t really want to know. Whether it&#39;s because they didn&#39;t bother to disallow it,
+or because some special case of template instantiation (like when you add a <tt>const</tt> to a parameter type which is in fact a reference)
+would fail or anything like that - that&#39;s just another lame excuse as far as a language user is concerned.
+</p>
+
+
+<a name="fqa-18.8"></a>
+<h2>[18.8] What does &quot;<tt>Fred const&amp; x</tt>&quot; mean?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.8">FAQ:</a></b>
+ It&#39;s equivalent to &quot;<tt>const Fred&amp; x</tt>&quot;. The question is - which form should you use? Nobody can answer this for <i>your</i>
+organization without understanding <i>your</i> needs. The are lots of business scenarios, some producing the need for one
+form, others for the other. The discussion takes a full screen of text.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yawn. Another <a href="class.html#fqa-7.8">stupid duplication</a> in C++.
+</p>
+
+<p>
+Come <i>on</i>. What &quot;business scenarios&quot; can &quot;produce needs&quot; for a form of a <tt>const</tt> declaration? If your organization employs
+people who can&#39;t memorize both forms or check what a declaration means, you have to admit they will drown in
+C++ even if you somehow know for sure that in general they can program. C++ has <i>megatons</i> of syntax.
+</p>
+
+
+<a name="fqa-18.9"></a>
+<h2>[18.9] What does &quot;<tt>Fred const* x</tt>&quot; mean?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.9">FAQ:</a></b>
+ The FAQ replicates the previous answer, replacing &quot;reference&quot; with &quot;pointer&quot;. Probably the same <a href="ref.html#fqa-8.6">religion</a> thing again.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yawn. Another <a href="const.html#fqa-18.6">stupid duplication</a> in the C++ FAQ.
+</p>
+
+
+<a name="fqa-18.10"></a>
+<h2>[18.10] What is a &quot;<tt>const</tt> member function&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.10">FAQ:</a></b>
+ It&#39;s declared by appending <tt>const</tt> to the prototype of a class member function. Only this kind of methods may be
+called when you have a <tt>const</tt> object. Errors are caught at compile time, without any speed or space penalty.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> As discussed above, this <a href="const.html#fqa-18.2">breaks into little pieces</a> when your class is similar to a pointer in the sense that
+a user can change both the state of your object and use your object to change some other state. As to the speed
+and space penalty, you may check the symbol table of your program if you want to know how many functions were
+<a href="templates.html#fqa-35.10">generated twice from a single template</a> because of <tt>const</tt> and non-<tt>const</tt> template parameters. Then you can count
+the functions having identical code except for extra <tt>const</tt> qualifiers in some versions, but not others.
+</p>
+
+
+<a name="fqa-18.11"></a>
+<h2>[18.11] What&#39;s the relationship between a return-by-reference and a <tt>const</tt> member function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.11">FAQ:</a></b>
+ <tt>const</tt> member functions returning references to class members should use a <tt>const</tt> reference. Many times the compiler
+will catch you when you violate this rule. Sometimes it won&#39;t. You have to think.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <i>Of course</i> you have to think about this complete and utter nonsense! Somebody has to, and the C++ designers didn&#39;t.
+</p>
+
+<p>
+As usual with <tt>const</tt>, the compiler becomes <a href="const.html#fqa-18.2">dumb</a> when levels of indirection appear. For instance, if you keep a member
+reference, the thing it points to is not considered part of the object. It&#39;s up to you to decide whether you want
+to return this reference as <tt>const</tt> or non-<tt>const</tt> from your <tt>const</tt> member accessor. Both choices may eventually
+lead to <tt>const_cast</tt>.
+</p>
+
+
+<a name="fqa-18.12"></a>
+<h2>[18.12] What&#39;s the deal with &quot;<tt>const</tt>-overloading&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.12">FAQ:</a></b>
+ You can have two member functions with a single difference in the prototype - the trailing <tt>const</tt>. The compiler
+will select the function based on whether the <tt>this</tt> argument is <tt>const</tt> or not. For instance, a class with a subscript
+operator may have two versions: one returning mutable objects and one returning <tt>const</tt> objects - in the latter version,
+<tt>this</tt> is also qualified as <tt>const</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <i>Please try to avoid this feature</i>. In particular, get and set functions having the same name (<tt>const</tt>-overloaded)
+are not a very good idea.
+</p>
+
+<p>
+Having to replicate the code of a subscript operator just to add two <tt>const</tt> qualifiers - for the return value and
+the <tt>this</tt> argument - is yet another example of <tt>const</tt> forcing you to write your program twice. Well, most likely
+there are more problems where this one came from. A class with a subscript operator is a &quot;smart array&quot;,
+probably not unlike <tt>std::vector</tt>, so you&#39;ll end up with much more replicated code - an <tt>iterator</tt> and a
+<tt>const_iterator</tt> or some such.
+</p>
+
+
+<a name="fqa-18.13"></a>
+<h2>[18.13] What do I do if I want a <tt>const</tt> member function to make an &quot;invisible&quot; change to a data member?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.13">FAQ:</a></b>
+ There are legitimate use cases for this - that would be when a user doesn&#39;t see the change using the interface
+of the class. For example, a set class may cache the last look-up to possibly speed up the next look-up.
+</p>
+
+<p>
+Use the <tt>mutable</tt> keyword when you declare the members you want to change this way. If your compiler doesn&#39;t have
+<tt>mutable</tt>, use <tt>const_cast&lt;Set*&gt;(this)</tt> or the like. However, try to avoid this because it can lead to undefined behavior
+if the object was originally declared as <tt>const</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Most compilers probably support <tt>mutable</tt> today, but you may still need <tt>const_cast</tt> because the tweaks to the
+type system supporting <tt>const</tt> <a href="const.html#fqa-18.2">break in many cases</a>. Which may be a problem combined with the fact that
+<tt>const_cast</tt> is not designed to work with objects declared as <tt>const</tt> (as opposed to those declared non-constant but passed to a function by <tt>const</tt> reference or pointer).
+</p>
+
+<p>
+There are numerous reasons making <tt>const_cast</tt> safer in practice than in theory. People rarely declare objects as <tt>const</tt>.
+Compiler writers are unlikely to add special cases to their compiler to support <tt>const</tt> objects of C++ classes because it&#39;s hard work
+that is unlikely to pay off. For example, allocating a global <tt>const</tt> C-style structure with an aggregate initializer in read-only
+memory is easy. Doing the same for a C++ class with a constructor is hard because the constructor must be able to
+write to the object upon initialization. So you&#39;d have to use writable memory you later make read-only, which is not
+typically supported by object file formats and operating systems. Or you could translate C++ code to a C-style aggregate
+initializer, spending lots of effort to only handle the cases when the compiler can <a href="inline.html#fqa-9.1">inline</a> the code of the constructors.
+</p>
+
+<p>
+However, there is no simple rule making it &quot;very close to impossible&quot; for a compiler writer to use the opportunity
+provided by the standard and implement <tt>const</tt> objects differently from other objects. In the case of <a href="const.html#fqa-18.4">optimizing</a>
+the dereferencing of <tt>const</tt> pointers, such a rule does exist (there might be other, non-<tt>const</tt> pointers to the same location).
+But in the case of objects declared <tt>const</tt>, there <i>should</i> be no such pointers.
+</p>
+
+<p>
+The fact that the compiler is allowed
+to work under this assumption could be great if it were more likely to actually yield performance benefits, and
+if <tt>const</tt> worked to an extent making the use of <tt>const_cast</tt> unnecessary. The current state of affairs just
+creates another source of uncertainty for the programmer.
+</p>
+
+
+<a name="fqa-18.14"></a>
+<h2>[18.14] Does <tt>const_cast</tt> mean lost optimization opportunities?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.14">FAQ:</a></b>
+ Theoretically, yes. In practice, no. If a compiler knows that a value used in a piece of code
+is not modified, it can optimize the access to that value, for example, fetch it to a machine register.
+However, the compiler can&#39;t be sure that a value pointed by a <tt>const</tt> pointer is not modified because
+of the aliasing problem: there can be other pointers to the same object, not necessarily constant.
+Proving the opposite is almost always impossible.
+</p>
+
+<p>
+And when the compiler can&#39;t prove it, it can&#39;t speed up the access to the value. For example, if it
+uses the value it fetched to a register after someone modified it in the original memory location,
+the compiler changes the meaning of the program because it uses an outdated value.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Three cheers to the FAQ! No, really, this time the answer describes the actual state of affairs.
+You understand why I&#39;m so deeply touched if you met some of <a href="const.html#fqa-18.4">the many C++ users</a> who
+give a different answer to this question, and know their <a href="ctors.html#fqa-10.9">ways</a> to reason about performance.
+</p>
+
+<p>
+I think the answer is &quot;no&quot; in theory, too, because basically the compiler has to figure out which parts of
+the code modify the data, and if it knows the data won&#39;t get modified while this piece of code is running, it can use
+this fact, and otherwise it can&#39;t, so what difference do your <tt>const</tt>-qualifications make? But let&#39;s
+say I&#39;m not really sure, and anyway, it&#39;s not the time to argue about the exact phrasing when once in
+a lifetime a realistic statement appears about the performance of C++ code.
+</p>
+
+<p>
+The thing that is worth noting is that aliasing problems impede the performance of &quot;generic&quot; libraries, not just compilers.
+For example, consider <tt>vector&lt;T&gt;::push_back()</tt>. The vector will try to append the object to its storage.
+If there&#39;s no free space left, it will allocate a larger chunk, copy the old objects, and then append the
+new one. The new object is thus copied once (from wherever it was into the vector storage), right?
+</p>
+
+<p>
+But what if the object <a href="assign.html#fqa-12.2">is itself located in the old chunk</a>, and <tt>vector</tt> tries to be efficient and use <tt>realloc</tt>, which
+may or may not free the old memory? The object may be wiped out by <tt>realloc</tt>. Very good, then, <tt>vector</tt>
+creates <i>another</i> copy. Hop 1 - from the parameter to a temporary, hop 2 - from a temporary to the vector storage
+and everyone is happy - after a certain amount of clock cycles.
+</p>
+
+<p>
+&quot;Theoretically, yes. In practice, no.&quot; Quite a nice summary of C++.
+</p>
+
+
+<a name="fqa-18.15"></a>
+<h2>[18.15] Why does the compiler allow me to change an <tt>int</tt> after I&#39;ve pointed at it with a <tt>const int*</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.15">FAQ:</a></b>
+ Because when you point to something with a <tt>const</tt> pointer, this only means that you can&#39;t
+use that pointer to change the object. It doesn&#39;t mean the object can&#39;t be changed at
+all, because it can be accessible in other ways, not only through this pointer.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Exactly; it&#39;s related to the previous FAQ. Surprisingly for C++, it even makes sense.
+After all, when the object is <i>declared</i>, it seems like the right place to say what can be done with it.
+But if anyone can take an existing object
+and point to it and thus redefine what can be done with it, it&#39;s just weird, and can&#39;t really
+work, because it could be done from many places in incompatible ways.
+</p>
+
+
+<a name="fqa-18.16"></a>
+<h2>[18.16] Does &quot;<tt>const Fred* p</tt>&quot; mean that <tt>*p</tt> can&#39;t change?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.16">FAQ:</a></b>
+ No, for example, it could change through a non-constant <tt>Fred* q</tt> pointing to the same object.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This question is just like the previous one.
+</p>
+
+
+<a name="fqa-18.17"></a>
+<h2>[18.17] Why am I getting an error converting a <tt>Foo**</tt> to <tt>const Foo**</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/const-correctness.html#faq-18.17">FAQ:</a></b>
+ It would be &quot;invalid and dangerous&quot;! Suppose <tt>Foo**</tt> points to an array of pointers, which
+can be used to modify the pointed objects. Suppose C++ would allow to pass this array to a function
+which expects <tt>const Foo**</tt> - an array of pointers which <i>can&#39;t</i> be used to modify the pointed objects.
+</p>
+
+<p>
+Now suppose that this function fills the array with a bunch of pointers to <i>constant</i> objects.
+This looks perfectly good in that context, because that&#39;s what the function was passed - an
+array of pointers to constant objects. But what we&#39;ve got now is an array of pointers which can be used to modify those <tt>const</tt> objects,
+because the declaration of the array does allow such modifications!
+</p>
+
+<p>
+It&#39;s a good thing we get a compile time error instead. Don&#39;t use casts to work around this!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Wonderful. But why are we discussing evil built-in pointers anyway? Let&#39;s talk about the smart
+C++ array classes. Why can&#39;t I pass <tt>std::vector&lt;T*&gt;&amp;</tt> to a function expecting
+<tt>const std::vector&lt;const T*&gt;&amp;</tt>? The function clearly says that it&#39;s not going to modify <i>anything</i>:
+neither the vector nor the pointed objects. Why can&#39;t I pass my mutable vector of mutable objects
+to a function that promises not to modify either of those?
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

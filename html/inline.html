@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: Inline functions</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>Inline functions</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html">FAQ</a></b><small class="part"> links.</small><hr>
+
+<p>
+Inline functions are a pet feature of <a href="ctors.html#fqa-10.9">people</a> who think they care about performance, but don&#39;t bother to measure it.
+</p>
+
+<ul>
+<li><a href="inline.html#fqa-9.1">[9.1] What&#39;s the deal with inline functions?</a></li>
+<li><a href="inline.html#fqa-9.2">[9.2] What&#39;s a simple example of procedural integration?</a></li>
+<li><a href="inline.html#fqa-9.3">[9.3] Do <tt>inline</tt> functions improve performance?</a></li>
+<li><a href="inline.html#fqa-9.4">[9.4] How can <tt>inline</tt> functions help with the tradeoff of safety vs. speed?</a></li>
+<li><a href="inline.html#fqa-9.5">[9.5] Why should I use <tt>inline</tt> functions instead of plain old <tt>#define</tt> macros?</a></li>
+<li><a href="inline.html#fqa-9.6">[9.6] How do you tell the compiler to make a non-member function <tt>inline</tt>?</a></li>
+<li><a href="inline.html#fqa-9.7">[9.7] How do you tell the compiler to make a member function <tt>inline</tt>?</a></li>
+<li><a href="inline.html#fqa-9.8">[9.8] Is there another way to tell the compiler to make a member function <tt>inline</tt>?</a></li>
+<li><a href="inline.html#fqa-9.9">[9.9] With inline member functions that are defined outside the class, is it best to put the <tt>inline</tt> keyword next to the declaration within the class body, next to the definition outside the class body, or both?</a></li>
+</ul>
+
+<a name="fqa-9.1"></a>
+<h2>[9.1] What&#39;s the deal with inline functions?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.1">FAQ:</a></b>
+ Inlining a function call means that the compiler inserts the code of the function into the calling code
+(which is technically different, but logically similar to the expansion of <tt>#define</tt> macros). This may
+ improve performance, because the compiler optimizes the callee code in the context of the calling code
+ instead of implementing a function call. However, the performance impact depends on lots of things.
+</p>
+
+<p>
+There&#39;s more than one way to say that a function should be inline, some of which use the <tt>inline</tt>
+ keyword and some don&#39;t. No matter what way you use, the compiler might actually inline the function
+ and it might not - you&#39;re just giving it a &quot;hint&quot;. Sounds vague? It is - and it is <i>good</i>: it lets
+ the compiler generate better and/or more debuggable code.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> To summarize: the compiler has the right to inline or not inline any function, whether it&#39;s declared
+ inline in any of the several ways or not. Doesn&#39;t this make &quot;inline functions&quot; a meaningless term?
+</p>
+
+<p>
+It&#39;s impossible to make any sense of this without <a href="inheritance-mother.html#fqa-23.5">discussing the history of actual implementations</a>
+ of the C language tool chain - compilers, assemblers and linkers. A straight-forward C implementation
+ (which originally <i>all</i> of them were) works like this. First, a compiler generates assembly code from
+ each source file, <i>separately</i> (without looking at other source files). Then the assembler converts
+ the assembly code to an &quot;object file&quot;, where &quot;object&quot; means &quot;a sequence of bytes&quot; (talk about &quot;object oriented&quot;).
+ For example, a function
+ is one kind of &quot;object&quot; - the bytes encode the machine instructions the compiler used to implement it.
+</p>
+
+<p>
+The values of the bytes making up these &quot;objects&quot; are almost completely finalized at this stage.
+ The only kind of &quot;unknowns&quot; is addresses of &quot;objects&quot; - when an &quot;object&quot; refers to an address of another &quot;object&quot;
+ (say, a function calls another function), the assembler can&#39;t compute the actual values of the bytes making up
+ the function call instructions.
+ This is done by the linker, which allocates the &quot;objects&quot; (basically by concatenating them).
+ The linker then resolves the references (such as function calls) to the addresses of the &quot;objects&quot;.
+</p>
+
+<p>
+What this means is that the <i>only</i> way to inline functions is to <tt>#include</tt> their definition in the header file -
+otherwise, the compiler doesn&#39;t see the code of the function, and the linker can&#39;t do inlining, because all it
+ sees is byte sequences, and it would have to <i>decompile</i> them first. Which explains why you need to
+ include the source code of inline functions in header files, but doesn&#39;t explain why you need an <tt>inline</tt>
+ keyword and other ways to explicitly declare a function as &quot;inline&quot;. After all, the compiler is free to ignore
+ these hints, so what&#39;s their point?
+</p>
+
+<p>
+Well, the point is that the compiler can&#39;t tell an <tt>#include</tt>d function from one written in your source file, because
+ that&#39;s how C preprocessing works - the compiler only sees one large file of code. So unless you explicitly declare the
+ <tt>#include</tt>d functions &quot;inline&quot;, it will generate their code like it does with normal functions. Then the linker
+ will complain about multiple definitions.
+</p>
+
+<p>
+Here&#39;s how code is compiled by many modern compilers, including some C and C++ compilers. The compiler transforms
+ the source code to an intermediate representation, &quot;lower&quot; than the source language but &quot;higher&quot; than assembly language.
+ This makes it possible to do inlining at link time, either on a per-library or a whole-program basis. The machine
+ code is only generated as the final linkage step, or it can even be delayed until run time (the so called &quot;just in time compilation&quot;).
+This way, you don&#39;t have to split your functions to &quot;inline&quot; (those that <i>can</i> be inlined, but the compiler gets to decide if they actually <i>are</i> inlined) and the rest (those that just <i>can&#39;t</i> be inlined).
+Instead, you let the compiler make the decision for <i>all</i> functions. Unfortunately, the meaning of C and C++ is defined with
+the old sort of implementation in mind, and having newer, more sophisticated implementations around can&#39;t change it.
+</p>
+
+
+<a name="fqa-9.2"></a>
+<h2>[9.2] What&#39;s a simple example of procedural integration?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.2">FAQ:</a></b>
+ There&#39;s an example of a function calling another function and how inlining may save you copying the parameters
+when you pass them to a function and copying the result it returns and stuff. There&#39;s also a disclaimer saying that
+it&#39;s just an example and many different things can happen.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Basically, code may be portable, but <i>performance</i> is typically not. For example, inlining a function may make code faster
+or slower, depending on lots of things discussed in the next FAQs. This is one reason to leave the decision to
+a compiler, because &quot;it understands the target platform better&quot;. This is also a reason to leave the decision to a human,
+because compilers <i>don&#39;t</i> really know the target platform very well (they know the target processor but not the entire system),
+and because they don&#39;t understand the problem you are solving <i>at all</i> (so they can&#39;t tell how many times each piece
+of code is likely to run, etc.).
+</p>
+
+<p>
+Anyway, the problem of &quot;helping the compiler to optimize code&quot; by adding &quot;hints&quot; to the code,
+especially portable code, is quite hard. There are many things similar to inlining in this respect (for example, loop unrolling).
+Which is why there&#39;s no <tt>unroll</tt> keyword forcing loop unrolling. And the <tt>inline</tt> keyword only exists
+because there&#39;s <a href="inline.html#fqa-9.1">no better way</a> to <i>enable</i> (as opposed to &quot;force&quot;) inlining in C/C++.
+</p>
+
+
+<a name="fqa-9.3"></a>
+<h2>[9.3] Do <tt>inline</tt> functions improve performance?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.3">FAQ:</a></b>
+ Sometimes they do, sometimes they don&#39;t. There&#39;s no simple answer.
+</p>
+
+<p>
+Inlining can make code faster by eliminating function call overhead, or slower by generating too much code, causing
+instruction cache misses. It may make it larger by replicating all that callee code, or smaller by saving the
+instructions used to implement function calls. It may inflate the code of an innermost loop, causing repeated
+cache misses, or it may improve the locality of reference in the loop, by compiling all relevant code at adjacent
+addresses. It may also be irrelevant for performance, because your system is not CPU-bound.
+</p>
+
+<p>
+See? Told you there was no simple answer.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> However, there <i>is</i> a relatively simple answer to the legitimate question: &quot;Why do we need this language feature
+if its effect is undefined?&quot;. See <a href="inline.html#fqa-9.1">the first FAQ</a> in the section. There&#39;s also a relatively simple &amp; useful rule saying that
+functions which have short code and/or are typically called with compile time constant arguments so that most of their code
+computes a constant are typically good candidates for inlining. Long functions are typically worse candidates for inlining,
+because the function call overhead is negligible compared to the things the functions actually do, and the main problem with
+inlining - large code size - becomes dominant.
+</p>
+
+<p>
+It&#39;s usually a good idea to only explicitly enable the inlining of very short functions, and performance considerations
+are not the only reason. In C++ you have to place the code in header files to enable inlining. While the run time performance may or may not improve, the <i>compile time</i> performance is guaranteed
+to drop. Which means changing code becomes hard, which means you&#39;ll do your best to <i>not</i> change it, which means you&#39;ll
+leave wrong things unfixed. And debuggers handle inlined code pretty poorly (typically
+                                                                          you can&#39;t inspect the local variables
+of inlined functions or even step through their source code lines),
+so debugging the optimized (production) build becomes harder. And debugging a special &quot;debug&quot; build is not always possible
+(some bugs won&#39;t reproduce in that build), not to mention that you have to spend time building those binaries, too.
+</p>
+
+<p>
+If your application is not CPU bound, <a href="ctors.html#fqa-10.9">you aren't getting any benefits</a> from using an unsafe language like C++ except for extra quality time
+ with the debugger.
+</p>
+
+
+<a name="fqa-9.4"></a>
+<h2>[9.4] How can <tt>inline</tt> functions help with the tradeoff of safety vs. speed?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.4">FAQ:</a></b>
+ &quot;In straight C&quot; you could implement encapsulation using a <tt>void*</tt>, so that users can&#39;t access the underlying data.
+ Instead, the users have to call functions which access that data by casting the <tt>void*</tt> to the right type first.
+</p>
+
+<p>
+Not only is this type-unsafe - it&#39;s also costly, since the simplest access now involves a function call. In C++ you
+ can use <tt>inline</tt> accessors to <tt>private</tt> data - safe, fast.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Today C has inline functions (the FAQ probably doesn&#39;t consider the current C standard &quot;straight&quot;,
+                                   I wonder why).
+AFAIK they were back-ported from C++ together with <tt>const</tt> and other useless things.
+But it&#39;s irrelevant to the question, which is about the completely wrong argument that <tt>inline</tt> accessors to <tt>private</tt>
+functions are a form of &quot;high-speed encapsulation&quot;.
+</p>
+
+<p>
+First, the tales about <tt>void*</tt> are <a href="class.html#fqa-7.5">wrong</a> - you can use forward declarations to achieve the holy grail of (compile time)
+type safety. Second, <a href="inline.html#fqa-9.1">a good language implementation</a> can inline the small C-style accessors at link time. Third,
+<tt>private</tt> provides little encapsulation - change a private member and you have to <a href="class.html#fqa-7.4">recompile</a> all code using the class.
+ Fourth, most frequently <tt>private</tt> members with straight-forward <tt>public</tt> accessors are a just verbose way to implement
+ a <tt>public</tt> member, since changing the representation is almost impossible and/or hardly useful.
+</p>
+
+<p>
+And in the quite rare cases
+ where it <i>is</i> possible and useful, &quot;properties&quot; - a language facility allowing to overload the <tt>obj.member</tt> syntax -
+ could solve the problem, but C++ doesn&#39;t have properties. Or you could refactor the code automatically - if anything
+ could <a href="ctors.html#fqa-10.19">reliably parse</a> it.
+</p>
+
+<p>
+In the C++ world code is considered a good thing, of which there should be plenty.
+ <tt>private: int _n; public: int n() const { return _n; }</tt> is thus better than <tt>int n;</tt>. The question is -
+ do <i>you</i> like lots and lots of C++ code doing practically nothing?
+</p>
+
+
+<a name="fqa-9.5"></a>
+<h2>[9.5] Why should I use <tt>inline</tt> functions instead of plain old <tt>#define</tt> macros?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.5">FAQ:</a></b>
+ Because macros are <a href="picture.html#fqa-6.15">evil</a>. In particular, when a macro is expanded, the parameters are not evaluated before the
+ expansion, but copied &quot;as is&quot; (they are interpreted as character sequences by the preprocessor, not as C++ expressions). Therefore,
+ if a parameter is an expression with a side effect, such as <tt>i++</tt>, and the macro mentions it several times, the macro
+ will expand to buggy code (for instance, <tt>i</tt> will get incremented many times). Or the generated code may be slow
+ (when you use expressions like <tt>functionTakingAgesToCompute()</tt> as macro arguments).
+</p>
+
+<p>
+Besides, inline functions check the argument types.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yeah, C macros are no picnic. But see that thing about argument types? How can you write an <tt>inline</tt> function
+ computing the maximal value of two arguments? A <tt>template</tt> <tt>inline</tt> function, you say? Try this: <tt>std::max(n,5)</tt>
+ with <tt>short n</tt>.
+</p>
+
+<p>
+And how should function arguments be passed - by value or by reference? &quot;By value&quot; may cause extra copying, and &quot;by reference&quot;
+ may slow down the code due to aliasing problems, forcing the compiler to actually spill values to memory in order to
+ pass them <i>to the code of an inlined function</i>! How&#39;s that for &quot;performance benefits&quot;? Another problem C macros don&#39;t have.
+</p>
+
+<p>
+Frequently <tt>inline</tt> functions are better than macros, though, because the problems with macros turn out to be more severe in many cases.
+<a href="ctors.html#fqa-10.6">As usual</a>, it&#39;s you who gets the interesting job of choosing between duplicate C++ facilities, each flawed in its own unique way.
+</p>
+
+
+<a name="fqa-9.6"></a>
+<h2>[9.6] How do you tell the compiler to make a non-member function <tt>inline</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.6">FAQ:</a></b>
+ Prepend the <tt>inline</tt> keyword to its prototype, and place the code in a header file, unless it&#39;s only used in
+ a single <tt>.cpp</tt> file, or else you&#39;ll get errors about &quot;unresolved externals&quot; from the linker.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ&#39;s decision to avoid the <a href="inline.html#fqa-9.1">discussion</a> of the <i>reasons</i> leading to these requirements is wrong.
+ Clearly people who don&#39;t understand the underlying implementation issues won&#39;t survive to live the miserable life
+ of competent C++ developers. That&#39;s because in C++, the <i>underlying</i> stuff tends to climb out of the basement in
+ repeated attempts to make <i>you</i> the one lying under a pile of hard, urgent, mind-numbing low-level problems.
+</p>
+
+<p>
+Therefore, the only legitimate excuse for telling about a totally weird language requirement and not explaining
+ why it exists is brevity. See the FAQ&#39;s lengthy discussion about the performance of inline functions for a pretty good
+ evidence that brevity is hardly the motivation here.
+</p>
+
+
+<a name="fqa-9.7"></a>
+<h2>[9.7] How do you tell the compiler to make a member function <tt>inline</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.7">FAQ:</a></b>
+ Declare the function in the class as usual. In the definition, add the <tt>inline</tt> keyword to the prototype.
+The definition must be in a header file.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, it&#39;s similar to non-member functions.
+</p>
+
+
+<a name="fqa-9.8"></a>
+<h2>[9.8] Is there another way to tell the compiler to make a member function <tt>inline</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.8">FAQ:</a></b>
+ Yes, by writing its code right in the body of the class, instead of only writing the declaration there, and
+ defining it outside of the class. This way, you don&#39;t even have to use the <tt>inline</tt> keyword.
+</p>
+
+<p>
+It&#39;s easier when you write classes, but harder when you read them, because the interface is mixed with the implementation.
+ Remember the &quot;reuse-oriented world&quot;? Think about the welfare of the many, many users of your class!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> What popular language forces you to write a bare interface (&quot;header file&quot;) and separately an implementation containing
+ all the information in the interface (&quot;source files&quot;)? Somehow all those languages which only make you type the interface
+ once are not at all that hard to use. May it be that it&#39;s because these languages are <i>parsable</i> and therefore <i>IDEs can
+ do the oh-so-interesting job of extracting the interface from the implementation</i> and then you can use things like
+ class view windows to inspect interfaces?
+</p>
+
+<p>
+Unless you use templates and operator overloading and all that, many IDEs even have a chance of working with your C++ code.
+So writing inline functions inside class definitions won&#39;t really hurt your users after all.
+Even if there were no IDEs, you should probably only inline very short functions, with implementations as descriptive
+                                       as a comment (is <tt>return _x;</tt> less of a documentation than &quot;//returns the value of the x coordinate&quot;?). If there&#39;s lots of &quot;implementation
+ details&quot; to hide from the eye of a casual observer, inlining is most likely a bad idea anyway.
+</p>
+
+
+<a name="fqa-9.9"></a>
+<h2>[9.9] With inline member functions that are defined outside the class, is it best to put the <tt>inline</tt> keyword next to the declaration within the class body, next to the definition outside the class body, or both?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/inline-functions.html#faq-9.9">FAQ:</a></b>
+ The &quot;best practice&quot; is to only use it in the definition outside of the class. Blah, blah, blah, argues the FAQ
+ passionately about the issue. &quot;Observable semantics&quot;, &quot;practical standpoint&quot;, blah, blah, blah.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Programmers typically have a good ability to keep many details in their heads. So good that many don&#39;t realize that
+                                       this ability is
+ <i>finite</i>. If you litter your brain with idiotic &quot;best practices&quot; which don&#39;t even affect the <i>observable semantics</i> of code,
+you do it at the expense of <i>not</i> thinking about something else when you write code. &quot;Something else&quot; may include
+ really important things, like the purpose and the meaning of the code.
+</p>
+
+<p>
+If you don&#39;t care about this sort of discussions, and you find yourself under an attack of &quot;software professionals&quot; buzzing
+ buzzwords about your &quot;bad practices&quot;, send them a link to this page to distract them, and use the time gained
+ by the distraction to go out and buy a buzzer to talk back to them.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

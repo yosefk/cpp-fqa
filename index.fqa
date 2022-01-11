@@ -19,7 +19,7 @@ questioned answers". This FQA is called
 <li><a href="http://yosefk.com/blog">Blog</a></li>
 </ul>`
 
-`<h2>C++ Q&A</h2>`
+`<h2>C++ Q&amp;A</h2>`
 
 The structure of the Q&A pages corresponds to that of C++ FAQ Lite, and links are given
 to the original FAQ answers. Issues on many different scales are discussed. For
@@ -49,5 +49,9 @@ a summary of the large-scale problems with C++, see `<a href="defective.html">De
 <li><a href="mixing.html">How to mix C and C++</a></li>
 <li><a href="function.html">Pointers to member functions</a></li>
 <li><a href="templates.html">Templates</a></li>
-</ul>
-`
+</ul>`
+
+\<!-- 
+RG: this closing shitter \` on a new line prevents removal of a 
+trailing \<\/p\> in tidy.py 
+--\>

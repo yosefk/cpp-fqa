@@ -59,7 +59,7 @@ our problem in the first place). So we /don't/ want to use the virtual base clas
 
 /From a Usenet posting/
 (in
-[http://groups.google.co.il/group/comp.lang.c++.moderated/tree/browse_frm/thread/870d15c57e831fc5/8396a5eaa8e3452d?hl=en&rnum=41&_done=%2Fgroup%2Fcomp.lang.c%2B%2B.moderated%2Fbrowse_frm%2Fthread%2F870d15c57e831fc5%2F5868fd6e57f6ae2c%3Fhl%3Den%26tvc%3D1%26#doc_1425cc7bbc57bcb8 comp.lang.c++.moderated]):
+[http://groups.google.co.il/group/comp.lang.c++.moderated/tree/browse_frm/thread/870d15c57e831fc5/8396a5eaa8e3452d?hl=en&amp;rnum=41&amp;_done=%2Fgroup%2Fcomp.lang.c%2B%2B.moderated%2Fbrowse_frm%2Fthread%2F870d15c57e831fc5%2F5868fd6e57f6ae2c%3Fhl%3Den%26tvc%3D1%26#doc_1425cc7bbc57bcb8 comp.lang.c++.moderated]):
 You said "C++ doesn't add any built-in types to C."
 What about |bool|?
 

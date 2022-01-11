@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: Destructors</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>Destructors</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html">FAQ</a></b><small class="part"> links.</small><hr>
+
+<p>
+Destructors are one of the many pieces of the puzzle that is the C++ <a href="heap.html#fqa-16.1">memory management</a>.
+</p>
+
+<ul>
+<li><a href="dtor.html#fqa-11.1">[11.1] What&#39;s the deal with destructors?</a></li>
+<li><a href="dtor.html#fqa-11.2">[11.2] What&#39;s the order that local objects are destructed?</a></li>
+<li><a href="dtor.html#fqa-11.3">[11.3] What&#39;s the order that objects in an array are destructed?</a></li>
+<li><a href="dtor.html#fqa-11.4">[11.4] Can I overload the destructor for my class?</a></li>
+<li><a href="dtor.html#fqa-11.5">[11.5] Should I explicitly call a destructor on a local variable?</a></li>
+<li><a href="dtor.html#fqa-11.6">[11.6] What if I want a local to &quot;die&quot; before the close <tt>}</tt> of the scope in which it was created? Can I call a destructor on a local if I <i>really</i> want to?</a></li>
+<li><a href="dtor.html#fqa-11.7">[11.7] OK, OK already; I won&#39;t explicitly call the destructor of a local; but how do I handle the above situation?</a></li>
+<li><a href="dtor.html#fqa-11.8">[11.8] What if I can&#39;t wrap the local in an artificial block?</a></li>
+<li><a href="dtor.html#fqa-11.9">[11.9] But can I explicitly call a destructor if I&#39;ve allocated my object with <tt>new</tt>?</a></li>
+<li><a href="dtor.html#fqa-11.10">[11.10] What is &quot;placement <tt>new</tt>&quot; and why would I use it?</a></li>
+<li><a href="dtor.html#fqa-11.11">[11.11] When I write a destructor, do I need to explicitly call the destructors for my member objects?</a></li>
+<li><a href="dtor.html#fqa-11.12">[11.12] When I write a derived class&#39;s destructor, do I need to explicitly call the destructor for my base class?</a></li>
+<li><a href="dtor.html#fqa-11.13">[11.13] Should my destructor throw an exception when it detects a problem?</a></li>
+<li><a href="dtor.html#fqa-11.14">[11.14] Is there a way to force <tt>new</tt> to allocate memory from a specific memory area?</a></li>
+</ul>
+
+<a name="fqa-11.1"></a>
+<h2>[11.1] What&#39;s the deal with destructors?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.1">FAQ:</a></b>
+ A destructor, abbreviated &quot;dtor&quot;, is a &quot;you&#39;re about to die&quot; member function. It is used to release
+resources, for example, semaphores. Most frequently the resource is memory allocated by <tt>new</tt>;
+the destructor frees it with <tt>delete</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yep, <a href="heap.html#fqa-16.1">C++ has no garbage collection</a>, which makes &quot;memory&quot; a manually managed &quot;resource&quot;. Die-hard C++ programmers
+firmly believe that <a href="exceptions.html#fqa-17.4">RAII</a> - acquiring resources in constructors and releasing them in destructors - is the silver
+bullet for resource management. The problem with this approach is that many objects can point to the same piece of data,
+but only one of them is the &quot;owner&quot;, and when the owner dies, its destructor promptly blows the piece of data
+to even smaller little pieces.
+</p>
+
+<p>
+The most common way around this is <i>copying</i>. For example, you load a large file representing a 3D object model
+or an XML document or something. You find an interesting leaf on the 3D tree model or in the XML tree or whatever.
+Now you want to release the memory of the whole model so that you can free some space for processing the part.
+You need to either convince the model object that it doesn&#39;t own the stuff in your leaf, or you have to copy
+that stuff. The latter is way easier
+(try to convince an owner such as <tt>std::list</tt> to let a couple of nodes go out of its jurisdiction).
+</p>
+
+<p>
+Which is one reason that can cause garbage collection to outperform manual memory management. But of course with garbage
+ collection you&#39;ll never master your debugging tools to an extent anywhere near the expertise you&#39;ll reach with
+ manual memory management
+(you&#39;ll have 10 times less bugs to practice on). It&#39;s up to you to choose the right tradeoff.
+</p>
+
+<p>
+There are two common counter arguments: not all resources are memory, and not all systems can afford garbage collection.
+ Well, surely more than 95% of resources <i>are</i> memory, and surely more than 95% of C++ code runs in systems which <i>can</i> afford garbage collection.
+These arguments are yet another evidence that <a href="picture.html#fqa-6.2">C++ is about theory, not practice</a>. And the resources which are not memory
+and must be released deterministically usually aren&#39;t handled very well be C++ destructors anyway. That&#39;s because a C++
+ destructor can&#39;t handle errors (it has no return value and <a href="dtor.html#fqa-11.13">it can't throw exceptions</a>).
+</p>
+
+
+<a name="fqa-11.2"></a>
+<h2>[11.2] What&#39;s the order that local objects are destructed?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.2">FAQ:</a></b>
+ In reverse order of construction - the stuff declared last is destroyed first.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Which makes sense, but are you sure you want to write code that depends on this?
+</p>
+
+
+<a name="fqa-11.3"></a>
+<h2>[11.3] What&#39;s the order that objects in an array are destructed?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.3">FAQ:</a></b>
+ In reverse order of construction - the last element is destroyed first.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Which sort of makes sense, but you <i>surely</i> don&#39;t want to write code that depends on that one, do you?
+</p>
+
+<p>
+By the way, don&#39;t forget to use <tt>delete[]</tt>, not just <tt>delete</tt>, to free arrays allocated with <tt>new[]</tt>, otherwise the stupid thing
+ <a href="heap.html#fqa-16.12">will not bother</a> to check the number of elements pointed by your pointer and some of your destructors won&#39;t get called
+ (actually, in theory it could be worse - the behavior is undefined).
+</p>
+
+
+<a name="fqa-11.4"></a>
+<h2>[11.4] Can I overload the destructor for my class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.4">FAQ:</a></b>
+ No. Destructors never have parameters or return values. And you&#39;re not supposed to call destructors explicitly,
+so you couldn&#39;t use parameters or return values anyway.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Why do you want to overload destructors? Do you like C++ overloading? Are you sure? But the lack of return values
+ <i>is</i> a pity - <a href="dtor.html#fqa-11.13">no way to handle errors</a>. Let&#39;s hope they won&#39;t happen, shall we?
+</p>
+
+
+<a name="fqa-11.5"></a>
+<h2>[11.5] Should I explicitly call a destructor on a local variable?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.5">FAQ:</a></b>
+ Don&#39;t do that! The destructor will be called again at the end of scope. And the second call will do nasty things,
+ like crashing your program or something.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There are standard questions to ask in these cases, like &quot;if this syntax is never useful, why does it compile&quot;? Anyway, you <i>can</i> call a destructor
+ on a local variable, but you have to make sure you call a constructor after that and before the object goes out of scope.
+ For example:
+</p>
+
+<pre>
+AMiserableFileClass file(&quot;f1.txt&quot;);
+//use file... now we want to close it, but there&#39;s no close() method, so:
+file.~AMiserableFileClass();
+//open another file
+new (&amp;file) AMiserableFileClass(&quot;f2.txt&quot;);
+</pre>
+
+<p>
+<tt>AMiserableFileClass</tt> is a miserable file class because it has no <tt>close</tt> method, so you might feel the need to close it
+ in the ugly way above. Try to avoid this, because most people won&#39;t understand it, and they shouldn&#39;t, because <a href="picture.html#fqa-6.4">there
+ are better things to do</a> than <a href="ctors.html#fqa-10.19">fiddling with the many ugly bits of C++</a>.
+</p>
+
+
+<a name="fqa-11.6"></a>
+<h2>[11.6] What if I want a local to &quot;die&quot; before the close <tt>}</tt> of the scope in which it was created? Can I call a destructor on a local if I <i>really</i> want to?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.6">FAQ:</a></b>
+ No, no, no! See the next FAQ for a simple solution. But don&#39;t call the destructor!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If you ever get into the situation of promoting an especially disgusting product, such as the C++ programming language, there are better ways to handle it
+than get all excited. You can try and find a less disgusting product to center your money-making around, or you can
+just relax.
+</p>
+
+<p>
+&quot;Don&#39;t call the destructor&quot;. There has to be <i>some</i> reason for the destructor call to compile, doesn&#39;t it? Perhaps
+sharing it with us could help calm down.
+</p>
+
+
+<a name="fqa-11.7"></a>
+<h2>[11.7] OK, OK already; I won&#39;t explicitly call the destructor of a local; but how do I handle the above situation?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.7">FAQ:</a></b>
+ Now you&#39;re talking! Here&#39;s a tip - you can simply surround the object with an <i>artificial block</i>:
+</p>
+
+<pre>
+{
+  AMiserableFileClass file(&quot;f1.txt&quot;);
+} //the file object dies here
+</pre>
+
+<p>
+<b class="FQA">FQA:</b> Is this ugly code supposed to be better than <a href="dtor.html#fqa-11.5">the ugly code</a> calling a destructor and than a constructor? On a level,
+this version is more cryptic
+(at least it&#39;s easy to see what gets called when in that other ugly piece of code). But the truth is that
+for many actual C++ programmers the &quot;artificial blocks&quot; (isn&#39;t all code &quot;artificial&quot;?) are more readable.
+</p>
+
+
+<a name="fqa-11.8"></a>
+<h2>[11.8] What if I can&#39;t wrap the local in an artificial block?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.8">FAQ:</a></b>
+ If you absolutely have to, do something like adding a <tt>close</tt> method to <tt>AMiserableFileClass</tt> which closes the file
+ in its destructor. So you can achieve the effect of the destructor call without calling the destructor. Which is a taboo,
+ get it?
+</p>
+
+<p>
+The FAQ also points out how hard it is to write a <tt>close</tt> function so that the destructor doesn&#39;t try to close a closed
+ file.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If you can change <tt>AMiserableFileClass</tt>, it&#39;s better than using ugly code to work around its deficiencies. But
+ where&#39;s the FAQ&#39;s brave new <a href="operator.html#fqa-13.4">reuse-oriented world</a> now? What about all those classes with stable interfaces
+ you can&#39;t change? Seriously, it can happen with classes not available in source form.
+</p>
+
+<p>
+I sincerely believe that the not-so-appetizing &quot;call the destructor, then call a constructor&quot; method is legal C++.
+ If this is indeed so, I fail to understand the problem with mentioning it in the answer.
+</p>
+
+<p>
+As to the problem of having destructors and close functions respect each other - one way around this is to <a href="ctors.html#fqa-10.5">avoid
+non-trivial constructors</a> and destructors and always use init and close functions. Next, you can replace <a href="class.html#fqa-7.1">C++ classes</a>
+ with their <a href="class.html#fqa-7.4">metaphysical "encapsulation"</a> with <a href="class.html#fqa-7.5">forward-declared</a> C <tt>struct</tt>s, which can actually yield stable binary interfaces
+ and save recompilation. Next, you can replace C++ with C (where execution time matters) or with one of the many sane, safe
+languages (where development time matters). There, doesn&#39;t it feel <a href="picture.html#fqa-6.5">much better</a> now?
+</p>
+
+
+<a name="fqa-11.9"></a>
+<h2>[11.9] But can I explicitly call a destructor if I&#39;ve allocated my object with <tt>new</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.9">FAQ:</a></b>
+ You can&#39;t, unless the object was allocated with placement <tt>new</tt>. Objects created by <tt>new</tt> must be <tt>delete</tt>d, which
+ does two things (remember them): calls the destructor, then frees the memory.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Translation: <tt>delete</tt> <i>is</i> a way to explictly call a destructor, but it <i>also</i> deallocates the memory. You can
+also call a destructor without deallocating the memory. It&#39;s ugly and useless in most cases,
+ but you can do that.
+</p>
+
+<p>
+Questions like &quot;What <i>exactly</i> does <tt>delete</tt> do?&quot; probably cross the fine line separating between the questions everyone claiming to know
+ C++ should be able to answer and the questions identifying people with too much C++-related garbage in their brains.
+People can be quite productive by simply calling
+ <tt>new</tt> and <tt>delete</tt> without thinking too much about the two steps involved, so not knowing about the two steps is probably no big deal.
+ The most interesting thing about the two steps is that the idea of <a href="ctors.html#fqa-10.1">having the code using the class managing the memory
+ of its objects</a> is the main reason C++ code is <a href="class.html#fqa-7.4">recompiled so frequently</a>.
+</p>
+
+
+<a name="fqa-11.10"></a>
+<h2>[11.10] What is &quot;placement <tt>new</tt>&quot; and why would I use it?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.10">FAQ:</a></b>
+ There are many uses for placement <tt>new</tt>. For example, you can allocate an object in a particular location,
+ you can pass the pointer to this location to placement <tt>new</tt> like this: <tt>C* p = new(place) C(args);</tt>
+</p>
+
+<p>
+Don&#39;t use this unless you really care where the object lives (say, you have a memory-mapped hardware device
+ like a timer, and you want to have a <tt>Timer</tt> object at the particular location).
+</p>
+
+<p>
+Beware! It is your job to make sure that the address where you allocate the object is properly aligned and that
+you have enough space for the object. You are also responsible for calling the destructor with <tt>p-&gt;~C();</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Size is relatively easy to deal with because we have <tt>sizeof</tt>, alignment can be more painful. Here&#39;s an advice:
+if you care where your objects are allocated, don&#39;t make them objects of classes with constructors and destructors and stuff.
+This way, you can create <a href="dtor.html#fqa-11.14">memory pools</a> with code like <tt>C pool[N];</tt>, which takes care of alignment <i>and</i> &quot;type safety&quot;.
+But if the class <tt>C</tt> has a constructor, it&#39;s going to get called N times by this statement (slow and stupid), and if you want someone to use
+placement <tt>new</tt> with the pool, you&#39;ll have to <i>call the destructors</i> after the constructors finish running
+(slow, stupid and cryptic). Or you can use <tt>char pool[N*sizeof(C)];</tt> with platform-specific additions to handle
+alignment, and then you won&#39;t be able to easily inspect the pool in a debugger (the object <tt>pool</tt> has the wrong type), etc.
+</p>
+
+<p>
+And you have to be <i>out of your mind</i> to call placement <tt>new</tt> when you <a href="operator.html#fqa-13.3">deal with memory-mapped hardware</a>.
+Do you realize that the constructor is going to <i>directly modify the state of the hardware</i>?
+Even if you get this right (yes, there are ways to get this wrong, too boring to enumerate here),
+this is one very unmaintainable way to write this kind of code. If you think that&#39;s &quot;intuitive&quot;, think again.
+What is the constructor doing - &quot;creating&quot; the timer? Come on, it&#39;s <i>hardware</i>, it was already physically there. Oh, it &quot;initializes&quot; it?
+So why don&#39;t use a function with &quot;init&quot; in its name instead of a &quot;constructor&quot;?
+</p>
+
+<p>
+You have enough trouble thinking about the semantics
+of the hardware interface, so why would anyone want to add the complexity of C++ to the problem?
+</p>
+
+<p>
+At least the FAQ has finally disclosed the <a href="dtor.html#fqa-11.5">top secret information</a> about explicitly calling destructors.
+</p>
+
+
+<a name="fqa-11.11"></a>
+<h2>[11.11] When I write a destructor, do I need to explicitly call the destructors for my member objects?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.11">FAQ:</a></b>
+ No, they are called implicitly in the reverse order of their declaration in the class.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Pay attention to the details. If your member is a pointer
+to something allocated with <tt>new</tt>, <i>the pointer&#39;s destructor</i>, which is a purely metaphysical entity doing nothing
+                                                         physically observable,
+is called, but it&#39;s <i>your</i> job to call <tt>delete</tt> on the pointer, which calls the destructor of the pointed object.
+The pointed object is technically <i>not</i> a member of your class (the pointer is). The difference between
+the intuitive feeling that &quot;it&#39;s part of the class&quot; and the formal definition of the term &quot;member&quot; is one reason making
+<tt>const</tt> <a href="const.html#fqa-18.2">less than useful</a> (is changing the object pointed by a member &quot;changes&quot; the object itself or not?).
+</p>
+
+<p>
+Experienced C++ programmers find this natural since the C++ approach to these issues is relatively uniform.
+If you have the tough luck of using C++ a lot, this point is obvious
+(but you wouldn&#39;t ask the question in the first place).
+</p>
+
+<p>
+There&#39;s a nifty thing called <a href="heap.html#fqa-16.1">"garbage collection"</a> that&#39;s been around for nearly half a century. The run time system
+automatically figures out which objects are not pointed by anything and collects this garbage. Check it out, it&#39;s quite nice.
+</p>
+
+
+<a name="fqa-11.12"></a>
+<h2>[11.12] When I write a derived class&#39;s destructor, do I need to explicitly call the destructor for my base class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.12">FAQ:</a></b>
+ No, this is done implicitly, in the reverse order of the appearance of the classes in the inheritance list
+ (but <tt>virtual</tt> inheritance complicates matters), and after the destruction of the class members.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ says that if someone is <a href="dtor.html#fqa-11.3">relying</a> on more complicated details of the finalization order, you&#39;ll need information outside the scope
+ of the FAQ. The remark probably refers to useful information like locations of mental institutions and drug prescriptions.
+</p>
+
+<p>
+Seriously, a Usenet language FAQ is already a place normally visited only by language lawyers. If you need <i>more</i>
+obscure information to get your job done, the only legitimate reason is that you&#39;re writing a C++ compiler.
+ If that&#39;s the case, and you feel miserable, cheer up - it could be worse. For example, imagine the misery of the people who&#39;ll <i>use</i> your compiler!
+</p>
+
+
+<a name="fqa-11.13"></a>
+<h2>[11.13] Should my destructor throw an exception when it detects a problem?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.13">FAQ:</a></b>
+ THAT IS DANGEROUS! Which is discussed in <a href="exceptions.html#fqa-17.3">a FAQ about exceptions</a>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It shouldn&#39;t. And you can&#39;t return an error code either. However, on many systems you can send an e-mail with the word
+ &quot;BUMMER&quot; to your support e-mail address.
+</p>
+
+<p>
+If you want your destructor to detect problems, make it a <tt>close</tt> function.
+</p>
+
+
+<a name="fqa-11.14"></a>
+<h2>[11.14] Is there a way to force <tt>new</tt> to allocate memory from a specific memory area?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/dtors.html#faq-11.14">FAQ:</a></b>
+ Oh, yessssss! Pools! Pools, pools, pools, pools, pools...
+</p>
+
+<p>
+Please forgive me this time. I can&#39;t summarize what the FAQ is saying. It&#39;s almost as long as
+ <i>all the previous answers</i>. And it&#39;s totally out of control. If you feel like it, fasten your seat belt,
+ grab a barf bag, follow the link
+ and knock yourself out.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Oh, nooooooo! Don&#39;t do that!
+</p>
+
+<p>
+I know that your system has more than one kind of memory and/or you have real time requirements and
+ you can&#39;t use a traditional <tt>malloc</tt> implementation. But trust me, you&#39;re going to hate the day you&#39;ve
+ heard about those pools. Pools have arbitrary size limits (at most 20 objects of this, at most 30 objects of that...).
+ Everybody is going to have a paranoia attack and set the limits to huge values, and then you&#39;re out of memory,
+ and then you start thinking about the &quot;right&quot; limits, and it turns out that it&#39;s extremely hard to figure that out,
+ because seemingly independent modules have related memory requirements (say, they handle mutually exclusive situations
+                                                                         so you&#39;d like them to use the same memory, but how?),
+ and then you need some hairy logic to compute those values on a per-configuration basis, which means building several
+ versions of the program, and maybe creating scripts for computing the values at build time, and you&#39;re going to <i>hate the day you&#39;ve
+ heard about those pools</i>.
+</p>
+
+<p>
+If you&#39;re absolutely sure you can&#39;t create a single allocator managing your memory, at least <i>don&#39;t allocate objects
+of classes with constructors</i> from pools, <a href="dtor.html#fqa-11.10">use C-like structs instead</a>. If you refuse to give up and admit that you&#39;re
+ doing a pretty low-level thing and instead want to keep pretending that you&#39;re <a href="ref.html#fqa-8.6">"programming in the problem domain"</a>,
+ and for some reason you think C++ classes help you with that - go ahead. The punishments for your crime are
+                                                                         discussed throughout the FQA.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

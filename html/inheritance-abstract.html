@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: Inheritance -- abstract base classes</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>Inheritance -- abstract base classes</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/abcs.html">FAQ</a></b><small class="part"> links.</small><hr>
+
+<p>
+C++ abstract base classes are not bad at all by C++ standards. However, they are quite poor by OO standards.
+</p>
+
+<ul>
+<li><a href="inheritance-abstract.html#fqa-22.1">[22.1] What&#39;s the big deal of separating interface from implementation?</a></li>
+<li><a href="inheritance-abstract.html#fqa-22.2">[22.2] How do I separate interface from implementation in C++ (like Modula-2)?</a></li>
+<li><a href="inheritance-abstract.html#fqa-22.3">[22.3] What is an ABC?</a></li>
+<li><a href="inheritance-abstract.html#fqa-22.4">[22.4] What is a &quot;pure virtual&quot; member function?</a></li>
+<li><a href="inheritance-abstract.html#fqa-22.5">[22.5] How do you define a copy constructor or assignment <tt>operator</tt> for a class that contains a pointer to a (abstract) base class?</a></li>
+</ul>
+
+<a name="fqa-22.1"></a>
+<h2>[22.1] What&#39;s the big deal of separating interface from implementation?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/abcs.html#faq-22.1">FAQ:</a></b>
+ Interfaces are the most important thing possessed by a company. Defining interfaces is hard, throwing together an implementation
+is easy. Designing interfaces takes lots of time and is done by people who are paid lots of money.
+</p>
+
+<p>
+You wouldn&#39;t want these valuable artifacts clobbered by implementation details, would you?
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If interface is decoupled from implementation, you can have more than one implementation of the same
+interface. This way, code <i>using</i> the interface can work with all those implementations. For example, the same
+code may be used to render a document to a screen, a printer and a file. Which is <i>excellent</i>, and is a <i>very
+widely acknowledged and basic fact</i>.
+</p>
+
+<p>
+It&#39;s amazing that the FAQ&#39;s answer fails to mention this. The FAQ&#39;s claim about the relative importance
+of interfaces and implementations is unbelievable, too. Here&#39;s an interface for you:
+</p>
+
+<pre>
+class SearchEngine
+{
+public:
+  // search the documents pointed by URLs in the inputURLs stream, search the query string
+  // in them and emit the URLs sorted by relevance to the outputURLs stream (at most maxResults URLs).
+  virtual void find(const string&amp; query, istream&amp; inputURLs, ostream&amp; outputURLs, int maxResults) = 0;
+};
+</pre>
+
+<p>
+Now, that took about 1 minute. It&#39;s your turn to &quot;throw together an implementation&quot;, which shouldn&#39;t take more
+than 30 seconds according the FAQ&#39;s argument, should it? Go.
+</p>
+
+<p>
+If you don&#39;t like this example (&quot;there are more complicated interfaces in a real search engine&quot;), think about
+<tt>matchScore = faceRecognition(suspectImage, testImage)</tt>, <tt>fft(outputArray, inputArray, size)</tt>,
+<tt>text = ocr(imageWithHandWriting)</tt>, <tt>render(screen,htmlPage)</tt>, <tt>write(file,buffer,size)</tt>... The idea that
+&quot;implementations are trivial&quot; can only come from working on extremely stupid applications or example
+programs for text books.
+</p>
+
+<p>
+Of course many interfaces should be decoupled from implementations - but that&#39;s because they <i>hide</i>
+a <i>much more complicated</i> implementation, and/or because they have more than one implementation,
+and/or because you want to change the implementation without affecting the client code. Surprisingly
+enough, C++ abstract classes actually allow you to achieve all these things.
+</p>
+
+<p>
+Of course they don&#39;t
+fix many hard problems with C++ - there&#39;s no real run time type information, for example. And adding a function
+to an abstract class changes the binary interface, which is frequently unacceptable.
+But abstract classes are better than nothing, as opposed to the many C++ features which are in fact
+<i>worse</i> than nothing.
+</p>
+
+
+<a name="fqa-22.2"></a>
+<h2>[22.2] How do I separate interface from implementation in C++ (like Modula-2)?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/abcs.html#faq-22.2">FAQ:</a></b>
+ Use an abstract base class.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> What do you mean &quot;like Modula-2&quot;?
+</p>
+
+<p>
+If you want to be able to work with many different implementations selected
+at run time, abstract base class is the way to go. Alternatively, you can roll your own &quot;abstract base classes&quot;
+by using structures containing function pointers, emulating &quot;vtables&quot;. This results in extra code, but it&#39;s <a href="picture.html#fqa-6.3">more
+portable</a> (C binary calling conventions on a given processor architecture tend to be shared by more tools than C++ ones).
+</p>
+
+<p>
+If you don&#39;t need dynamic implementation selection, you can use a header file with forward declarations of types,
+and have the types defined in the implementation file(s). <a href="class.html#fqa-7.5">This way</a> you can change the implementation details
+without recompiling the calling code
+(which you can&#39;t do with C++ <tt>private</tt> members). In particular,
+you can build several versions of your program with different implementations of this interface without recompiling
+the entire program.
+</p>
+
+
+<a name="fqa-22.3"></a>
+<h2>[22.3] What is an ABC?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/abcs.html#faq-22.3">FAQ:</a></b>
+ An abstract base class.
+</p>
+
+<p>
+Logically, it corresponds to an abstract concept, such as <tt>Animal</tt>. Specific animals, like <tt>Rat</tt>, <tt>Skunk</tt> and <tt>Weasel</tt>,
+correspond to implementation classes derived from <tt>Animal</tt>.
+</p>
+
+<p>
+Technically, a class with at least one pure <a href="inheritance-virtual.html#fqa-20.1">virtual</a> function is abstract. You can&#39;t have objects of abstract classes,
+ you can only create objects of classes derived from them that implement all the pure virtual functions.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> ABC is also an especially annoying abbreviation.
+</p>
+
+<p>
+Here are a couple of things you can&#39;t do with a C++ abstract base class, and which are supported in other OO languages. You can&#39;t iterate over the methods of
+ an abstract base class (neither at compile time nor at run time). So you can&#39;t easily utilize the decoupling
+ between the interface and the implementation by automatically generating wrapper classes that log function calls
+ or pack the arguments and send them to an object in another process and/or on another machine. You also
+ can&#39;t ask a random object whether it implements the given interface (in language terms,
+ whether its class is derived from a given abstract base class).
+</p>
+
+<p>
+If the only language you use heavily is C++, it&#39;s possible that you don&#39;t realize that you might <i>want</i> to do these
+ things at all, or even memorized elaborate arguments &quot;proving&quot; that these things <i>should not</i> be done.
+ But hey - at least abstract classes don&#39;t make anything <i>worse</i> than it already was in C. Quite an achievement
+ for a C++ feature.
+</p>
+
+
+<a name="fqa-22.4"></a>
+<h2>[22.4] What is a &quot;pure virtual&quot; member function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/abcs.html#faq-22.4">FAQ:</a></b>
+ It&#39;s a virtual function which (normally) has no implementation in the base class, and (always) must be implemented
+ in a derived class to make it non-abstract. The syntax is: <tt>virtual result funcname(args) = 0;</tt>.
+</p>
+
+<p>
+This declaration makes the class abstract - it is illegal to create objects of this class. A derived class that doesn&#39;t
+ implement at least one pure virtual function is still abstract. Only derived classes without any unimplemented pure
+ virtual functions can be instantiated (you can create objects of these classes).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The syntax is ridiculous. You may wonder what <tt>virtual result funcname(args) = 1999;</tt> means. Well, it means nothing;
+ it doesn&#39;t compile.
+</p>
+
+<p>
+One possible motivation for this syntax is to save a keyword (such as <tt>pure</tt> or <tt>abstract</tt>). The more new keywords there are,
+ the &quot;less&quot; C++ is compatible with C, or with C++ code written before the new keyword was introduced (well, <a href="picture.html#fqa-6.11">strictly
+speaking</a>, either two things are compatible, or they are not, but we&#39;ll ignore that for the moment). That&#39;s because
+ C and C++ have grammars which disallow to use keywords as identifiers. This problem is shared by the majority of
+ programming languages.
+</p>
+
+<p>
+However, C++ does have a huge amount of new keywords. This makes one wonder why the very rarely used <tt>explicit</tt>
+ (not to mention <tt>export</tt>) is a keyword, while the many different uses of the keyword <tt>static</tt> are in fact collapsed
+ into a single keyword instead of using new keywords for the new uses. And why not use the silly, but standard
+ &quot;reserved namespace&quot; (names prefixed with two underscores or a single underscore followed by a capital letter
+are reserved for the compiler), the way it&#39;s (mostly) done in C99? Then we&#39;d have <tt>__explicit</tt> built-in and <tt>explicit</tt>
+ would be a <tt>#define</tt> you&#39;d <tt>#include</tt> from <tt>&lt;shiny_new_useless_cxx_features&gt;</tt> (no trailing <tt>.h</tt>, of course).
+This way, you give a normally looking keyword to people who need it, and don&#39;t break the code of those who don&#39;t.
+</p>
+
+<p>
+Here&#39;s a proposal for the next C++ standard: let&#39;s define two keywords, <tt>__0</tt> and <tt>__1</tt>. With a token sequence composed of these
+ two keywords, we can express anything
+ (actually, one keyword is enough, but that&#39;s just too verbose). Then we won&#39;t
+ever need any new keywords. As the pure virtual syntax example shows, the readability loss is a small price to pay
+ for the forward, backward and downward compatibility achieved using this approach.
+</p>
+
+
+<a name="fqa-22.5"></a>
+<h2>[22.5] How do you define a copy constructor or assignment <tt>operator</tt> for a class that contains a pointer to a (abstract) base class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/abcs.html#faq-22.5">FAQ:</a></b>
+ If you don&#39;t want to make a &quot;deep copy&quot; of that pointer, there&#39;s nothing special about this case.
+</p>
+
+<p>
+If you do want to make a deep copy of the pointer (which you normally should do when the class &quot;owns&quot; it),
+  the abstract base class should have virtual <tt>copy</tt> and <tt>assign</tt> methods you can call from your copy constructor and
+  assignment operator.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This is a small example of how C++ forces you to write code which <a href="inheritance-virtual.html#fqa-20.8">could be generated automatically</a>.
+  You can avoid the problem by avoiding the ownership approach to lifetime management (<a href="exceptions.html#fqa-17.4">RAII</a>), but
+  figuring out that you need these virtual functions and implementing them is easy for people
+  who understand C++ well.
+</p>
+
+<p>
+The trouble is that <a href="picture.html#fqa-6.6">most</a> people using C++ <i>don&#39;t</i> understand it very well. C++ has the lethal combination
+  of looking all nice and simple on the surface and having lots of traps installed under the surface, waiting
+  for a victim. The only chance of the victim is to have a very good understanding of the underlying problems
+  of C++. With that understanding, it&#39;s easy to see that, um, you have to make a deep copy since you&#39;re
+  the &quot;owner&quot;, and an object pointed by two owners is going to be wiped out twice by the <a href="dtor.html#fqa-11.1">destructor</a>, and we
+  don&#39;t want that, so let&#39;s copy the object - costly, but safe, and, um, we can&#39;t just copy the object, because we don&#39;t know its type, but wait,
+  the object <i>itself</i> does know its type, so we need it to help us with the copying, so we need to add these
+  virtual <tt>copy</tt> functions to this hierarchy of classes. It&#39;s a good thing we did it now before the interfaces
+  became stable and adding functions became a royal pain, causing recompilation of calling code. Or did we?
+</p>
+
+<p>
+The problem with all this reasoning is that it has little to do with whatever you&#39;re ultimately trying to achieve
+  in your program. So many people who think more about what their program does than about the way their programming
+  language works won&#39;t see this coming, and do something wrong. No, it <i>doesn&#39;t</i> mean that the people primarily focused
+  on the programming language are more productive than others. Of course they aren&#39;t uniformly less productive, either.
+  Some of the people with a programming language focus spend most of their time <a href="friend.html#fqa-14.3">choosing</a>
+  between <tt>func(obj)</tt> and <tt>obj.func()</tt>, some don&#39;t; it depends on the person, and people can change, further complicating matters.
+</p>
+
+<p>
+Of course this problem exists with all computer languages and, more generally, with all software systems, and, more
+  generally, with all formal systems. Basically there&#39;s the ice - the things compatible with human common sense -
+  and the cold water under it, into which you can fall when the rules governing the system <a href="inheritance-proper.html#fqa-21.6">contradict</a>
+  your common sense. So what&#39;s so special about C++?
+</p>
+
+<p>
+Well, in C++, the very thin ice is covered with <a href="operator.html#fqa-13.2">paint</a>, and the water is deep enough to <a href="templates.html#fqa-35.20">drown</a>.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

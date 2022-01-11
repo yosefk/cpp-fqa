@@ -31,7 +31,7 @@ of articles replying to other articles make sense some of the time. Comment thre
 Special case: Usenet conversations are futile. If they are moderated, they are futile and (almost) polite.
 
 An example of a futile, (almost) polite discussion of the C++ FQA can be found in
-[http://groups.google.co.il/group/comp.lang.c++.moderated/browse_frm/thread/870d15c57e831fc5/5868fd6e57f6ae2c?hl=en&tvc=1#5868fd6e57f6ae2c this comp.lang.c++.moderated thread]. For some reason, several people
+[http://groups.google.co.il/group/comp.lang.c++.moderated/browse_frm/thread/870d15c57e831fc5/5868fd6e57f6ae2c?hl=en&amp;tvc=1#5868fd6e57f6ae2c this comp.lang.c++.moderated thread]. For some reason, several people
 well-known in the C++ community decided to have a bunch of off-topic arguments in that thread
 (like how bad it is that some obscure features are going into C++0x and other obscure features aren't).
 Off-topic and futile, but amusing and (almost) polite.

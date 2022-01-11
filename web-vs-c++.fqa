@@ -1,4 +1,4 @@
-﻿C++ criticism by other people
+C++ criticism by other people
 {}
 This page is a collection of the best C++ criticism by FQA readers, copied
 from e-mail messages and online discussions. If you know an interesting consequence
@@ -290,7 +290,7 @@ inline my_class operator&&(my_class,int){return my_class(0);}
 int main(void)
 {
   double x = std::pow(1.0, 1.0);
-  (void) x; // to avoid unused variable warning
+  (void) x; \/\/ to avoid unused variable warning
 }
 @
 
@@ -299,7 +299,7 @@ The error message is:
 @
 $ g++ -Wall -pedantic-errors simple_test.cpp
 simple_test.cpp: In function ‘int main()’:
-simple_test.cpp:11: error: ambiguous overload for `operator&&' in `std::__traitor<std::__is_integer<double>, std::__is_floating<double> >::__value && std::__traitor<std::__is_integer<double>, std::__is_floating<double> >::__value'
+simple_test.cpp:11: error: ambiguous overload for `operator&amp;&amp;' in `std::__traitor<std::__is_integer<double>, std::__is_floating<double> >::__value && std::__traitor<std::__is_integer<double>, std::__is_floating<double> >::__value'
 simple_test.cpp:11: note: candidates are: operator&&(bool, bool) <built-in>
 simple_test.cpp:7: note:                 my_class operator&&(my_class, int)
 @
@@ -334,7 +334,7 @@ Tracing a few header files up brings us to |bits\/cpp_type_traits.h|:
   template<class _Sp, class _Tp>
     struct __traitor
     {
-      enum { __value = bool(_Sp::__value) || bool(_Tp::__value) };
+      enum { __value = bool(_Sp::__value) \|\| bool(_Tp::__value) };
       typedef typename __truth_type<__value>::__type __type;
     };
 @

@@ -1,0 +1,437 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta name="generator" content=
+"HTML Tidy for Mac OS X (vers 31 October 2006 - Apple Inc. build 4618), see www.w3.org">
+<meta http-equiv="Content-Type" content=
+"text/html; charset=us-ascii">
+<title>C++ FQA Lite: &iuml;&raquo;&iquest;C++ criticism by other
+people</title>
+
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>&iuml;&raquo;&iquest;C++ criticism by other people</h1>
+<small class="part">Part of <a href="index.html">C++ FQA
+Lite</a></small>
+<hr>
+<p>This page is a collection of the best C++ criticism by FQA
+readers, copied from e-mail messages and online discussions. If you
+know an interesting consequence of C++ problems not mentioned in
+the FQA, please <a href="http://yosefk.com">send me e-mail</a>.
+Similarly to <a href="http://yosefk.com/c++fqa/web-vs-fqa.html">the
+FQA errors</a> page, this one lists things that can be proved /
+tested rather than qualitative statements. The stuff is published
+with credits or anonymously, according to the choice of each
+author.</p>
+<p>The issues listed here (or the FQA itself) are not supposed to
+be "new" in the sense that they were never discussed in a published
+work (if C++ problems were so hard to discover as to take decades,
+discussing them wouldn't necessarily be worth the trouble).</p>
+<p>There's lots of (well-reasoned or entertaining or both) C++
+criticism on the web, including several pieces by celebrity
+programmers. However, I made the decision not to cite famous quotes
+by celebrities on this site. The main reason is that I don't want
+to make the FQA more convincing to the people who mostly value the
+credentials of an author and ignore things like facts and
+reasoning. I want to work less both with C++ <i>and</i> with these
+people. So I'd rather have them use C++ than convince them to
+switch to something else.</p>
+<ul>
+<li><a href="web-vs-c++.html#misfeature-1">Implicit type
+conversions</a></li>
+<li><a href="web-vs-c++.html#misfeature-2">C++ grammar: the type
+name vs object name issue</a></li>
+<li><a href="web-vs-c++.html#misfeature-3">C++ grammar: type vs
+object and template specializations</a></li>
+<li><a href="web-vs-c++.html#misfeature-4">printf, iostream and
+internationalization</a></li>
+<li><a href="web-vs-c++.html#misfeature-5">Static binding
+rules</a></li>
+</ul>
+<p><a name="misfeature-1" id="misfeature-1"></a></p>
+<h2>Implicit type conversions</h2>
+<p><i>Anonymous:</i> I'd add something about the broken type system
+- how the following code is legal and compiles without warnings
+with most compilers, for example:</p>
+<pre>
+void foo(const std::string &amp;) {}
+int main() 
+{
+    foo(false);
+}
+</pre>
+<p>Another example:</p>
+<pre>
+class A { public: int a; };
+class B : public A { public: int b; };
+int main() 
+{
+    A * p = new B[10];
+    p[5].a = 1;
+}
+</pre>
+<p>Why should a static type system allow this without an explicit
+cast?</p>
+<p><i>Yossi:</i> The FQA doesn't talk much about implicit type
+conversions, since the FAQ doesn't. The problem is quite important
+though. It wouldn't be so bad if C++ detected run time errors (as
+opposed to compiling the second example to code modifying the wrong
+place), and/or if so many C++ programmers didn't think that "with
+C++, when it compiles and links, it will run correctly" (I actually
+heard this one, and then there are many large C++ monolithic
+applications without unit tests speaking for themselves).</p>
+<p>Note that this has nothing to do with safety and C++ being a
+"power tool allowing you to do dangerous things" because it's so
+"high-performance". This argument only makes sense for
+<i>explicit</i> casts. What the code demonstrates is unexpected
+interactions between pairs of different implicit conversions (in
+the first example, <tt>bool -&gt; char* -&gt; std::string</tt>, in
+the second - <tt>B[] -&gt; B* -&gt; A*</tt>).</p>
+<p>By the way, the second example explains <a href=
+"inheritance-proper.html#fqa-21.5">the FAQ's remark</a> about
+arrays being <a href="picture.html#fqa-6.15">evil</a> in the
+context of inheritance and substitutability. The thing is that with
+arrays of objects, there's an implicit type conversion that allows
+you to violate the substitutability principle without a compile
+time error. With <tt>std::vector&lt;B&gt;</tt>, there's no implicit
+cast. I didn't understand the FAQ was talking about that, because
+most of the time, when inheritance and polymorphism are involved,
+you allocate arrays of <i>pointers</i> to objects. And in that
+case, there's no difference between a <tt>vector&lt;B*&gt;</tt> and
+a <tt>B**</tt> - you'd need an explicit cast in both cases. I
+automatically thought the question was the continuation of the
+discussion in <a href="inheritance-proper.html#fqa-21.2">preceding
+questions</a> about <i>why</i> the compiler wouldn't do the cast
+implicitly, and in that context the "arrays are evil" remark didn't
+quite fit. I completely forgot about the arrays-of-objects case,
+which is something a newbie coming from another language (and with
+C++, some people stay "newbies" for years) could very well try to
+use.</p>
+<p><a name="misfeature-2" id="misfeature-2"></a></p>
+<h2>C++ grammar: the type name vs object name issue</h2>
+<p><i>drorz:</i> In C/C++ you can not separate parsing into
+separate syntax and semantic passes. No existing compiler does it
+in two separate passes.</p>
+<p>In the example:</p>
+<pre>
+AA BB(CC);
+</pre>
+<p>The parse tree is different in the following cases:</p>
+<ul>
+<li>When AA and CC are types, BB is a function prototype.</li>
+<li>When AA is a type and CC is a variable, then BB is a
+variable/object initialization.</li>
+<li>When AA is a variable, <tt>AA BB(CC)</tt> is illegal and its
+parse tree is entirely different from the first two cases.</li>
+</ul>
+<p>You can not (more precisely, no one did it in a real C/C++
+compiler) fix a wrong parse tree in semantic analysis pass.</p>
+<p>Consider this example:</p>
+<pre>
+x * y(z);
+</pre>
+<p>in two different contexts:</p>
+<pre>
+int main() {
+    int x, y(int), z;
+    x * y(z);
+}
+</pre>
+<p>and</p>
+<pre>
+int main() {
+    struct x { x(int) {} } *z;
+    x * y(z);
+}
+</pre>
+<p>In the first case <tt>x * y(z)</tt> is expression, and in the
+second case it is a declaration of pointer y. Parse trees for those
+cases are completely different.</p>
+<p><i>Yossi:</i> This is the first part of the problem making the
+C++ grammar undecidable. The second part of the problem is that
+<tt>AA</tt> may really be
+<tt>Template&lt;Params&gt;::InnerDef</tt>, and figuring out whether
+<tt>InnerDef</tt> is a type name or an object name is equivalent to
+solving the halting problem, since templates may instantiate
+themselves recursively and in fact represent arbitrary recursive
+functions. Maybe I'll expand on this one later. In particular, it
+has to do with template specializations, which are discussed in the
+next item.</p>
+<p>Purists who don't like the "nearly context-free" expression in
+Defective C++: when you write parsers, it <i>does</i> make sense to
+discuss the "extent" of your dependence on the context. For
+example, C++ inherits the type name/object name riddle from C. But
+in C, you can solve it using a single dictionary of
+<tt>typedef</tt> names. Of course, theoretically the important part
+is that the C grammar is <i>decidable</i> (though not
+context-free). In practice, what matters is that it's <i>easy to
+parse</i>. In particular, you can use a parser generator for
+context-free grammars (<tt>yacc</tt>/<tt>bison</tt> is one mature
+program in this family) with the simple "symbol table hack"
+described above, and get a working parser. This is what "nearly
+context-free" means.</p>
+<p>I think the example is excellent since it took me quite some
+time to figure out what the code means myself (I think it's the
+asterisk). The <tt>AA BB(CC);</tt> example used in Defective C++ is
+simpler, but I think it doesn't convey the point as clearly, since
+apparently it makes it intuitively easier to counter with something
+like "you can solve the ambiguity at the semantical analysis
+stage". Note that you can <i>always</i> counter with that - for
+example, you can say that the "parse tree" of your language is
+simply the list of characters in the file, and the rest is
+semantical analysis.</p>
+<p><a name="misfeature-3" id="misfeature-3"></a></p>
+<h2>C++ grammar: type vs object and template specializations</h2>
+<p><i>drorz:</i> Consider the following example:</p>
+<pre>
+  
+#include &lt;cstdio&gt;
+template&lt;int n&gt; struct confusing
+{
+    static int q;
+};
+template&lt;&gt; struct confusing&lt;1&gt;
+{
+    template&lt;int n&gt;
+    struct q
+    {
+        q(int x)
+        {
+            printf("Separated syntax and semantics.\n");
+        }
+        operator int () { return 0; }
+    };
+};
+char x;
+int main()
+{
+    int x = confusing&lt;sizeof(x)&gt;::q &lt; 3 &gt; (2);
+    return 0;
+}
+</pre>
+<p>If you "didn't care" about semantics during parsing, then
+<tt>confusing&lt;1&gt;::q</tt> is a typename, so
+<tt>confusing&lt;1&gt;::q&lt;3&gt;(2)</tt> creates an object of
+type <tt>confusing&lt;1&gt;::q&lt;3&gt;</tt> with the argument
+2.</p>
+<p>If you "do" semantics during the syntax pass, then
+<tt>confusing&lt;4&gt;</tt> will be looked up,
+<tt>confusing&lt;4&gt;::q</tt> is a variable. The declaration would
+"expand" to <tt>int x = (confusing&lt;4&gt;::q &lt; 3) &gt;
+2</tt>.</p>
+<p>You can see that parse trees in those cases are completely
+different, based on the output of the <tt>sizeof</tt> operator!</p>
+<p><i>Yossi:</i> ...and <tt>sizeof</tt> depends on the platform and
+the implementation details of inheritance (including multiple and
+virtual), virtual functions, etc. The "parser" gets closer and
+closer to a full-blown compiler.</p>
+<p>The problem is the freedom that template specializations have
+when defining members. Now if anybody showed me a <i>useful</i>
+application of the ability to define something as an inner type in
+one specialization and a static variable in some other
+specialization, I'd be surprised.</p>
+<p>The <a href=
+"http://programming.reddit.com/info/5z7jr/comments/c02bmog">reddit
+thread</a> which this and the previous example are taken from has a
+detailed discussion about parsing C++.</p>
+<p><a name="misfeature-4" id="misfeature-4"></a></p>
+<h2>printf, iostream and internationalization</h2>
+<p><i>Alexander E. Patrakov (patrakov at ums dot usu dot ru):</i>
+The FQA lists <a href="io.html#fqa-15.1">valid information</a> for
+and against the use of <tt>&lt;iostream&gt;</tt> instead of
+<tt>&lt;cstdio&gt;</tt>. There is, however, one more thing for
+<tt>&lt;cstdio&gt;</tt> and against <tt>&lt;iostream&gt;</tt>: the
+possibility to translate program messages to a different natural
+language (using, e.g., <tt>gettext</tt>). And here I don't mean
+that there is currently no gettext equivalent for C++ iostreams,
+but that there is no way to design such thing correctly.</p>
+<p>Translation works on phrases, not on their parts. Consider,
+e.g., such C statements:</p>
+<pre>
+printf("Read %d files\n", total);
+printf("New data were found in %d files\n", found);
+</pre>
+<p>With the standard C++ iostreams, this becomes:</p>
+<pre>
+cout &lt;&lt; "Read " &lt;&lt; total &lt;&lt; " files\n";
+cout &lt;&lt; "New data were found in " &lt;&lt; found &lt;&lt; " files\n";
+</pre>
+<p>A well-designed program fetches translations from a message
+catalog, Windows resource or anywhere else except its own source
+code. With C and gettext message catalogs, the translator sees the
+whole phrases such as <i>"Read %d files", "New data were found in
+%d files"</i>, etc. If the same approach were applied to C++, the
+translator would see just <i>"Read ", "New data were found in
+"</i>, and <i>"files"</i> (used twice). Lack of context is the
+least of all worries. The real problem is that, e.g., when
+translating to Russian, the two instances of " files" have to be
+translated slightly differently, because Russian has six
+grammatical cases and different cases are required in the two
+sentences:</p>
+<pre>
+Read %d files =&gt; &ETH;&Yuml;&Ntilde;&euro;&ETH;&frac34;&Ntilde;&Dagger;&ETH;&cedil;&Ntilde;&sbquo;&ETH;&deg;&ETH;&frac12;&ETH;&frac34; %d &Ntilde;&bdquo;&ETH;&deg;&ETH;&sup1;&ETH;&raquo;&ETH;&frac34;&ETH;&sup2;
+New data were found in %d files =&gt; &ETH;&ETH;&frac34;&ETH;&sup2;&Ntilde;&lsaquo;&ETH;&micro; &ETH;&acute;&ETH;&deg;&ETH;&frac12;&ETH;&frac12;&Ntilde;&lsaquo;&ETH;&micro; &ETH;&plusmn;&Ntilde;&lsaquo;&ETH;&raquo;&ETH;&cedil; &ETH;&frac12;&ETH;&deg;&ETH;&sup1;&ETH;&acute;&ETH;&micro;&ETH;&frac12;&Ntilde;&lsaquo; &ETH;&sup2; %d &Ntilde;&bdquo;&ETH;&deg;&ETH;&sup1;&ETH;&raquo;&ETH;&deg;&Ntilde;&hellip;
+</pre>
+<p>(approximately - I don't want to overwhelm the example with the
+singular/plural treatment)</p>
+<p>Even worse, examples exist with two format substitutions where
+they have to be reordered when translating. C (or, more precisely,
+the Single UNIX Specification) allows such reordering with
+something like <tt>printf("%2$d x %1$d inches", width, num);</tt>
+but in C++ the output order of fields is hard-coded.</p>
+<p>The downside is, of course, that nobody except the translator
+checks the translated format string, and wrongly-copied conversion
+specifiers can crash a program in the corresponding locale (and
+this did happen with sed and vim in the past).</p>
+<p>See how Trolltech <a href=
+"http://doc.trolltech.com/4.3/i18n.html#use-qstring-arg-for-dynamic-text">
+handles</a> the abovementioned problems in their Qt toolkit.</p>
+<p><i>Yossi:</i> I really like this example because it can be a
+real eye-opener for a practical programmer, and I wish I heard and
+thought about it several years ago. Clearly the <tt>printf</tt>
+interface gets something right that <tt>iostream</tt> doesn't,
+since it seems to save us lots of trouble. What is it that
+<tt>printf</tt> gets right? Could it be that representing the
+program structure using compile time constructs incomprehensible to
+any tool except for the compiler is not the way to go? Effectively
+the advantage of the <tt>printf</tt> program is that it's easier
+for <i>other programs</i> to manipulate. The idea that backfires is
+that program structure may be encoded in abitrarily complex ways
+and the only one who ever has to worry about it is the compiler
+writer.</p>
+<p>But maybe this translation business is a singularity in the
+computing universe, and we shouldn't infer general conclusions from
+it? Well, here's another example. Suppose you want to do real time
+logging. You don't have enough time and/or bandwidth to do the
+formatting at the target machine. And yet you want to log free
+text, not some strict binary format with versioning schemes and
+fixed size limits and other headaches. With <tt>printf</tt>-style
+interface, you can log packets of (for example) 32 bit words -
+size, constant format string pointer, and the list of arguments.
+You can then extract the format strings from the executable file
+(reading ELF or COFF files is easy - there are examples on the net
+of about 200 lines of C code), and do the formatting at the host
+machine. Now, with <tt>iostream</tt>-like interface, the format
+string is split to many little parts, and all kinds of types come
+in the middle - types of data items have to be encoded in the
+logged packets, too. And you'd have to log calls to I/O
+manipulators such as <tt>hex</tt>, <tt>setfill</tt>, etc. Clearly
+the overhead per logged data word is going to increase
+significantly.</p>
+<p>Think about it: how can it be that a simplistic "1 format string
+plus N arguments of dynamic types" interface beats an advanced
+"statically dispatched polymorphic operators" interface, and what
+makes it surprising to you?</p>
+<p><a name="misfeature-5" id="misfeature-5"></a></p>
+<h2>Static binding rules</h2>
+<p><i>Miguel Catalina:</i> The following test program does not
+compile under gcc 4.3.{1,2}:</p>
+<pre>
+#include &lt;cmath&gt;
+struct my_class {
+  my_class(int) {}
+};
+inline my_class operator&amp;&amp;(my_class,int){return my_class(0);}
+int main(void)
+{
+  double x = std::pow(1.0, 1.0);
+  (void) x;  to avoid unused variable warning
+}
+</pre>
+<p>The error message is:</p>
+<pre>
+$ g++ -Wall -pedantic-errors simple_test.cpp
+simple_test.cpp: In function &acirc;&euro;&tilde;int main()&acirc;&euro;&trade;:
+simple_test.cpp:11: error: ambiguous overload for operator&amp;&amp;' in std::__traitor&lt;std::__is_integer&lt;double&gt;, std::__is_floating&lt;double&gt; &gt;::__value &amp;&amp; std::__traitor&lt;std::__is_integer&lt;double&gt;, std::__is_floating&lt;double&gt; &gt;::__value'
+simple_test.cpp:11: note: candidates are: operator&amp;&amp;(bool, bool) &lt;built-in&gt;
+simple_test.cpp:7: note:                 my_class operator&amp;&amp;(my_class, int)
+</pre>
+<p>The reason for this error has to do with this declaration in
+<tt>cmath</tt>:</p>
+<pre>
+  template&lt;typename _Tp, typename _Up&gt;
+    inline
+    typename __gnu_cxx::__promote_2&lt;
+    typename __gnu_cxx::__enable_if&lt;__is_arithmetic&lt;_Tp&gt;::__value
+                                    &amp;&amp; __is_arithmetic&lt;_Up&gt;::__value,
+                                    _Tp&gt;::__type, _Up&gt;::__type
+    pow(_Tp __x, _Up __y)
+    {
+      typedef typename __gnu_cxx::__promote_2&lt;_Tp, _Up&gt;::__type __type;
+      return pow(__type(__x), __type(__y));
+    }
+</pre>
+<p>Tracing a few header files up brings us to
+<tt>bits/cpp_type_traits.h</tt>:</p>
+<pre>
+  template&lt;typename _Tp&gt;
+    struct __is_arithmetic
+    : public __traitor&lt;__is_integer&lt;_Tp&gt;, __is_floating&lt;_Tp&gt; &gt;
+    { };
+</pre>
+<p>...and:</p>
+<pre>
+  template&lt;class _Sp, class _Tp&gt;
+    struct __traitor
+    {
+      enum { __value = bool(_Sp::__value)  bool(_Tp::__value) };
+      typedef typename __truth_type&lt;__value&gt;::__type __type;
+    };
+</pre>
+<p>So it turns out that the operation that is giving us trouble is
+the &amp;&amp; inside the <tt>__enable_if</tt> in the template
+declaration of <tt>pow()</tt>. We are invoking &amp;&amp; with two
+<tt>enum</tt> operands (<tt>__is_arithmetic&lt;T&gt;::__value</tt>
+is an unnamed <tt>enum</tt>). I guess the compiler is treating
+unnamed <tt>enum</tt>s as <tt>int</tt>s. So the compiler is trying
+to call <tt>operator&amp;&amp;(int,int)</tt>. But there isn't,
+there are only <tt>operator&amp;&amp;(my_class,int)</tt> and
+<tt>operator&amp;&amp;(bool,bool)</tt>. So the compiler is trying
+to do an implicit conversion of the operands so that they can match
+the available prototypes. There are implicit ways of converting an
+<tt>int</tt> to a <tt>my_class</tt>, as well as convering an
+<tt>int</tt> to a <tt>bool</tt>. The compiler does not know which
+one to use, hence the ambiguity.</p>
+<p>The question is: why on Earth when you are trying to invoke a
+function that only deals with <tt>double</tt>s, do you have to deal
+with the ambiguity between two available implicit conversions for
+types that have nothing to do with <tt>double</tt>?</p>
+<p><i>Yossi:</i> Takes time to wrap one's mind around this, um,
+treason (don't you just love the <tt>public __traitor</tt> bit? I
+guess a "traitor" is something used to generate so-called "type
+traits", a key idiom in the world of C++ templates arcana). Now
+that we (presumably) understand the error message, how would you
+work around the problem? If the compiler would barf trying to
+dispatch an operator with user-defined types, we could specifically
+define the operator with the prototype it would pick as the best
+match (as the GNU STL implementors themselves <a href=
+"templates.html#fqa-35.11">do</a> in similar situations). But we
+can't define <tt>operator&amp;&amp;(int,int)</tt>. Now what?</p>
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href=
+"http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 05 January 2022</tt></small> <script type=
+"text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script><script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}
+</script>
+</body>
+</html>

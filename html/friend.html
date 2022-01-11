@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: Friends</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>Friends</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/friends.html">FAQ</a></b><small class="part"> links.</small><hr>
+
+<p>
+The questions here are about <tt>friend</tt> declarations. A short answer to them all: you probably don&#39;t need <tt>friend</tt> declarations.
+</p>
+
+<ul>
+<li><a href="friend.html#fqa-14.1">[14.1] What is a <tt>friend</tt>?</a></li>
+<li><a href="friend.html#fqa-14.2">[14.2] Do friends violate encapsulation?</a></li>
+<li><a href="friend.html#fqa-14.3">[14.3] What are some advantages/disadvantages of using <tt>friend</tt> functions?</a></li>
+<li><a href="friend.html#fqa-14.4">[14.4] What does it mean that &quot;friendship isn&#39;t inherited, transitive, or reciprocal&quot;?</a></li>
+<li><a href="friend.html#fqa-14.5">[14.5] Should my class declare a member function or a <tt>friend</tt> function?</a></li>
+</ul>
+
+<a name="fqa-14.1"></a>
+<h2>[14.1] What is a <tt>friend</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/friends.html#faq-14.1">FAQ:</a></b>
+ A class can declare other classes and/or functions as friends. The declaration allows the friends to
+access non-<tt>public</tt> class members unaccessible to other code outside of the class.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> In other words, <tt>friend</tt> refines the access control provided by the <tt>private</tt> keyword.
+Which means it&#39;s almost useless, simply because <tt>private</tt> is <a href="class.html#fqa-7.4">almost useless</a>. Specifically,
+it fails to provide <i>encapsulation</i>, and therefore is little more than a <i>comment</i>.
+</p>
+
+<p>
+If you define interfaces between modules developed independently and want these interfaces to be stable,
+it&#39;s better to <a href="picture.html#fqa-6.3">use C for the interface definitions</a>, not C++. If you insist on using C++ (forcing both modules to be built with the same tools),
+relying on <tt>private</tt> to provide encapsulation is a bad idea, because changing private members triggers recompilation
+of the client code. You can use <a href="class.html#fqa-7.5">forward declarations</a> and/or <a href="inheritance-virtual.html#fqa-20.1">pure abstract classes</a> to
+provide a more stable interface.
+</p>
+
+<p>
+If you work on the internal interfaces between the different classes of a module, and you&#39;re stuck with C++,
+using <tt>private</tt> is surely better than defining all members <tt>public</tt>. This way, someone can easily tell
+that a member is not accessed outside of the class, and clarity is good. However, there is little reason
+to obsess with the fine details of access control in the internal interfaces.
+</p>
+
+<p>
+Most of the time, the distinction
+between <tt>private</tt> and <tt>public</tt> is good enough to describe what you want. If you feel a strong urge to split
+tightly coupled functions between several classes, you can do it with <tt>friend</tt>, or you can make the members
+<tt>public</tt>. Of course it&#39;s possible to argue forever about this (&quot;But it&#39;s bad design to allow <i>everyone</i> to access the members!&quot;,
+&quot;But it&#39;s bad design to have tightly coupled classes!&quot;). However, these are some of the internal classes of a module,
+nothing more, nothing less.
+If the module has reasonable size, the access control is not that big a deal. If the module is huge, you have a huge
+problem either way, especially with C++, which compiles forever and doesn&#39;t localize the damage of run time errors.
+</p>
+
+<p>
+Therefore, <tt>friend</tt> is totally useless for the external interfaces and almost useless for the internal interfaces.
+So there you are.
+</p>
+
+
+<a name="fqa-14.2"></a>
+<h2>[14.2] Do friends violate encapsulation?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/friends.html#faq-14.2">FAQ:</a></b>
+ On the contrary - they enhance it. If used properly, of course.
+</p>
+
+<p>
+For example, you can use them to split code into two classes and have their data inaccessible for code in all other classes.
+Or you can use them as &quot;a syntactic variant&quot; of member functions.
+</p>
+
+<p>
+Think of the friends as part of the class interface instead of something outside the class.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> What encapsulation? C++ doesn&#39;t have encapsulation. It has access control
+(code outside of a class using <tt>private</tt> members of this class will not compile), but it has neither compile time encapsulation
+(stable binary interfaces) nor run time encapsulation (safe memory access). What&#39;s there to violate?
+</p>
+
+<p>
+The case of two classes was discussed in <a href="friend.html#fqa-14.1">the previous FAQ</a>; this argument only sounds convincing if you think C++ classes
+are a good way to define the important, stable interfaces in your system.
+</p>
+
+<p>
+As to the &quot;syntactic variant&quot; business, it&#39;s probably about <a href="operator.html#fqa-13.1">overloaded operators</a>. The C++ syntax makes it impossible
+to define overloaded operators as class members unless the first argument is an object of the class. Since C++
+uses <tt>stream&lt;&lt;obj</tt> to print things, many classes declare
+a <tt>friend operator&lt;&lt;</tt>, for example. This argument is only interesting if you think C++ operator overloading is any good.
+</p>
+
+
+<a name="fqa-14.3"></a>
+<h2>[14.3] What are some advantages/disadvantages of using <tt>friend</tt> functions?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/friends.html#faq-14.3">FAQ:</a></b>
+ Advantage: they allow the designer to choose between <tt>obj.func()</tt> and <tt>func(obj)</tt>, which &quot;lowers maintenance costs&quot;.
+</p>
+
+<p>
+Disadvantage: they require more code to achieve dynamic binding. Non-member functions can&#39;t be <tt>virtual</tt>, so if the
+designer&#39;s syntax of choice is <tt>func(obj)</tt>, and dynamic binding is needed, <tt>func</tt> will have to delegate to a <tt>protected virtual</tt>
+member with <tt>obj.func()</tt>.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Listen carefully, this is an excellent opportunity to learn about the C++ approach to writing software.
+Choosing between two equivalent syntactic forms is called &quot;design&quot;. The availability of many forms and the
+&quot;right&quot; choice between them is expected to &quot;lower maintenance costs&quot;. Does this make any sense at all?
+Have you seen headlines such as &quot;An engineer replaced <tt>obj.func()</tt> with <tt>func(obj)</tt>, profits sky-rocket&quot;
+or &quot;A researcher wins the Turing award for discovering a new way to replace <tt>obj.func()</tt> with <tt>func(obj)</tt>&quot;?
+</p>
+
+<p>
+And why not say out loud that the real choice is between <tt>obj&lt;&lt;stream</tt> and <tt>stream&lt;&lt;obj</tt> or something like this?
+This is really about operator overloading, because that&#39;s where the member/global function distinction matters most
+syntactically. Why not just say <tt>obj.print(stream)</tt> instead of shifting streams by the amount of bits in an object
+or something?
+</p>
+
+
+<a name="fqa-14.4"></a>
+<h2>[14.4] What does it mean that &quot;friendship isn&#39;t inherited, transitive, or reciprocal&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/friends.html#faq-14.4">FAQ:</a></b>
+ It means that classes derived from a friend class don&#39;t automatically become friends (do <i>you</i> trust the kids of your friends?),
+a friend of a friend doesn&#39;t automatically become a friend (do <i>you</i> trust the friends of your friends?), and that a class
+declaring another class as &quot;friend&quot; doesn&#39;t automatically become a friend of that class (do <i>you</i> trust anyone who calls you a friend?).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The real life analogies are too scary for a detailed discussion. &quot;Do <i>your</i> friends have access to your members&quot;?
+</p>
+
+<p>
+One reason to avoid friends is that the only possible benefit is a little extra clarity, but this benefit can be
+dwarfed by the extra obfuscation - not everyone is (or should be) 100% sure what <tt>friend</tt> means when it comes
+to class hierarchies and stuff.
+</p>
+
+
+<a name="fqa-14.5"></a>
+<h2>[14.5] Should my class declare a member function or a <tt>friend</tt> function?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/friends.html#faq-14.5">FAQ:</a></b>
+ Use a member function unless you must use a <tt>friend</tt> function. For example, you may need <tt>friend</tt> for operator overloading.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FAQ says it at last! See? It was about operator overloading <a href="friend.html#fqa-14.3">all the way</a>.
+</p>
+
+<p>
+The FAQ&#39;s advice may be further simplified if we use the observation that C++ operator overloading is just a pain in the neck.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

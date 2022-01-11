@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: Big Picture Issues</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>Big Picture Issues</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html">FAQ</a></b><small class="part"> links.</small><hr>
+
+<p>
+This part deals with the Big (and somewhat Sad) Picture.
+</p>
+
+<ul>
+<li><a href="picture.html#fqa-6.1">[6.1] Is C++ a practical language?</a></li>
+<li><a href="picture.html#fqa-6.2">[6.2] Is C++ a perfect language?</a></li>
+<li><a href="picture.html#fqa-6.3">[6.3] What&#39;s the big deal with OO?</a></li>
+<li><a href="picture.html#fqa-6.4">[6.4] What&#39;s the big deal with generic programming?</a></li>
+<li><a href="picture.html#fqa-6.5">[6.5] Is C++ better than Ada? (or Visual Basic, C, FORTRAN, Pascal, Smalltalk, or any other language?)</a></li>
+<li><a href="picture.html#fqa-6.6">[6.6] Who uses C++?</a></li>
+<li><a href="picture.html#fqa-6.7">[6.7] How long does it take to learn OO/C++?</a></li>
+<li><a href="picture.html#fqa-6.8">[6.8] What are some features of C++ from a business perspective?</a></li>
+<li><a href="picture.html#fqa-6.9">[6.9] Are virtual functions (dynamic binding) central to OO/C++?</a></li>
+<li><a href="picture.html#fqa-6.10">[6.10] I&#39;m from Missouri. Can you give me a simple reason why <tt>virtual</tt> functions (dynamic binding) make a big difference?</a></li>
+<li><a href="picture.html#fqa-6.11">[6.11] Is C++ backward compatible with ANSI/ISO C?</a></li>
+<li><a href="picture.html#fqa-6.12">[6.12] Is C++ standardized?</a></li>
+<li><a href="picture.html#fqa-6.13">[6.13] Where can I get a copy of the ANSI/ISO C++ standard?</a></li>
+<li><a href="picture.html#fqa-6.14">[6.14] What are some &quot;interview questions&quot; I could ask that would let me know if candidates really know their stuff?</a></li>
+<li><a href="picture.html#fqa-6.15">[6.15] What does the FAQ mean by &quot;such and such is evil&quot;?</a></li>
+<li><a href="picture.html#fqa-6.16">[6.16] Will I sometimes use any so-called &quot;evil&quot; constructs?</a></li>
+<li><a href="picture.html#fqa-6.17">[6.17] Is it important to know the technical definition of &quot;good OO&quot;? Of &quot;good class design&quot;?</a></li>
+<li><a href="picture.html#fqa-6.18">[6.18] What should I tell people who complain that the word &quot;FAQ&quot; is misleading, that it emphasizes the questions rather than the answers, and that we should all start using a different acronym?</a></li>
+</ul>
+
+<a name="fqa-6.1"></a>
+<h2>[6.1] Is C++ a practical language?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.1">FAQ:</a></b>
+ Sure - not perfect, but mature and well-supported, which is good for business.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It&#39;s &quot;practical&quot; in the sense that you can use it to modify and extend programs such as WebKit
+(a web browser engine written in C++) or LLVM (an optimizing compiler written in C++).
+</p>
+
+<p>
+It&#39;s &quot;practical&quot; in the sense that a lot of practical work is done with it, and a lot of useful things
+are hardi or impossible to do without it. Most of those useful things are along the lines of &quot;changing a C++ program&quot;
+or &quot;using a C++ library&quot;.
+</p>
+
+<p>
+C++ is not &quot;mature&quot; in the sense that different compilers will interpret it differently, and
+C++ modules built by different vendors will not work with each other. C++ is not &quot;well-supported&quot; in the sense that
+development tools for C++ lack features and are unreliable compared to other languages. These things make one ask &quot;Am I the first one trying to do this?&quot; all the time.
+</p>
+
+<p>
+This situation is not likely to change, because it follows from the C++ definition. C++ is very complicated
+for programs (or people) to understand. C++ specification leaves out most aspects crucial for interoperability,
+such as modules and calling conventions. C++ has a huge installed base, and since solving these problems backward-compatibly
+is impossible, they won&#39;t be solved.
+</p>
+
+
+<a name="fqa-6.2"></a>
+<h2>[6.2] Is C++ a perfect language?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.2">FAQ:</a></b>
+ No, and it shouldn&#39;t be, it should be practical, which, as we&#39;ve just seen, it is.
+Perfect is for academy, practical is for business.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> No language is &quot;perfect&quot; because our requirements from a &quot;perfect&quot; language are inconsistent with each other.
+So instead of perfection, good languages provide <i>consistency</i> and <i>usability</i>.
+This can be called &quot;practical&quot; from the point of view of language users.
+</p>
+
+<p>
+C++ is different - it&#39;s designed for perfection. Where other languages give you a feature, C++ gives you meta-features.
+Instead of built-in <a href="operator.html#fqa-13.3">strings and vectors</a>, it gives you <a href="templates.html#fqa-35.1">templates</a>.
+Instead of <a href="dtor.html#fqa-11.1">garbage collection</a>, it gives you <a href="exceptions.html#fqa-17.4">smart pointers</a>. This way, you can (theoretically) implement your own &quot;perfect&quot;
+(most efficient and generic) strings. In practice, this turns into a nightmare since many different kinds of strings,
+smart pointers, etc., each perfect in its own way, will not work with each other. C++ sacrifices usability for perfection.
+</p>
+
+<p>
+However, despite the obsession with perfection, C++ <i>is</i> &quot;practical&quot; - from a language designer&#39;s perspective
+rather than from a user&#39;s point of view. The &quot;practical&quot; thing in C++ is that it&#39;s based on C. This helped the language gain popularity.
+This is also the main reason for inconsistencies in the language - <a href="ctors.html#fqa-10.19">ambiguities in the grammar</a>
+(declaration/definition, type name/object name...), <a href="ref.html#fqa-8.6">duplications of functionality</a> in the different features
+(pointers/references, constructors/aggregate initialization, macros/constants/templates, files/namespaces...).
+C++ sacrifices consistency for popularity. This &quot;practical&quot; approach helps to increase the number of C++ users,
+but it doesn&#39;t help those users to get their job done.
+</p>
+
+
+<a name="fqa-6.3"></a>
+<h2>[6.3] What&#39;s the big deal with OO?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.3">FAQ:</a></b>
+ Object-oriented programming is the best known way to develop complex systems. It was invented because
+customers kept demanding increasingly complex systems.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Object-oriented programming is very useful. For a lot of things it&#39;s so useful you&#39;re likely
+to want support for it built into your language. Of course nobody knows how to build complex systems in the general case (or in your special case). OOP
+can help, other things can help, but ultimately there is no simple way to deal with complexity. Which is
+only surprising if you think that there should exist a reliable process to produce anything people are
+willing to pay for. The laws of business are powerful, the laws of nature are more powerful.
+</p>
+
+<p>
+Most kinds of built-in language support for object-oriented programming, including <a href="class.html#fqa-7.5">no such support</a>,
+have big advantages over <a href="class.html#fqa-7.1">C++ classes</a>. The single biggest problem with C++ classes is that
+private members are written in header files, so changing them requires <a href="class.html#fqa-7.4">recompiling</a>
+the code using them - for important practical purposes, this makes private members a part of the interface.
+C++ is built such that recompilation is very <a href="templates.html#fqa-35.12">slow</a> (an order of magnitude slower than it is with virtually any other language), and classes are built to make recompilation a frequent event.
+</p>
+
+<p>
+From a business perspective, this means two things: your C++ developers spend a significant amount of their time in recompilation cycles, and C++ interfaces provided to your customers or by your vendors will cause you major headaches (when versions are upgraded, some of the code won&#39;t be recompiled and software will fail in creative ways). Luckily, C++ interfaces are <i>hard</i> to provide (effectively all parties must use the same compiler with the same settings), so quite typically C++ modules have interfaces written in C.
+</p>
+
+
+<a name="fqa-6.4"></a>
+<h2>[6.4] What&#39;s the big deal with generic programming?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.4">FAQ:</a></b>
+ Generic programming allows to create components which are easy to use, widely applicable (reusable) <i>and</i> efficient. Using them makes your code faster and reduces the amount of errors. Creating them is a &quot;non-process&quot;
+(a poetic description of solving hard problems follows - waking up at night and other things probably questionable from the &quot;business perspective&quot; of which the FAQ is so fond). Most people can use them, but aren&#39;t <i>cut out</i> to create their own - one must <i>like to solve puzzles</i> for that. But these generic components are so generic that you can probably find an off-the-shelf one for your needs.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> &quot;Generic programming&quot; in the context of C++ refers to <a href="templates.html#fqa-35.1">templates</a>.
+</p>
+
+<p>
+Templates are hard to <i>use</i> (and <i>not</i> only define &amp; implement)
+due to <a href="templates.html#fqa-35.17">cryptic compiler error messages</a>, <a href="templates.html#fqa-35.12">extremely long compilation time</a> and remarkable hostility to symbolic debugging
+- both code browsing and data inspection. The usability problems are <i>not</i> solved by using off-the-shelf components.
+</p>
+
+<p>
+Templates are mostly applicable to containers or smart pointers, which can contain or point to almost anything. When the constraints on the input are less trivial, most of the time you either don&#39;t really need polymorphism, or you are better off with dynamic polymorphism (for example, the kind you get with C++ virtual functions).
+That&#39;s because in most cases, the benefits (such as separate compilation) are worth the overhead of dynamic binding (which is dwarfed by the complexity of the dispatched operations themselves).
+</p>
+
+<p>
+Templates are a form of code generation, and hence they don&#39;t make code faster or slower compared to code you&#39;d write manually. They do tend to make it larger since the compiler generates the same code many times. Although there are theoretical ways to avoid this, you find yourself solving someone else&#39;s problem. With the &quot;evil&quot; C macros you can at least control when they are expanded.
+</p>
+
+<p>
+People who like to solve puzzles usually prefer <i>interesting</i> puzzles. With templates, the greatest puzzle is what on Earth the code means (even compilers frequently disagree). Practical people avoid fiddling with problems which nobody actually wants solved, and templates are only interesting inside the world of C++, not the real world.
+</p>
+
+
+<a name="fqa-6.5"></a>
+<h2>[6.5] Is C++ better than Ada? (or Visual Basic, C, FORTRAN, Pascal, Smalltalk, or any other language?)</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.5">FAQ:</a></b>
+
+ Answering this question is not very helpful because business considerations dominate technical considerations. Specifically, availability (of compile time and run time environments, tools, developers) is the most important consideration. People who don&#39;t get this are techie weenies endangering their employer&#39;s interests.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Answering this question is not very helpful because the real question is what language is best for your specific purposes. The purposes are defined by the business considerations (what seems worth doing) and by technical considerations (what seems possible to do). In particular, your purposes may limit the availability of developers, tools, etc. These constraints are necessary to meet.
+</p>
+
+<p>
+One thing is always true: where you can use C++, you can use C. In particular,
+if someone gave you C++ interfaces, a thin layer of wrappers will hide them. Using C instead of C++ has several practical benefits: faster development cycle, reduced complexity, better support by tools such as debuggers, higher portability and interoperability. When C++ is an option, C is probably a better option.
+</p>
+
+<p>
+Another thing is always true: where you can use a managed environment (where the behavior of wrong programs is defined), using it will save a lot of trouble. C++ (like C) is designed for unmanaged environments (where the behavior of wrong programs is undefined). Unmanaged environments make it very hard to locate faults and impose no limit on the damage done by an undetected fault. In theory, C++ implementations can run in managed environments, but in practice they don&#39;t because of innumerable compatibility issues.
+</p>
+
+<p>
+Yet another thing is almost always true: picking up a new language is easier for an experienced C++ programmer than working in C++. This is the result of the exceeding complexity of C++.
+</p>
+
+<p>
+People who think there&#39;s no point in comparing programming languages, for example because
+&quot;business considerations dominate technical considerations&quot;,                                                                                                                                                                                                                                  
+are free to start their new projects in <a href="http://en.wikipedia.org/wiki/COBOL">COBOL</a> (<b>CO</b>mmon <b>B</b>usiness-<b>O</b>riented <b>L</b>anguage).
+</p>
+
+
+<a name="fqa-6.6"></a>
+<h2>[6.6] Who uses C++?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.6">FAQ:</a></b>
+ Lots and lots and lots of people and organizations. Which is excellent for business since a lot of developers are available.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Empirical studies indicate that 20% of the people drink 80% of the beer. With C++ developers, the rule is that 80% of the developers understand at most 20% of the language. It is not <i>the same</i> 20% for different people, so don&#39;t count on them to understand each other&#39;s code.
+</p>
+
+<p>
+Two things are at fault: the exceptional complexity of C++ and its wide popularity, driving hordes of people who don&#39;t consider professional competence a personal priority. The few competent developers will spend much of their time dealing with problems created by the language instead of the original problems (and a subset of these developers <a href="friend.html#fqa-14.3">will not even notice</a>).
+</p>
+
+<p>
+The large number of developers at least has the advantage of motivating the development of tools for dealing with C++ code. However, the design of the language makes it notoriously hard to produce such tools - a problem motivation can&#39;t quite remedy.
+Compare the quality of code browsing in C++ IDEs to IDEs of other languages and you&#39;ll get the idea.
+You can look at language-specific IDEs, general-purpose programming IDEs or extensions for general-purpose text editors - C++ loses everywhere.
+Don&#39;t just look at small examples, try it on large programs (especially ones using cutting-edge template libraries).
+</p>
+
+
+<a name="fqa-6.7"></a>
+<h2>[6.7] How long does it take to learn OO/C++?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.7">FAQ:</a></b>
+ In 6-12 months you can become proficient, in 3 years you are a local mentor. Some people won&#39;t make it - those can&#39;t learn, and/or they are lazy. Changing the way you think and what you consider &quot;good&quot; is hard.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> In 6-12 months you can become as proficient as it gets. It is impossible to &quot;know&quot; C++ - it keeps surprising one forever. For example, what does the code <tt>cout &lt;&lt; p</tt> do when p is a <tt>volatile</tt> pointer? Hint: as experienced people might <i>expect</i>, there&#39;s an unexpected implicit <a href="io.html#fqa-15.1">type</a> conversion involved.
+</p>
+
+<p>
+While some people are better at learning than others, it is also true that some languages are easier to learn and use than others. C++ is one of the hardest, and your reward for the extra effort spent learning it is likely to be extra effort spent using it. If you find it hard to work in C++, trying another language may be a good idea.
+</p>
+
+<p>
+Before you subvert the way you think about programming and your definition of &quot;good&quot; in this context to fit C++, it might be beneficial to ask the common sense again. For example, does compilation time <i>really</i> cost nothing (is development time that cheap, are there compilation servers with 100 GHz CPUs around)? Is run time <i>really</i> priceless (don&#39;t user keystrokes limit out speed, how much data are we processing anyway)? How efficient a C++ construct <i>really</i> is in your implementation (templates, exceptions, endless copying &amp; conversion)? The reasoning behind C++ may be consistent, but the assumptions almost never hold.
+</p>
+
+<p>
+Learning OO has nothing to do with learning C++, and it is probably better to learn OO using a different language as an example. The OO support in C++ is almost a parody on OO concepts. For example, <a href="class.html#fqa-7.4">encapsulation</a> is supposed to hide the implementation details from the user of a class. In C++, the implementation is hidden neither at compile time (change a private member and you must recompile the calling code) nor at run time (overwrite memory where an object is stored and you&#39;ll find out a lot about the implementation of its class - although in an unpleasant way).
+</p>
+
+
+<a name="fqa-6.8"></a>
+<h2>[6.8] What are some features of C++ from a business perspective?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.8">FAQ:</a></b>
+ Here are a few:
+</p>
+
+<ul>
+<li><a href="picture.html#fqa-6.1">A huge installed base</a>, which means good support</li>
+<li>Allows to provide <a href="class.html#fqa-7.1">simplified interfaces</a>, reducing the defect rate</li>
+<li><a href="operator.html#fqa-13.1">Operator overloading</a> reduces learning curves by <a href="operator.html#fqa-13.2">exploiting</a> intuition</li>
+<li>Reduces <a href="class.html#fqa-7.5">safety-vs-usability</a> and <a href="inline.html#fqa-9.4">safety-vs-speed</a> trade-offs</li>
+<li><a href="picture.html#fqa-6.10">Makes it possible</a> for old code to call new code</li>
+</ul>
+
+<p>
+<b class="FQA">FQA:</b> Here are a few more:
+</p>
+
+<ul>
+<li>No practical implementation of C++ runs in managed environments, increasing both the defect rate and the potential damage of an undetected defect</li>
+<li>Providing C++ interfaces to a software component is impossible in practice due to lack of compile time and run time interoperability</li>
+<li>C++ is extremely inconsistent and complicated, increasing learning curves and the defect rate</li>
+<li>C++ compilers typically fail to comply to its intricate standard, reducing portability</li>
+<li>C++ compilation is both very slow and very frequent, increasing development time and defect rate (people write cryptic and dangerous code to avoid recompilation, for example, use global variables instead of adding arguments to functions, saving 1.5 hours per rebuild x 20 developers = 30 hours of downtime)</li>
+<li>C++ lacks standard types representing basic data structures like strings, arrays and lists (or has more than one standard and many non-standard ones, which is the same), making it harder to reuse code (each interface works with a different kind of strings) and reducing the speed due to run time type conversion</li>
+</ul>
+
+<p>
+All things mentioned in the FAQ are false for most practical purposes:
+</p>
+
+<ul>
+<li>Despite the &quot;huge&quot; installed base, the tools dealing with C++ code are poor and their interoperability is a disaster (in both cases the problem is in the language definition)</li>
+<li>C++ interfaces are usually very complicated (<a href="http://c2.com/cgi/wiki?RavioliCode">lots of small classes</a>, implicitly generated functions like constructors &amp; destructors, code bundled with the interface in template definitions...). As mentioned above, providing C++ interfaces to someone outside of your team is very hard in practice. And private members are for many purposes effectively a part of your interface.</li>
+<li>Operator overloading is almost always counter-intuitive if one tries to understand the functionality (why does the left shift operator <i>print</i> things?), and always counter-intuitive if one tries to estimate performance (go figure if <tt>*</tt> multiplies two integers or two matrices, especially inside a template definition) or locate bugs (lethal ones can hide in places like <tt>operator=</tt>, where they are hard to see)</li>
+<li>C++ doesn&#39;t reduce safety-vs-anything trade-off since it&#39;s extremely unsafe (it &quot;supports&quot; all the undefined behavior of C like buffer overflows, adds many new scenarios with undefined result like invisibility of template specializations at the point of usage, and its complexity reduces the chances that someone actually knows what a program does and can prove its correctness). Where&#39;s the &quot;trade-off&quot;?</li>
+<li>Old code can call new code in almost any popular language, for example, C (the ancient <tt>qsort</tt> function is probably calling new code as we speak). The item is really supposed to describe the benefits of OO to non-technical people. C++ is not likely to give its user the benefits of OO.</li>
+</ul>
+
+
+<a name="fqa-6.9"></a>
+<h2>[6.9] Are virtual functions (dynamic binding) central to OO/C++?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.9">FAQ:</a></b>
+ Sure, that&#39;s what makes C++ an object-oriented language. Don&#39;t switch from C to C++ unless you need virtual functions!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> They probably are if you consider C++ an &quot;object-oriented&quot; language (a C++ debugger <a href="class.html#fqa-7.2">doesn't</a> - try asking it to show what &quot;object&quot; is located at a random place, for example). You have to carefully define &quot;object-oriented&quot; so that C++ fits the definition.
+</p>
+
+<p>
+Dynamic binding is central to any language since otherwise old code can&#39;t call new code, making code reuse very hard. Virtual functions are one form of dynamic binding supported by C++ (function pointers, inherited from C, are another one).
+</p>
+
+<p>
+Switching from any language to C++ is not necessarily a good idea.
+</p>
+
+
+<a name="fqa-6.10"></a>
+<h2>[6.10] I&#39;m from Missouri. Can you give me a simple reason why <tt>virtual</tt> functions (dynamic binding) make a big difference?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.10">FAQ:</a></b>
+ Before OO, you could only reuse old code by having new code call it. With OO, old code can call new code - more reuse. Even if the source code for the old code is not available.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It is unclear why the FAQ gets this wrong - most of the time it is technically accurate. Dynamic binding - old code calling new code - exists outside of OO. There are countless examples on any scale, ranging from the C <tt>qsort</tt> function to operating systems, which run programs written long after the code of those systems.
+</p>
+
+<p>
+The special thing in OO is that, well, it works with objects. In the case of dynamic binding, this means that not only does old code call new code - it also passes the <i>state</i> (encapsulated in the object receiving the method call) needed for this new code to work. This also happens outside of OO, but OO is an excellent unifying framework for dealing with this kind of thing. Especially if you have a <i>good</i> OO environment.
+</p>
+
+<p>
+The omission of facts in the FAQ is much more typical than the technical inaccuracy. Specifically, there&#39;s a difference between theory and practice when it comes to old code <i>not available in source form</i> calling new code. In practice, code generated from C++ source is not portable, limiting the scenarios where the reuse actually works. Worse, even C++ implementations running on the same hardware and operating system are rarely compatible. For actually having old code call new code, you must limit yourself to a small subset of the language (C is one good one), and/or have both the old and the new code built with the same tools under the same settings.
+</p>
+
+
+<a name="fqa-6.11"></a>
+<h2>[6.11] Is C++ backward compatible with ANSI/ISO C?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.11">FAQ:</a></b>
+ Almost. But a declaration of a function without parameters means different things in C and C++, and <tt>sizeof(&#39;x&#39;)</tt> is likely to yield a different value, and...
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The pair of words &quot;almost compatible&quot; is <i>almost meaningless</i> - for many technical purposes, compatibility is a binary thing. &quot;Compatible&quot;, on the other hand, can have <i>several</i> meanings.
+</p>
+
+<p>
+If your question is &quot;Can I compile C code with a C++ compiler?&quot;, the answer is &quot;no&quot; because of numerous differences in the way code is interpreted (some things will be reported by the compiler, some will be silently misinterpreted).
+However, this is not a real problem, since you can compile C code with a C compiler.
+</p>
+
+<p>
+If your question is &quot;Can I call C code from C++ code?&quot;, the answer is &quot;yes&quot;, but it&#39;s not special to C++. You can call C code from virtually any popular language because most of today&#39;s environments are based on C, making it both easy and beneficial to support this.
+</p>
+
+<p>
+If your question is &quot;Can I call C++ code from C code?&quot;, the answer is <a href="mixing.html#fqa-32.1">"sometimes"</a>. It is possible if the C++ code exposes a C interface (no classes, no exceptions...), and even then there are problems like making sure C++ global constructors and destructors are invoked. Many platforms provide ways for this to work.
+</p>
+
+<p>
+If your question is &quot;Is it easier for a C programmer to learn and use C++ than another new language, possibly object-oriented?&quot;, the answer is &quot;no&quot;. C++ is very hard to learn and use and the hardest parts are not related to the C subset, but to the new parts and the way they interact with the old parts.
+</p>
+
+<p>
+If your question is &quot;Are C++ programs likely to contain bugs similar to these littering C programs, like buffer overflows?&quot;, the answer is &quot;yes&quot;. If you are willing to sacrifice performance to gain stability, a managed environment might suit your needs. If you want to improve the stability of your programs without sacrificing neither development time nor run time, you probably can&#39;t. In particular, the &quot;high-level&quot; C++ is <i>compatible</i> to the &quot;low-level&quot; C when it comes to damage caused by low-level errors.
+</p>
+
+
+<a name="fqa-6.12"></a>
+<h2>[6.12] Is C++ standardized?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.12">FAQ:</a></b>
+ Yes, an ISO standard was adopted in 1997. The FAQ mentions twice that it was &quot;adopted by unanimous vote&quot;.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Yes, there is a document specifying what &quot;C++&quot; means, and lots of implementation vendors signed it. The important thing about standardization, however, is the practical implications. Let&#39;s examine them.
+</p>
+
+<p>
+The C++ standard does not specify what source code is translated to. Unlike code built from Java source, compiled C++ code will usually only run on one hardware/OS configuration.
+</p>
+
+<p>
+The C++ standard does not address interoperability between implementations. Unlike code built from C source, compiled C++ code will only be able to call C++ code built with the same compiler and the same settings. Different implementations implement exceptions, global initialization &amp; destruction, virtual functions, RTTI, mangling conventions, etc. etc. differently. The C standard leaves out interoperability between implementations just like the C++ standard - but C is an order of magnitude simpler, so you won&#39;t have these problems in practice.
+</p>
+
+<p>
+The C++ standard does not define a term like &quot;module&quot; or &quot;library&quot; - only &quot;program&quot; and &quot;translation unit&quot; (roughly, the latter means a preprocessed source file). If you deliver dynamically/statically linked libraries, you&#39;re on your own. Again, you will have problems with global initialization &amp; destruction, RTTI, exceptions...
+</p>
+
+<p>
+The C++ standard does not specify a machine-readable definition of the C++ grammar, and the question whether a given sequence of characters is legal C++ is undecidable. Building tools reliably processing C++ code (including <i>compilers</i>) is extremely hard.
+</p>
+
+<p>
+The C++ standard has been out there for a long time. Today, different C++ compilers will interpret C++ code differently. The most frequent source of problems is <i>static binding</i> - figuring out what function calls should be generated from a given statement. Compilers implement name resolution (affected by namespaces, function &amp; operator overloading, template signature matching &amp; specialization, implicit type conversions, type qualifiers, inheritance...) differently. Neither the standard document nor common sense will easily tell you which compiler is &quot;right&quot;.
+</p>
+
+<p>
+You may think that compilers will eventually catch up with the standard (which most vendors are trying to do all the time, but the tools still frequently disagree on the question what &quot;C++&quot; means). Well, the <i>next</i> version of the standard is supposed to be adopted before 2010, giving those vendors some more work. For those compiler writers with <i>really</i> too much time on their hands, there&#39;s C++/CLI.
+</p>
+
+<p>
+C++ is standardized, but it may have less practical benefits than you might be used to expect from &quot;standards&quot;.
+</p>
+
+
+<a name="fqa-6.13"></a>
+<h2>[6.13] Where can I get a copy of the ANSI/ISO C++ standard?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.13">FAQ:</a></b>
+ Get ready to spend some money. A list of links follows.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Get ready to throw away some money. Seriously, what are you going to do with your copy? The document is incomprehensible.
+</p>
+
+<p>
+The document may be useful if you are a language lawyer planning to sue the people responsible for the language or a particular implementation. But if you want to build working software, it&#39;s more practical to accept the fact that your implementation is not standard-compliant in many dark areas. If you find a front-end bug (for example, many times nifty, expensive tools will <i>crash</i> trying to process complicated C++ code; all compilers I used did) - that&#39;s actually <i>your</i> problem. While you are lost in the maze of C++ features, your competitor has already released a working product written without such complications.
+</p>
+
+<p>
+The document is also useful if you&#39;re into meta-programming (compilers/debuggers/profilers/verifiers...) and want to write tools dealing with C++ code. The standard may help chill your passion before you throw away too much of your time.
+</p>
+
+
+<a name="fqa-6.14"></a>
+<h2>[6.14] What are some &quot;interview questions&quot; I could ask that would let me know if candidates really know their stuff?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.14">FAQ:</a></b>
+ If you are a non-technical person (manager/HR), ask a technical person to help you judge the technical competence of a candidate. If you are a technical person, the FAQ is one source of good questions, separating the truly competent people from the posers.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The good interview questions probably don&#39;t mention anything unique to C++.
+</p>
+
+<p>
+Ultimately, you are looking for people with good will (some call them &quot;cooperative&quot;), who will do things, not just talk about them (some call them &quot;practical&quot;), and who will think, not just do (some call them &quot;intelligent&quot;). So the best questions, relevant for all candidates, are about their largest last projects. The answers give you lots of information and good answers are almost impossible to fake.
+</p>
+
+<p>
+You may also need people to have some prior knowledge relevant to their work since you don&#39;t have time to have them trained and gain experience. If you are sure that&#39;s the case (despite the fact that the people you are looking for are good learners), ask specific questions. Questions about high-level software organization issues (like OO) may be useful. Questions about low-level software construction issues (like pointers) may be useful. These issues are not specific to C++.
+</p>
+
+<p>
+Asking about things specific to C++ is not very useful.
+</p>
+
+<p>
+First, many of these things are useless for any practical purpose and are best avoided. Whether someone knows these things is correlated quite loosely with proficiency, and there are many excellent developers out there who weren&#39;t confronted with a particular obscure C++ feature yet, or successfully forgot it. So chances are that you are going to reject a good candidate.
+</p>
+
+<p>
+Second, a <i>good</i> candidate actually knowing the answer may prefer an employer asking more relevant and practical questions. So chances are that a good candidate is going to reject you.
+</p>
+
+<p>
+And third, there are people who look for the most complicated way to solve a problem to show off their intelligence. These tend to stumble into the dark areas of the tools they use all the time, so they will know answers to many C++-specific questions (they won&#39;t know answers to many more, because almost nobody does). Your questions will rank these people as the best possible candidates. Later you will find out that these people are poor practitioners.
+</p>
+
+
+<a name="fqa-6.15"></a>
+<h2>[6.15] What does the FAQ mean by &quot;such and such is evil&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.15">FAQ:</a></b>
+ This means that a feature should be avoided whenever possible. The strong word is supposed to help people change their old thinking.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> This means the feature satisfies the following conditions:
+</p>
+
+<ul>
+<li>It is inherited from C</li>
+<li>It is easy to abuse <i>(especially when it interacts with the new C++ features)</i></li>
+<li>It can cause problems when abused <i>(especially when it interacts with the new C++ features)</i></li>
+<li>C++ provides one or more facilities duplicating the functionality of the feature, replacing the original problems with new and much more complicated problems</li>
+</ul>
+
+<p>
+For example, macros, pointers, and arrays meet this definition (the corresponding C++ &quot;solutions&quot; are const &amp; template, references &amp; smart pointers, and vector/string classes).
+Include files almost meet this definition, except that C++ doesn&#39;t duplicate this functionality (namespaces are a parallel notion of &quot;modules&quot;, but they can&#39;t be used to locate definitions). Consequently, the FAQ will not call include files &quot;evil&quot;.
+On the other hand, function overloading doesn&#39;t come from C, so duplicate facilities like template specialization, default arguments, etc. are not enough for the FAQ to call function overloading &quot;evil&quot;. Still, function overloading is very commonly abused leading to major problems.
+</p>
+
+<p>
+A C++ user is likely to have a different definition of &quot;evil&quot;. A user doesn&#39;t care whether something came from C or not, and whether C++ tried to offer duplicate facilities (while forcing users to deal with the original ones since they&#39;re still in the language). A user typically cares about the &quot;easy to abuse and causing trouble when abused&quot; parts. Lots and lots of parts of C++ are like that.
+</p>
+
+<p>
+As to the features the FAQ does call evil - <a href="picture.html#fqa-6.2">why</a> are they in the language? Is it good for the users of the language, or for those who designed and promoted it?
+</p>
+
+
+<a name="fqa-6.16"></a>
+<h2>[6.16] Will I sometimes use any so-called &quot;evil&quot; constructs?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.16">FAQ:</a></b>
+ Of course! <a href="picture.html#fqa-6.15">Evil</a> means &quot;usually undesirable&quot;, but sometimes you have to choose from a set of bad options, and an &quot;evil&quot; feature is your best option. There are no universal rules. Think! At this point the FAQ (and your typical C++ devotee) gets quite agitated.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Of course! You have no choice. They are built into the language. For example, <tt>&quot;abc&quot;</tt> and <tt>{1,2,3}</tt> are evil arrays, the keyword <tt>this</tt> and the standard <tt>char** argv</tt> are evil pointers, and you&#39;ll need an evil <tt>#define</tt> to define a usable interface (for the header file inclusion guards).
+</p>
+
+<p>
+Note that with evil arrays, you can write <tt>int a[3] = {1,2,3};</tt> while with the supposedly less evil <tt>std::vector</tt>, you can&#39;t. You&#39;ll find out that C++ brand new features duplicating the functionality of the &quot;evil&quot; old C features are inferior to the latter in <a href="ctors.html#fqa-10.6">many</a> <a href="ref.html#fqa-8.6">more</a> ways.
+</p>
+
+<p>
+Worse, you can avoid neither the features the FAQ calls evil nor the ones the user would call evil, because if your code doesn&#39;t use a feature, it doesn&#39;t mean that someone else&#39;s code you have to live with doesn&#39;t. For example, you may try to avoid exceptions, but the C++ <tt>operator new</tt>, as well as code in third-party libraries, will throw exceptions, and you have to catch them.
+</p>
+
+<p>
+There&#39;s a basic assumption behind C++ that extra features can&#39;t be a problem - only missing features can. That&#39;s why there are so many features in C++, and in particular so many duplicate ones. Real world analogies (&quot;imagine a dog with twelve legs&quot;) are pale compared to this reality.
+</p>
+
+
+<a name="fqa-6.17"></a>
+<h2>[6.17] Is it important to know the technical definition of &quot;good OO&quot;? Of &quot;good class design&quot;?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.17">FAQ:</a></b>
+ Not if you are a practitioner. <a href="picture.html#fqa-6.5">Business considerations are the important ones</a>. Precise technical definitions of &quot;good&quot; may lead developers to ignore these considerations, so they are dangerous.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Whether it&#39;s important or not, there is no technical definition of &quot;good&quot;, in particular good OO or good class design. &quot;Good&quot; is not a formal term, nor is it universal. For example, if you work for a company, it&#39;s important to consider how beneficial something ultimately is for that company in order to define &quot;good&quot;.
+</p>
+
+<p>
+However, there are technical definitions of OO. So while there are no formal means to tell whether something is <i>good</i> OO, you may be able to reason whether something is OO or <i>not</i>. Which is not necessarily interesting by itself. But it may be interesting if you have reasons to believe that OO is a good tool for your job - you may want to make sure you&#39;ll actually get the benefits you expect. It may also be interesting if someone calls something OO - you may wonder whether you use the same terms or whether they know what they&#39;re talking about.
+</p>
+
+<p>
+Getting obsessive about precise definitions is a bad way to make decisions. But it&#39;s also bad to ignore definitions and blindly go with the hype. For example, people promoting C++ keep telling how good OO is, and how C++ supports OO, and then you try to find out what OO actually <i>means</i>, and suddenly it turns out that it&#39;s not important. Isn&#39;t that a little strange?
+</p>
+
+<p>
+It is very beneficial for a practitioner to gain familiarity with OO systems other than C++, and with OO definitions other than the &quot;encapsulation, inheritance, polymorphism&quot; trinity interpreted in special ways allowing C++ to be considered &quot;OO&quot;. For example, a claim that an environment lacking <a href="class.html#fqa-7.2">boundary checking</a> or <a href="heap.html#fqa-16.1">garbage collection</a> is not an OO environment sounds outrageous to people accustomed to C++. But from many perspectives, it makes a lot of sense. If anyone can overwrite an object, where&#39;s the &quot;encapsulation&quot;? If disposing an object can lead to dangling references or memory leaks, how is the system &quot;object-oriented&quot;? What about the ability to tell what kind of object is located at a given place and time? You say the software works with objects - <i>where are they</i>? And if one can&#39;t find out, how is one supposed to debug the software?
+</p>
+
+<p>
+When people claim that C++ is object-oriented and therefore &quot;good&quot;, it may be worth checking whether your <a href="picture.html#fqa-6.7">notion of "good"</a> is similar to theirs - <a href="picture.html#fqa-6.3">from a business perspective</a>, for example.
+</p>
+
+
+<a name="fqa-6.18"></a>
+<h2>[6.18] What should I tell people who complain that the word &quot;FAQ&quot; is misleading, that it emphasizes the questions rather than the answers, and that we should all start using a different acronym?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/big-picture.html#faq-6.18">FAQ:</a></b>
+ These people should get a life. Changing a term used and understood by many people is pointless, because people no longer care about the origins of the term and directly associate it with the right meaning.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> If people are accustomed to express an idea in a certain way, and it works for them, trying to convince them to use a new way serves no useful purpose. We could use the opportunity to ask nitpicking questions about how this wisdom is applied to C++ itself. For example, why would someone deprecate <tt>static</tt> variables at the translation unit scope and demand people to use anonymous namespaces to get identical behavior? And all that.
+</p>
+
+<p>
+Instead, we&#39;ll use the opportunity to point out that at the time of writing (2007), &quot;FQA&quot; appears to be a less popular acronym than &quot;FAQ&quot;: a Google search yields a few results, but a Wikipedia search does not. Still, changing &quot;FQA&quot; to something else in this document is not an option: it&#39;s all over the place.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

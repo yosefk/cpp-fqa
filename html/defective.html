@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: Defective C++</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>Defective C++</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a></small><hr>
+
+<p>
+This page summarizes the major defects of the C++ programming language
+(listing all minor quirks would take eternity). To be fair, some of the items <i>by themselves</i>
+could be design choices, not bugs. For example, a programming language doesn&#39;t have to provide garbage collection.
+It&#39;s the <i>combination</i> of the things that makes them <i>all</i> problematic.
+For example, the lack of garbage collection makes C++ exceptions and operator overloading inherently defective. Therefore, the problems are not listed in the order of &quot;importance&quot;
+(which is subjective anyway - different people are hit the hardest by different problems).
+Instead, most defects are followed by one of their complementary defects, so that when a defect causes
+a problem, the next defect in the list makes it worse.
+<ul>
+<li><a href="defective.html#defect-1">No compile time encapsulation</a></li>
+<li><a href="defective.html#defect-2">Outstandingly complicated grammar</a></li>
+<li><a href="defective.html#defect-3">No way to locate definitions</a></li>
+<li><a href="defective.html#defect-4">No run time encapsulation</a></li>
+<li><a href="defective.html#defect-5">No binary implementation rules</a></li>
+<li><a href="defective.html#defect-6">No reflection</a></li>
+<li><a href="defective.html#defect-7">Very complicated type system</a></li>
+<li><a href="defective.html#defect-8">Very complicated type-based binding rules</a></li>
+<li><a href="defective.html#defect-9">Defective operator overloading</a></li>
+<li><a href="defective.html#defect-10">Defective exceptions</a></li>
+<li><a href="defective.html#defect-11">Duplicate facilities</a></li>
+<li><a href="defective.html#defect-12">No high-level built-in types</a></li>
+<li><a href="defective.html#defect-13">Manual memory management</a></li>
+<li><a href="defective.html#defect-14">Defective metaprogramming facilities</a></li>
+<li><a href="defective.html#defect-15">Unhelpful standard library</a></li>
+<li><a href="defective.html#defect-16">Defective inlining</a></li>
+<li><a href="defective.html#defect-17">Implicitly called &amp; generated functions</a></li>
+</ul>
+
+<p>
+<a name="defect-1"></a><h2>No compile time encapsulation</h2>
+
+<p>
+In naturally written C++ code, changing the private members of a class requires <a href="class.html#fqa-7.4">recompilation</a> of
+the code using the class. When the class is used to instantiate member objects of other classes,
+the rule is of course applied recursively.
+</p>
+
+<p>
+This makes C++ interfaces very unstable - a change
+invisible at the interface level still requires to rebuild the calling code, which can be
+very problematic when that code is not controlled by whoever makes the change.
+So shipping C++ interfaces to customers can be <a href="picture.html#fqa-6.3">a bad idea</a>.
+</p>
+
+<p>
+Well, at least when all relevant code is controlled by the same team of people, the only problem is the frequent
+rebuilds of large parts of it. This wouldn&#39;t be too bad by itself with almost any language,
+but C++ has...
+</p>
+
+<p>
+<a name="defect-2"></a><h2>Outstandingly complicated grammar</h2>
+
+<p>
+&quot;Outstandingly&quot; should be interpreted literally, because <i>all popular languages</i> have <a href="http://en.wikipedia.org/wiki/Context-free_grammar">context-free</a>
+(or &quot;nearly&quot; context-free) grammars, while C++ has <a href="http://en.wikipedia.org/wiki/Undecidability">undecidable</a> grammar.
+If you like compilers
+and parsers, you probably know what this means. If you&#39;re not into this kind of thing, there&#39;s a
+<a href="ctors.html#fqa-10.19">simple example</a> showing the problem with parsing C++: is <tt>AA BB(CC);</tt> an object definition
+or a function declaration? It turns out that the answer depends heavily on the code <i>before</i> the statement -
+the &quot;context&quot;. This shows (on an intuitive level) that the C++ grammar is quite context-sensitive.
+</p>
+
+<p>
+In practice, this means three things. First, C++ compiles slowly
+(the complexity takes time to deal with). Second, when it doesn&#39;t compile,
+the error messages are frequently incomprehensible
+(the smallest error which a human reader wouldn&#39;t notice completely confuses the compiler).
+ And three, parsing C++ right is very hard, so different compilers will interpret
+ it differently, and tools like debuggers and IDEs periodically get awfully confused.
+</p>
+
+<p>
+And <i>slow compilation</i> interacts badly with <i>frequent recompilation</i>. The latter is caused
+ by the lack of encapsulation mentioned above, and the problem is amplified by the fact
+ that C++ has...
+</p>
+
+<p>
+<a name="defect-3"></a><h2>No way to locate definitions</h2>
+
+<p>
+OK, so before we can parse <tt>AA BB(CC);</tt>, we need to find out whether <tt>CC</tt> is defined as an object or a type.
+ So let&#39;s locate the definition of <tt>CC</tt> and move on, right?
+</p>
+
+<p>
+This would work in most modern languages, in which <tt>CC</tt> is either defined in the same module
+(so we&#39;ve already compiled it), or it is imported from another module (so either we&#39;ve already compiled it, too,
+ or this must be the first time we bump into that module - so let&#39;s compile it now, <i>once</i>, but of course <i>not</i>
+ the next time we&#39;ll need it). So to compile a program, we need to compile each module, once,
+no matter how many times each module is used.
+</p>
+
+<p>
+In C++, things are <a href="inheritance-mother.html#fqa-23.10">different</a> - there are no modules. There are <i>files</i>, each of which can contain many
+ different definitions or just small parts of definitions, and there&#39;s <i>no way</i> to tell in which
+ files <tt>CC</tt> is defined, or which files must be parsed in order to &quot;understand&quot; its definition.
+ So who is responsible to arrange all those files into a sensible string of C++ code?
+ <i>You</i>, of course! In each compiled file, you <tt>#include</tt> a bunch of header files
+ (which themselves include other files); the <tt>#include</tt> directive basically issues
+ a copy-and-paste operation to the C preprocessor, inherited by C++ without changes.
+ The compiler then parses the result of all those copy-and-paste operations. So to compile a program,
+ we need to compile each file <i>the number of times it is used in other files</i>.
+</p>
+
+<p>
+This causes two problems. First, it multiplies the long time it takes to compile C++ code
+ by the number of times it&#39;s used in a program. Second, the only way to figure out what <i>should</i> be recompiled after a change to the code is to
+ check which of the <tt>#include</tt> files have been changed since the last build. The set of files to rebuild generated by this
+ inspection is usually a superset of the files that <i>really</i> must be recompiled according to the
+ C++ rules of dependencies between definitions. That&#39;s because most files <tt>#include</tt> definitions
+ they don&#39;t really need, since people can&#39;t spend all their time removing redundant inclusions.
+</p>
+
+<p>
+Some compilers support &quot;precompiled headers&quot; - saving the result of the parsing of &quot;popular&quot;
+ header files to some binary file and quickly loading it instead of recompiling from scratch.
+ However, this only works well with definitions that almost never change, typically third-party libraries.
+</p>
+
+<p>
+And now that you&#39;ve waited all that time until your code base recompiles, it&#39;s time to run and test the program,
+ which is when the next problem kicks in.
+</p>
+
+<p>
+<a name="defect-4"></a><h2>No run time encapsulation</h2>
+
+<p>
+Programming languages have rules defining &quot;valid&quot; programs - for example, a valid program shouldn&#39;t
+ divide by zero or access the 7th element of an array of length 5. A valid program isn&#39;t necessarily correct
+ (for example, it can delete a file when all you asked was to move it). However, an invalid program is necessarily
+ incorrect (there is no 7th element in the 5-element array). The question is, what happens when an
+ invalid program demonstrates its invalidity by performing a meaningless operation?
+</p>
+
+<p>
+If the answer is something like &quot;an exception is raised&quot;, your program runs in a managed environment.
+ If the answer is &quot;anything can happen&quot;, your program runs somewhere else. In particular, C and C++
+ are not designed to run in managed environments (think about pointer casts), and while in theory
+ they could run there, in practice all of them run elsewhere.
+</p>
+
+<p>
+So what happens in a C++ program with the 5-element array? Most frequently, you access something
+ at the address that <i>would</i> contain the 7th element, but since there isn&#39;t any, it contains something
+ else, which just happens to be located there. Sometimes you can tell from the source code what that is,
+ and sometimes you can&#39;t. Anyway, you&#39;re <i>really</i> lucky if the program crashes; because if it keeps
+ running, you&#39;ll have hard time understanding why it ends up crashing or misbehaving <i>later</i>.
+ If it doesn&#39;t scare you (you debugged a couple of buffer overflows and feel confident), wait until you get to many megabytes
+ of machine code and many months of execution time. That&#39;s when the real fun starts.
+</p>
+
+<p>
+Now, the ability of a piece of code to modify a random object when in fact it tries to access
+ an unrelated array indicates that <a href="class.html#fqa-7.2">C++ has no run time encapsulation</a>. Since it doesn&#39;t
+ have compile time encapsulation, either, one can wonder why it calls itself object-oriented. Two
+ possible answers are warped perspective and marketing
+ (these aren&#39;t mutually exclusive).
+</p>
+
+<p>
+But if we leave the claims about being object-oriented aside, the fact that a language runs
+  in unmanaged environments can&#39;t really be called a &quot;bug&quot;. That&#39;s because managed environments
+  check things at run time to prevent illegal operations, which translates to a certain (though frequently overestimated)
+  performance penalty. So when performance isn&#39;t that important, a managed environment is the way to go.
+  But when it&#39;s critical, you just have to deal
+  with the difficulties in debugging. However, C++ (compared to C, for example) makes <i>that</i> much harder than it already has to be, because there are...
+</p>
+
+<p>
+<a name="defect-5"></a><h2>No binary implementation rules</h2>
+
+<p>
+When an invalid program finally crashes (or enters an infinite loop, or goes to sleep forever), what you&#39;re left
+  with is basically the binary snapshot of its state (a common name for it is a &quot;core dump&quot;). You have to make sense of it in order to find the
+  bug. Sometimes a debugger will show you the call stack at the point of crash; frequently that information is
+  overwritten by garbage. Other things which can help the debugger figure things out may
+  be overwritten, too.
+</p>
+
+<p>
+Now, figuring out the meaning of partially corrupted memory snapshots is definitely not the most pleasant way to spend one&#39;s
+  time. But with unmanaged environments you <i>have</i> to do it and it <i>can</i> be done, <i>if</i> you know how your
+  source code maps to binary objects and code. Too bad that with C++, there&#39;s a ton of these rules and
+  each compiler uses different ones. Think about exception handling or various kinds of inheritance or
+  virtual functions or the layout of standard library containers. In C, there&#39;s no standard binary
+  language implementation rules, either, but it&#39;s an order of magnitude simpler and in practice compilers
+  use the same rules. Another reason making C++ code hard to debug is the above-mentioned complicated grammar,
+  since debuggers frequently can&#39;t deal with many language features
+  (place breakpoints in templates, parse pointer casting commands in data display windows, etc.).
+</p>
+
+<p>
+The lack of a standard ABI (application binary interface) has another consequence - it makes shipping
+  C++ interfaces to other teams / customers impractical since the user code won&#39;t work unless it&#39;s compiled
+  with the same tools and build options. We&#39;ve already seen another source of this problem - the instability
+  of binary interfaces due to the lack of compile time encapsulation.
+</p>
+
+<p>
+The two problems - with debugging C++ code and with using C++ interfaces - don&#39;t show up until your project
+  grows complicated in terms of code and / or human interactions, that is, until it&#39;s too late.
+  But wait, couldn&#39;t you deal with both problems programmatically? You could generate C or other
+  wrappers for C++ interfaces <i>and</i> write programs automatically shoveling through core dumps and deciphering
+  the non-corrupted parts, using something called reflection.
+  Well, actually, you couldn&#39;t, not in a reasonable amount of time - there&#39;s...
+</p>
+
+<p>
+<a name="defect-6"></a><h2>No reflection</h2>
+
+<p>
+It is impossible to programmatically iterate over the methods or the attributes or the base classes of a class in a
+  portable way defined by the C++ standard. Likewise, it is impossible to programmatically determine the type of an object
+  (for dynamically allocated objects, this can be justified to an extent by performance penalties of RTTI, but
+   not for statically allocated globals, and if you could <i>start</i> at the globals, you could decipher lots
+   of memory pointed by them). Features of this sort - when a program can access the structure of programs,
+in particular, its own structure - are collectively called reflection, and C++ doesn&#39;t have it.
+</p>
+
+<p>
+As mentioned above, this makes generating wrappers for C++ classes and shoveling through memory snapshots a pain,
+  but that&#39;s a small fraction of the things C++ programmers are missing due to this single issue.
+Wrappers can be useful not only to work around the problem of shipping C++ interfaces - you could automatically handle things
+  like remote procedure calls, logging method invocations, etc. A very common application of reflection is
+  <a href="io.html#fqa-15.14">serialization</a> - converting objects to byte sequences and vice versa. With reflection, you can
+  handle it for all types of objects with the same code - you just iterate over the attributes of compound objects,
+  and only need special cases for the basic types. In C++, you must maintain serialization-related code
+  and/or data structures for every class involved.
+</p>
+
+<p>
+But perhaps we could deal with <i>this</i> problem programmatically then? After all, debuggers do manage
+  to display objects somehow - the debug information, emitted in the format supported by your tool chain,
+  describes the members of classes and their offsets from the object base pointer and all that sort of meta-data.
+  If we&#39;re stuck with C++, perhaps we could parse this information and thus have non-standard, but working reflection?
+  Several things make this pretty hard - not all compilers can produce debug information <i>and</i>
+  optimize the program aggressively enough for a release build, 
+  not all debug information formats are documented, and then in C++, we have a...
+</p>
+
+<p>
+<a name="defect-7"></a><h2>Very complicated type system</h2>
+
+<p>
+In C++, we have standard and compiler-specific built-in types, structures, enumerations, unions, classes with single,
+  multiple, virtual and non-virtual inheritance, <tt>const</tt> and <tt>volatile</tt> qualifiers, pointers, references and arrays,
+  <tt>typedef</tt>s, global and member functions and function pointers, and <i>templates</i>, which can have specializations on (again) <i>types</i> (or integral constants),
+  and you can &quot;partially specialize&quot; templates by <i>pattern matching their type structure</i>
+  (for example, have a specialization for <tt>std::vector&lt;MyRetardedTemplate&lt;T&gt; &gt;</tt> for arbitrary values of <tt>T</tt>), and each template can have base classes
+  (in particular, it can be <i>derived from its own instantiations recursively</i>, which is a <i>well-known practice documented
+   in books</i>), and inner <tt>typedef</tt>s, and... We have lots of kinds of types.
+</p>
+
+<p>
+Naturally, representing the types used in a C++ program, say, in debug information, is not an easy task.
+  A trivial yet annoying manifestation of this problem is the expansion of <tt>typedef</tt>s done by debuggers when they show
+  objects (and compilers when they produce error messages - another reason why these are so cryptic). You may think it&#39;s a
+<tt>StringToStringMap</tt>, but only until the tools enlighten you - it&#39;s actually more of a...
+</p>
+
+<pre>
+// don&#39;t read this, it&#39;s impossible. just count the lines
+std::map&lt;std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;,
+std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;,
+std::less&lt;std::basic_string&lt;char, std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;
+  &gt;, std::allocator&lt;std::pair&lt;std::basic_string&lt;char, std::char_traits&lt;char&gt;,
+std::allocator&lt;char&gt; &gt; const, std::basic_string&lt;char, std::char_traits&lt;char&gt;,
+std::allocator&lt;char&gt; &gt; &gt; &gt; &gt;
+</pre>
+
+<p>
+But wait, there&#39;s more! C++ supports a wide variety of explicit and implicit <i>type conversions</i>, so now we
+   have a nice set of rules describing the cartesian product of all those types, specifically, how conversion should
+   be handled for each pair of types. For example, if your function accepts <tt>const std::vector&lt;const char*&gt;&amp;</tt>
+   (which is supposed to mean &quot;a reference to an immutable vector of pointers to immutable built-in strings&quot;), and I have
+   a <tt>std::vector&lt;char*&gt;</tt> object (&quot;a mutable vector of mutable built-in strings&quot;), then
+   <a href="const.html#fqa-18.1">I can't pass it to your function</a> because the types aren&#39;t convertible.
+    You <i>have</i> to admit that it <i>doesn&#39;t make any sense</i>, because your function guarantees
+    that it won&#39;t change anything, and I guarantee that I don&#39;t even mind having anything changed,
+    and still the C++ type system gets in the way and the only sane workaround is to <i>copy the vector</i>.
+    And this is an <i>extremely simple</i> example - no <a href="inheritance-multiple.html#fqa-25.13">virtual inheritance</a>, no user-defined conversion operators, etc.
+</p>
+
+<p>
+But conversion rules by themselves are still not the worst problem with the complicated type system. The worst problem is the...
+</p>
+
+<p>
+<a name="defect-8"></a><h2>Very complicated type-based binding rules</h2>
+
+<p>
+Types lie at the core of the C++ <i>binding rules</i>. &quot;Binding&quot; means &quot;finding the program entity
+    corresponding to a name mentioned in the code&quot;.
+When the C++ compiler compiles something like <tt>f(a,b)</tt> (or even <tt>a+b</tt>), it relies on the
+   argument types to figure out which version of <tt>f</tt> (or <tt>operator+</tt>) to call. This includes
+    overload resolution (is it <tt>f(int,int)</tt> or <tt>f(int,double)</tt>?), the handling of function template specializations
+    (is it <tt>template&lt;class T&gt; void f(vector&lt;T&gt;&amp;,int)</tt> or <tt>template&lt;class T&gt; void f(T,double)</tt>?),
+    and the argument-dependent lookup (ADL) in order to figure out the namespace
+    (is it <tt>A::f</tt> or <tt>B::f</tt>?).
+</p>
+
+<p>
+When the compiler &quot;succeeds&quot; (translates source code to object code), it doesn&#39;t mean that <i>you</i> are equally successful
+    (that is, you think <tt>a+b</tt> called what the compiler thought it called). When the compiler &quot;fails&quot;
+    (translates source code to error messages), most humans also fail
+    (to understand these error messages; multiple screens listing all available overloads
+     of things like <tt>operator&lt;&lt;</tt> are <a href="io.html#fqa-15.1">less than helpful</a>). By the way, the C++ FAQ 
+    has very few items related to the <a href="templates.html#fqa-35.11">unbelievably complicated
+     static binding</a>, like
+  overload resolution or ADL or template specialization. Presumably people get too depressed to ask any questions
+and silently give up.
+</p>
+
+<p>
+In short, the complicated type system interacts very badly with <i>overloading</i> - having multiple
+    functions with the same name and having the compiler figure out which of them to use
+    based on the argument types
+(don&#39;t confuse it with <i>overriding</i> - <tt>virtual</tt> functions, though very far from perfect, do follow rules
+ <a href="inheritance-virtual.html#fqa-20.1">quite sane</a> by C++ standards). And probably the worst kind of overloading is...
+</p>
+
+<p>
+<a name="defect-9"></a><h2>Defective operator overloading</h2>
+
+<p>
+C++ <a href="operator.html#fqa-13.1">operator overloading</a> has all the problems of C++ function overloading (incomprehensible overload resolution rules),
+and then some. For example, overloaded operators have to return their results by value - naively returning references
+to objects allocated with <tt>new</tt> would cause temporary objects to &quot;leak&quot; when code like <tt>a+b+c</tt> is evaluated. That&#39;s
+     because C++ doesn&#39;t have <a href="heap.html#fqa-16.1">garbage collection</a>, since that, folks, is inefficient. Much better to have
+     your code copy massive temporary objects and hope to have them optimized out by our friend the clever compiler.
+     Which, of course,
+<a href="ctors.html#fqa-10.9">won't happen</a> any time soon.
+</p>
+
+<p>
+Like several other features in C++, operator overloading is not necessarily a bad thing <i>by itself</i> - it just happens to interact really badly
+ with other things C++. The lack of automatic memory management is one thing making operator overloading less than useful. Another such thing is...
+</p>
+
+<p>
+<a name="defect-10"></a><h2>Defective exceptions</h2>
+
+<p>
+Consider error handling in an overloaded operator or a <a href="exceptions.html#fqa-17.2">constructor</a>. You can&#39;t use the return value, and setting/reading error
+ flags may be quite cumbersome. How about throwing an exception?
+</p>
+
+<p>
+This could be a good idea in some cases if <a href="exceptions.html#fqa-17.1">C++ exceptions</a> were any good. They aren&#39;t, and can&#39;t be - as usual, because of another
+ C++ &quot;feature&quot;, the oh-so-efficient manual memory management. If we use exceptions, we have to write exception-safe code
+ - code which frees all resources when the control is transferred from the point of failure (<tt>throw</tt>) to the point
+ where explicit error handling is done (<tt>catch</tt>). And the vast majority of &quot;resources&quot; happens to be <i>memory</i>,
+ which is managed manually in C++. To solve this, you are supposed to use <a href="exceptions.html#fqa-17.4">RAII</a>, meaning that all pointers have to be &quot;smart&quot;
+ (be wrapped in classes freeing the memory in the destructor, and then you have to design their copying semantics, and...).
+ Exception safe C++ code is almost infeasible to achieve in a non-trivial program.
+</p>
+
+<p>
+Of course, C++ exceptions have other flaws, following from <i>still other</i> C++ misfeatures. For example, the above-mentioned lack
+ of reflection in the special case of exceptions means that when you catch an exception, you
+ <a href="exceptions.html#fqa-17.7">can't</a> get the call stack
+ describing the context where it was thrown. This means that debugging illegal pointer dereferencing may be easier
+ than figuring out why an exception was thrown, since a debugger <i>will</i> list the call stack in many cases of the former.
+</p>
+
+<p>
+At the bottom line, <tt>throw/catch</tt> are about as useful as <tt>longjmp/setjmp</tt>
+(BTW, the former typically runs faster, but it&#39;s mere <i>existence</i> makes <i>the rest of the code</i> run slower, which is almost <a href="exceptions.html#fqa-17.1">never</a> acknowledged by C++ aficionados).
+So we have two features, each with its own flaws, and no interoperability between them. This is true
+ for the vast majority of C++ features - most are...
+</p>
+
+<p>
+<a name="defect-11"></a><h2>Duplicate facilities</h2>
+
+<p>
+If you need an <a href="ctors.html#fqa-10.5">array</a> in C++, you can use a C-like <tt>T arr[]</tt> or a C++ <tt>std::vector&lt;T&gt;</tt> or any of the array classes written
+ before <tt>std::vector</tt> appeared in the C++ standard. If you need a <a href="operator.html#fqa-13.6">string</a>, use <tt>char*</tt> or <tt>std::string</tt> or
+ any of the pre-standard string classes. If you need to take <a href="ref.html#fqa-8.6">the address of an object</a>,
+ you can use a C-like pointer, <tt>T*</tt>, or a C++ reference, <tt>T&amp;</tt>. If you need to <a href="ctors.html#fqa-10.12">initialize</a> an object,
+ use C-like aggregate initialization or C++ constructors. If you need to <a href="io.html#fqa-15.1">print</a> something, you can
+ use a C-like <tt>printf</tt> call or a C++ <tt>iostream</tt> call. If you need to <a href="templates.html#fqa-35.1">generate</a> many similar definitions
+ with some parameters specifying the differences between them, you can use C-like macros or C++ templates. And so on.
+</p>
+
+<p>
+Of course you can do the same thing in many ways in almost any language. But the C++ feature duplication is quite special.
+ First, the many ways to do the same thing are usually not purely syntactic options directly supported by the compiler -
+ you can compute <tt>a+b</tt> with <tt>a-b*-1</tt>, but that&#39;s different from having <tt>T*</tt> and <tt>T&amp;</tt> in the same language. Second,
+ you probably noticed a pattern - C++ adds features duplicating functionality already in C. This is bad by itself,
+ because the features don&#39;t interoperate well
+ (you can&#39;t <tt>printf</tt> to an <tt>iostream</tt> and vice versa, code mixing <tt>std::string</tt> and <tt>char*</tt> is <a href="operator.html#fqa-13.3">littered</a> with casts
+  and calls to <tt>std::string::c_str</tt>, etc.). This is made even worse by the <i>pretty amazing</i> fact that the new C++
+ features are actually <i>inferior</i> to the old C ones in many aspects.
+</p>
+
+<p>
+And the best part is that C++ devotees <i>dare</i> to refer to the C features as
+ <a href="picture.html#fqa-6.15">evil</a>, and frequently will actually resort to finger pointing and name calling when someone uses them in C++ code
+ (not to mention using plain C)! And <i>at the same time</i> they (<a href="picture.html#fqa-6.11">falsely</a>) claim that C++ is compatible with C and
+ it&#39;s one of its strengths (why, if C is so evil?). The <a href="picture.html#fqa-6.2">real</a> reason to leave the C syntax in C++ was
+ of course marketing - there&#39;s absolutely NO technical reason to <i>parse C-like syntax</i> in order to
+ <i>work with existing C code</i> since that code can be compiled separately. For example, mixing C and <a href="http://www.digitalmars.com/d/">the
+ D programming language</a> isn&#39;t harder than <a href="mixing.html#fqa-32.1">mixing C and C++</a>. D is a good example since its stated goals are similar
+ to those of C++, but almost all other popular languages have ways to work with C code.
+</p>
+
+<p>
+So IMO all that old syntax was kept for strictly commercial purposes - to market the language to non-technical
+ managers or programmers who should have known better and didn&#39;t understand the difference between &quot;syntax&quot; and &quot;compatibility with existing code&quot; and
+ simply asked whether the old code will compile with this new compiler. Or maybe they thought it would be easier
+ to learn a pile of new syntax when you also have the (smaller) pile of old syntax than when you have just the new syntax.
+Either way, C++ got wide-spread by exploiting misconceptions.
+</p>
+
+<p>
+Well, it doesn&#39;t matter anymore why they kept the old stuff. What matters is that the new stuff isn&#39;t really new, either - it&#39;s obsessively
+ built in ways exposing the C infrastructure underneath it. And <i>that</i> is purely a wrong design decision, made
+ without an axe to grind. For example, in C++ there&#39;s...
+</p>
+
+<p>
+<a name="defect-12"></a><h2>No high-level built-in types</h2>
+
+<p>
+C is a pretty low-level language. Its atomic types are supposed to fit into machine registers
+ (usually one, sometimes two of them). The compound types are designed to occupy a flat chunk of memory
+ with of a size known at compile time.
+</p>
+
+<p>
+This design has its virtues. It makes it relatively easy to estimate the performance &amp; resource consumption of code.
+ And when you have hard-to-catch low-level bugs, which sooner or later happens in unmanaged environments, having
+ a relatively simple correspondence between source code definitions and machine memory helps to debug the problem.
+ However, in a high-level language, which is supposed to be used when the development-time-cost / execution-time-cost ratio
+ is high, you need things like resizable arrays, key-value mappings, integers that don&#39;t overflow and other
+ such gadgets. Emulating these in a low-level language is possible, but is invariably painful since the tools
+ don&#39;t understand the core types of your program.
+</p>
+
+<p>
+C++ doesn&#39;t add any built-in types to C <i><a class="corr" href="web-vs-fqa.html#correction-2">(correction)</a></i>. All higher-level types must be implemented as user-defined classes and templates,
+ and this is when the defects of C++ classes and templates manifest themselves in their full glory.
+ The lack of syntactic support for higher-level types
+ (you can&#39;t initialize <tt>std::vector</tt> with <tt>{1,2,3}</tt> or initialize an <tt>std::map</tt> with something like <tt>{&quot;a&quot;:1,&quot;b&quot;:2}</tt>
+  or have large integer constants like <tt>3453485348545459347376</tt>) is the small part of the problem.
+ Cryptic multi-line or <i>multi-screen</i> <a href="templates.html#fqa-35.17">compiler error messages</a>,
+ debuggers that can&#39;t display the standard C++ types and <a href="templates.html#fqa-35.12">slow build times</a> unheard of anywhere outside of the C++ world
+ are the larger part of the problem. For example, here&#39;s a simple piece of code using the C++ standard library followed by an error message
+ produced from it by gcc 4.2.0. Quiz: what&#39;s the problem?
+</p>
+
+<pre>
+// the code
+typedef std::map&lt;std::string,std::string&gt; StringToStringMap;
+void print(const StringToStringMap&amp; dict) {
+  for(StringToStringMap::iterator p=dict.begin(); p!=dict.end(); ++p) {
+    std::cout &lt;&lt; p-&gt;first &lt;&lt; &quot; -&gt; &quot; &lt;&lt; p-&gt;second &lt;&lt; std::endl;
+  }
+}
+// the error message
+test.cpp: In function &#39;void print(const StringToStringMap&amp;)&#39;:
+test.cpp:8: error: conversion from
+&#39;std::_Rb_tree_const_iterator&lt;std::pair&lt;const std::basic_string&lt;char,
+std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::basic_string&lt;char,
+std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;&#39; to non-scalar type
+&#39;std::_Rb_tree_iterator&lt;std::pair&lt;const std::basic_string&lt;char,
+std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt;, std::basic_string&lt;char,
+std::char_traits&lt;char&gt;, std::allocator&lt;char&gt; &gt; &gt; &gt;&#39; requested
+</pre>
+
+<p>
+The decision to avoid new built-in types yields other problems, such as the <a href="exceptions.html#fqa-17.6">ability</a> to throw anything, but
+ without the ability to <i>catch</i> it later. <tt>class Exception</tt>, a built-in base class for all exception classes treated specially by the compiler,
+ could solve this problem with C++ exceptions (but not others). However, the most costly problem with having no
+ new high-level built-in types is probably the lack of easy-to-use containers. But to have those, we need more
+ than just new built-in types and syntax in the C++ compiler. Complicated data structures can&#39;t be manipulated
+ easily when you only have...
+</p>
+
+<p>
+<a name="defect-13"></a><h2>Manual memory management</h2>
+
+<p>
+Similarly to low-level built-in types, C++ manual memory management is inherited from C without changes
+ (but with the mandatory addition of duplicate syntax - <tt>new/delete</tt>, which normally call <tt>malloc/free</tt>
+  but don&#39;t <a href="heap.html#fqa-16.5">have to</a> do that, and of course can be <a href="dtor.html#fqa-11.10">overloaded</a>).
+</p>
+
+<p>
+Similarly to the case with low-level built-in types, what makes sense for a low-level language doesn&#39;t work
+  when you add higher-level features. Manual memory management is incompatible with features such as <a href="exceptions.html#fqa-17.1">exceptions</a> &amp; <a href="operator.html#fqa-13.1">operator overloading</a>,
+  and makes working with non-trivial data structures very hard, since you have to worry about the life cycles
+  of objects so they won&#39;t leak or die while someone still needs them.
+</p>
+
+<p>
+The most common solution is <a href="dtor.html#fqa-11.1">copying</a> -
+  since it&#39;s dangerous to point to an object which can die before we&#39;re done with it, make yourself a copy
+  and become an &quot;owner&quot; of that copy to control its life cycle. An &quot;owner&quot; is a C++ concept not represented
+  in its syntax; an &quot;owner&quot; is the object that is responsible to deallocate a dynamically allocated chunk
+  of memory or some other resource. The standard practice in C++ is to assign each &quot;resource&quot; (a fancy name for memory, most of the time)
+to an owner object, which is supposed to prevent resource leaks.
+  What it doesn&#39;t prevent is access to dead objects; we have copying for that.
+Which is slow and doesn&#39;t work when you need many pointers to <i>the same</i> object
+  (for example, when you want other modules to see your modifications to the object).
+</p>
+
+<p>
+An alternative solution to copying is using &quot;smart&quot; pointer classes, which could <a href="heap.html#fqa-16.26">emulate</a> automatic memory management
+   by maintaining <a href="heap.html#fqa-16.22">reference counts</a> or what-not. To implement the pointer classes for the many different types
+  in your program, you&#39;re encouraged to use...
+</p>
+
+<p>
+<a name="defect-14"></a><h2>Defective metaprogramming facilities</h2>
+
+<p>
+There are roughly two kinds of metaprogramming: code that generates other code and code that processes other code.
+  The second kind is practically impossible to do with C++ code - you can&#39;t reliably process source code due to the extremely
+  complicated grammar and you can&#39;t portably process compiled code because there&#39;s no reflection. So this section
+  is about the first kind - code generation.
+</p>
+
+<p>
+You can generate C++ code from within a C++ program using C macros and C++ templates. If you use macros, you risk
+  getting <a href="picture.html#fqa-6.15">clubbed to death</a> by C++ fanatics. Their irrational behavior left aside, these people do have a point -
+  C macros are pretty lame. Too bad templates are probably even worse. They are
+  <a href="templates.html#fqa-35.1">limited in ways macros aren't</a> (however, the opposite is also true). They <a href="templates.html#fqa-35.12">compile forever</a>.
+   Being the only way to do metaprogramming, they are routinely <a href="templates.html#fqa-35.2">abused</a> to do things they weren&#39;t designed for.
+   And they are a
+   <a href="templates.html#fqa-35.16">rats' nest</a> of bizarre syntactic problems.
+</p>
+
+<p>
+That wouldn&#39;t necessarily be so bad if C++ didn&#39;t <i>rely</i> on metaprogramming for doing essential programming tasks.
+One reason C++ has to do so is that in C++, the common practice is to use static binding (overload resolution, etc.)
+    to implement polymorphism, not dynamic binding. So you can&#39;t take an arbitrary object at run time and print it,
+    but in many programs you <i>can</i> take an arbitrary <i>type</i> at compile time and print objects of this type. Here&#39;s
+    one common (and broken) application of metaprogramming - the ultimate purpose is to be able to print arbitrary
+    object <i>at run time</i>:
+</p>
+
+<pre>
+// an abstract base class wrapping objects of arbitrary types.
+// there can be several such classes in one large project
+struct Obj {
+  virtual void print(std::ostream&amp;) const = 0;
+};
+template&lt;class T&gt; struct ObjImpl : Obj {
+  T wrapped;
+  virtual void print(std::ostream&amp; out) const { out &lt;&lt; wrapped; }
+};
+// now we can wrap int objects with ObjImpl&lt;int&gt; and string objects
+// with ObjImpl&lt;std::string&gt;, store them in the same collection of Obj*
+// and print the entire collection using dynamic polymorphism:
+void print_them(const std::vector&lt;Obj*&gt;&amp; objects) {
+  for(int i=0; i&lt;(int)objects.size(); ++i) {
+    objects[i]-&gt;print(std::cout); // prints wrapped ints, strings, etc.
+    std::cout &lt;&lt; std::endl;
+  }
+}
+</pre>
+
+<p>
+Typically there are 10 more layers of syntax involved, but you get the idea. This sort of code doesn&#39;t really work
+    because it requires all relevant overloads of <tt>operator&lt;&lt;</tt> to be visible <i>before</i> the point where <tt>ObjImpl</tt>
+    is defined, and that doesn&#39;t happen unless you routinely sort your <tt>#include</tt> directives according to that rule.
+    Some compilers will compile the code correctly with the rule violated, some will complain, some will silently generate
+    wrong code.
+</p>
+
+<p>
+But the most basic reason to rely on the poor C++ metaprogramming features for everyday tasks
+    is the above-mentioned ideological decision to avoid adding high-level built-in types. For example, templates
+    are at the core of the...
+</p>
+
+<p>
+<a name="defect-15"></a><h2>Unhelpful standard library</h2>
+
+<p>
+Most things defined by the C++ standard library are templates, and relatively sophisticated ones, causing
+    the users to deal with quite sophisticated manifestations of the problems with templates, discussed above.
+    In particular, a special program called <a href="http://www.bdsoft.com/tools/stlfilt.html">STLFilt</a> exists
+    for <i>decrypting the error messages</i> related to the C++ standard library.
+    Too bad it doesn&#39;t patch the debug information in a similar way.
+</p>
+
+<p>
+Another problem with the standard library is all the functionality that&#39;s not there.
+   A large part of the library duplicates the functionality from the C standard library (which is itself available to C++ programs, too).
+The main new thing is containers
+(&quot;algorithms&quot; like <tt>max</tt> and <tt>adjacent_difference</tt> don&#39;t count as <a href="class.html#fqa-7.3">"functionality"</a> in my book). The standard library
+ doesn&#39;t support listing directories, opening GUI windows or network sockets. You may think that&#39;s because these things
+ are non-portable. Well, the standard library doesn&#39;t have matrices or regular expressions, either.
+</p>
+
+<p>
+And when you use the standard library in your code, one reason it compiles slowly to a large binary image is
+ that the library extensively uses the...
+</p>
+
+<p>
+<a name="defect-16"></a><h2>Defective inlining</h2>
+
+<p>
+First, let&#39;s define the terms.
+</p>
+
+<p>
+&quot;Inlining&quot; in the context of compilers refers to a technique for <i>implementing</i> function calls
+ (instead of generating a sequence calling the implementation of the function, the compiler integrates that implementation
+  at the point where the call is made). <a href="inline.html#fqa-9.1">"Inlining" in the context of C++</a> refers to a way to <i>define</i> functions in order to <i>enable</i>
+ (as opposed to &quot;force&quot;) such implementation of the calls to the function (the decision whether to actually use the opportunity is made by the compiler).
+</p>
+
+<p>
+Now, the major problem with this C++ way to enable inlining is that you have to place the definition of the function
+ in header files, and have it recompiled over and over again from source. This doesn&#39;t have to be that way - the
+ recompilation from source can be avoided by having higher-level object file formats
+ (the way it&#39;s done in <a href="http://llvm.org">LLVM</a> and <a href="http://gcc.gnu.org">gcc starting from version 4</a>). This approach -
+  link-time inlining - is one aspect of &quot;whole program optimization&quot; supported by modern compilers. But the recompilation
+  from source could also be avoided in simpler ways if C++ had a way to locate definitions instead of recompiling them, which,
+  as we&#39;ve seen, it hasn&#39;t.
+</p>
+
+<p>
+The crude support for inlining, designed with a traditional implementation of a C tool chain in mind,
+  wouldn&#39;t be as bad if it wasn&#39;t <i>used all the time</i>. People define large functions inline for two reasons.
+  <a href="ctors.html#fqa-10.9">Some</a> of them &quot;care&quot; (emotionally) about performance, but never actually measure it, and someone told them
+  that inlining speeds things up, and forgot to <a href="inline.html#fqa-9.3">tell</a> them how it can slow them down. Another reason is that
+  it&#39;s simply <i>annoying</i> to define functions non-inline, since that way, you place the full function definition
+  in a <tt>.cpp</tt> file and its prototype in a <tt>.h</tt> file. So you write the prototype twice, <i>with small changes</i>
+  (for example, if a class method returns an object of a type itself defined in the class, you&#39;ll need an extra namespace
+   qualification in the <tt>.cpp</tt> file since you&#39;re now <i>outside of the namespace of the class</i>). Much easier
+   to just have the body written right in the <tt>.h</tt> file, making the code compile more slowly and recompile
+   more frequently (changing the function body will trigger a recompilation).
+</p>
+
+<p>
+And you don&#39;t even need to actually <i>write</i> any inline functions to get most of their benefits! A large subset
+   of the inline functions of a program are...
+</p>
+
+<p>
+<a name="defect-17"></a><h2>Implicitly called &amp; generated functions</h2>
+
+<p>
+Here&#39;s a common &quot;design pattern&quot; in C++ code. You have a huge class.
+   Sometimes there&#39;s a single pseudo-global object of this class.
+   In that case, you get all the <i>drawbacks</i> of global variables because everybody has a pointer to the
+ thing and modifies it and expects others to see the changes. But you get no <i>benefits </i>of global variables since
+ the thing is allocated on the stack and when your program crashes with a buffer overflow, you can&#39;t
+ find the object in a debugger. And at other times there are many of these objects,
+   typically kept in a pseudo-global collection.
+</p>
+
+<p>
+Anyway, this huge class has no constructors, no destructor and no <tt>operator=</tt>. Of course people create
+   and destroy the objects, and sometimes even assign to them. How is this handled by the compiler?
+</p>
+
+<p>
+This is handled by the compiler by generating a <i>gigantic</i> pile of code at the point where it would
+   call the user-defined functions with magic names (such as <tt>operator=</tt>) if there were any. When you <i>crash</i> somewhere
+   at that point, you get to see <i>kilobytes</i> of assembly code in the debugger, all generated
+   from <i>the same source code line</i>. You can then try and figure out which variable didn&#39;t like
+   being assigned to, by guessing where the class member offsets are in the assembly listing and looking
+   for symbolic names of the members corresponding to them. Or you can try and guess who forgot
+   all about the fact that these objects were assigned to using the &quot;default&quot; <tt>operator=</tt>
+   and added something like built-in pointer members to the class. Because that wouldn&#39;t work,
+   and could have caused the problem.
+</p>
+
+<p>
+Implicit generation of functions is problematic because it slows compilation down, inflates
+   the program binaries and gets in the way when you debug. But the problem with <i>implicitly calling</i> functions
+   (whether or not they were <i>implicitly generated</i>) is arguably even worse.
+</p>
+
+<p>
+When you see code like <tt>a=f(b,c)</tt> (or even <tt>a=b+c</tt>, thanks to operator overloading), you don&#39;t
+   know whether the objects are passed by reference or by value (see <a href="ref.html#fqa-8.6">"information hiding"</a>). In the latter case, the objects are
+   copied with implicitly called functions; in the former case, that&#39;s possible, too, if implicit type
+   conversions were involved. Which means that you don&#39;t really understand what the program does
+   unless you know the relevant information about the relevant overloads and types.
+   And by the way, the fact that you can&#39;t see whether the object is passed by reference or by value
+   at the point of call is <i>another</i> example of implicit stuff happening in C++.
+</p>
+
+<p>
+One more problem with automatically generated functions (such as constructors and destructors)
+   is that they must be <i>regenerated</i> when you add private members to a class, so changing
+   the private parts of a class triggers recompilation... Which brings us back to square 1.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

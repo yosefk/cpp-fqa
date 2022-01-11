@@ -34,7 +34,7 @@ YetAnotherSoCalledSmartPointer& YetAnotherSoCalledSmartPointer::operator=(const 
 Self assignment will first delete |_p|, and then dereference it, which is nasty. And it is all /your/ fault - you
 should have handled self assignment!
 
-FQA: Oh, so it's my fault, isn't it? Then why isn't this question listed in any other programming language FAQ on the planet?
+FQA: Oh, so it's my fault, is it? Then why isn't this question listed in any other programming language FAQ on the planet?
 I mean, it's the same me all the time, it's the languages that are different. So why don't we lose the feelings of guilt
 and check what it is about C++ that causes the problem?
 

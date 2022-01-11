@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: The FQA FAQ</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>The FQA FAQ</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a></small><hr>
+
+<p>
+This page contains answers to Frequently Asked Questions about the C++
+Frequently Questioned Answers. Which is a pretty bad case of having too many levels of indirection.
+The FQA FAQ is based on a semantical histogram of about a couple of hundred messages,
+some of which were supposed to be for me, and some others - for all the happy Web 2.0 users out there.
+Questions that were asked several times made it to the list (there was no lower bound on the quality though).
+</p>
+
+<p>
+If you want to question the facts in the FQA, there&#39;s a separate page for that.
+<a href="http://yosefk.com">Send me e-mail</a>, and if you <a href="http://yosefk.com/c++fqa/web-vs-fqa.html">correct a factual error</a>,
+I&#39;ll add your stuff.
+</p>
+
+<p>
+Most of the questions here manifest negative attitude. Let me assure you that I got plenty of positive
+feedback, too, but, somewhat naturally, it rarely comes in the form of a question.
+And I am not going to add fake FAQs to make the subject look better the way <a href="class.html#fqa-7.5">C++ FAQ does</a>.
+<ul>
+<li><a href="faq.html#faq-1">It looks like a bunch of random points, what are you trying to say?</a></li>
+<li><a href="faq.html#faq-2">I want to ask you something and get an answer, what should I do?</a></li>
+<li><a href="faq.html#faq-3">Is there any alternative to C++?</a></li>
+<li><a href="faq.html#faq-4">Can&#39;t the problems you mention be solved by proper design / project management?</a></li>
+<li><a href="faq.html#faq-5">But I already know C++, and so do many others. Isn&#39;t learning new languages hard?</a></li>
+<li><a href="faq.html#faq-6">Why are you writing in such an emotional way?</a></li>
+<li><a href="faq.html#faq-7">You are not very objective, are you?</a></li>
+<li><a href="faq.html#faq-8">You don&#39;t know C++ very well, do you?</a></li>
+<li><a href="faq.html#faq-9">You&#39;re clearly into &quot;managed environments&quot;, who cares what you think about C++, which has different goals?</a></li>
+<li><a href="faq.html#faq-10">Why do you complain when C++ lets you do bad things? The language is not your nanny.</a></li>
+<li><a href="faq.html#faq-11">C++ is just a tool. Have you hurt yourself with a big nasty hammer, little baby?</a></li>
+<li><a href="faq.html#faq-12">Are you a troll?</a></li>
+<li><a href="faq.html#faq-13">Don&#39;t you know that C++0x will fix all those problems?</a></li>
+<li><a href="faq.html#faq-14">But you could do this to any language. Doesn&#39;t it make the whole thing meaningless?</a></li>
+<li><a href="faq.html#faq-15">All those C++ users and overlords can&#39;t be wrong, can they? Why should I believe you?</a></li>
+<li><a href="faq.html#faq-16">Do you even realize that C++ was shaped by various goals and trade-offs? How can you judge it otherwise?</a></li>
+<li><a href="faq.html#faq-17">Why do you use complicated libraries like boost if they don&#39;t make your life easier, and isn&#39;t it your fault?</a></li>
+<li><a href="faq.html#faq-18">Why not quit whining and find a better job where there&#39;s no C++?</a></li>
+<li><a href="faq.html#faq-19">Why don&#39;t you get a life?</a></li>
+<li><a href="faq.html#faq-20">C++ is already dead, so isn&#39;t the whole purpose of this document to get page views?</a></li>
+</ul>
+
+<p>
+<a name="faq-1"></a><h2>It looks like a bunch of random points, what are you trying to say?</h2>
+
+<p>
+Read <a href="http://yosefk.com/c++fqa/defective.html">Defective C++</a> if you&#39;re looking
+for a summary. The Q&amp;A sections follow the structure of the C++ FAQ, and talk
+about things on varying scales and of different importance.
+</p>
+
+<p>
+<a name="faq-2"></a><h2>I want to ask you something and get an answer, what should I do?</h2>
+
+<p>
+Send me <a href="http://yosefk.com">mail</a>.
+</p>
+
+<p>
+Here&#39;s how it works. Publishing stuff makes sense.
+Face to face conversations and e-mail conversations make sense. Conversations in the form
+of articles replying to other articles make sense some of the time. Comment thread conversations are futile.
+Special case: Usenet conversations are futile. If they are moderated, they are futile and (almost) polite.
+</p>
+
+<p>
+An example of a futile, (almost) polite discussion of the C++ FQA can be found in
+<a href="http://groups.google.co.il/group/comp.lang.c++.moderated/browse_frm/thread/870d15c57e831fc5/5868fd6e57f6ae2c?hl=en&amp;tvc=1#5868fd6e57f6ae2c">this comp.lang.c++.moderated thread</a>. For some reason, several people
+well-known in the C++ community decided to have a bunch of off-topic arguments in that thread
+(like how bad it is that some obscure features are going into C++0x and other obscure features aren&#39;t).
+Off-topic and futile, but amusing and (almost) polite.
+</p>
+
+<p>
+<a name="faq-3"></a><h2>Is there any alternative to C++?</h2>
+
+<p>
+Yes, there&#39;s <a href="picture.html#fqa-6.5">plenty</a>. And no, there&#39;s <a href="inheritance-multiple.html#fqa-25.3">none</a>.
+</p>
+
+<p>
+As the C++ FAQ correctly points out, there&#39;s a key issue with choosing a programming language -
+availability. That is, stuff that <i>already exists</i> that your project depends upon. For example,
+you may need C++ libraries which have no alternative in other languages
+(today, in practice - not in the future, in theory). The project can already have lots
+of C++ code in it, and rewriting it in another language is most often not an option.
+Note how you can substitute COBOL for C++ in this paragraph and the claims will still hold.
+</p>
+
+<p>
+However, if you&#39;re asking about the programming language by itself, then C++ is never the best
+choice. In particular, use languages with safe execution and automatic memory management
+whenever possible, because that greatly increases the speed of development and solves
+many practical stability and security problems. There&#39;s plenty of languages in that
+family. If you <a href="ctors.html#fqa-10.9">really</a> need the speed badly enough to settle for unsafe execution,
+you still have better options than C++ - for example, D, Objective-C, and plain old
+C, a good snapshot of the language taken before the postfix increment
+(Clarification: I know that many things were back-ported from C++ to ANSI C, you language lawyer).
+You can also mix many programming languages fairly easily.
+</p>
+
+<p>
+Of course you are forced to use C++ quite frequently, and in this sense there may
+be no alternative to it. I use C++ a lot. I wouldn&#39;t write the FQA if I didn&#39;t.
+But since I&#39;ve stopped using it when I don&#39;t have to, many things became really easy.
+<i>Try it</i>. Stop being a die-hard C++ weenie that does simple throwaway text processing in C++ and calls
+the compiled programs &quot;scripts&quot;. This behaviorial pattern yields suboptimal results.
+And if you really need to use C++, make sure you know its problems, and don&#39;t
+blindly trust the recommendations of the C++ overlords.
+</p>
+
+<p>
+<a name="faq-4"></a><h2>Can&#39;t the problems you mention be solved by proper design / project management?</h2>
+
+<p>
+They can. Theoretically. It will still cost more than not having to solve these problems in the first place.
+You may not realize it, because you&#39;re fairly good. The thing is that your ability to juggle
+lots and lots of things in your head yields the best results when these things are not entirely
+worthless. Without having to work around C++, you&#39;ll get more done. But the bottom line is
+that you can have good C++ code, with most problems of C++ not manifesting themselves.
+<i>If everybody on the team is really good at C++, and has a practical approach and lots of experience,
+and your schedules aren&#39;t too tight</i>.
+</p>
+
+<p>
+This last statement rarely holds, especially for larger projects. The issue with real-world schedules and
+having no time to fight C++ in addition to the real problems is probably clear. The practical
+approach and the experience are relatively obvious, too. People who prefer complicated solutions
+because it demonstrates their skills and/or try to use their language naively and <a href="class.html#fqa-7.5">"naturally"</a> can cause
+lots of damage if their weapon is C++; the FQA has lots of details on that one. The strangest thing for most strong programmers is -
+if someone is not very good at C++ (or whatever your project is written in, for that matter),
+why do you want them on your team anyway?
+</p>
+
+<p>
+This is really important, and took me some time to understand - it&#39;s one of the several
+things that go against the grain of the training most programmers undergo. Well, let&#39;s look at an example.
+We have this guy who is really good at physics, or statistics, or economics, or AI/machine learning,
+or genetics - whatever your domain is. And he can program. He&#39;s not an expert programmer, but he&#39;s brilliant,
+and the code turns out pretty neat, at the semantical level, although admittedly he prints
+objects to <tt>cout</tt> with <tt>printSomething</tt> functions - <a href="io.html#fqa-15.1">pretty lame</a>, that. We can have him on board,
+happily coding away. We can hire him and let a strong programmer talk to him, convert his ideas
+to code and bring back whatever the machine has to say when it runs, iteratively. Or we can
+send the clueless PhD away and hire another <a href="templates.html#fqa-35.11">SFINAE</a> expert. It&#39;s your call. What will it be?
+</p>
+
+<p>
+Let&#39;s move on. What about the young, bright, responsible but inexperienced type, constantly
+looking for the most urgent problem and rushing to fight it? What about
+the amazing coder, who can only be seen coding if you put a camera in his office and play the recording
+in slow motion - most of the time he&#39;s surfing non-productive sites, except somehow
+all that stuff that scares the heck out of other people gets done in no time? What about the super-orderly,
+super-smart person, who can do anything you ask for, precisely and quickly, but just happens
+to be a newbie in your language, and will have no time to become an expert?
+Too bad all these people are not language lawyers, and can wreak havoc in C++. Would you have them on your team,
+or would you send them over to your competitor?
+</p>
+
+<p>
+<i>The programming language is not the main theme in programming.</i> Therefore, using a language which
+doesn&#39;t require expertise from all users can help you utilize your human resources better,
+as <a href="class.html#fqa-7.4">the business-friendly-looking FAQ</a> would say.
+</p>
+
+<p>
+<a name="faq-5"></a><h2>But I already know C++, and so do many others. Isn&#39;t learning new languages hard?</h2>
+
+<p>
+No. And the amazing part is that you&#39;ll tell me that <i>yourself</i>. Many times I heard something like
+&quot;C&#39;mon, this language is trivial and has nothing new, <i>why would I invest all that energy
+into learning it</i>?&quot; Prediction: the next step in the evolution of the brain will be a built-in consistency checker.
+</p>
+
+<p>
+Clarification: learning new libraries can take time, and rewriting old code is not a sane option
+in most cases. I&#39;m talking about new code, not old code.
+</p>
+
+<p>
+And, you&#39;ll be surprised how easy most languages are compared to C++. You can stay
+extremely ignorant about how they work and they won&#39;t bite you, for years. I tested this one
+myself since I was very curious. Perhaps I&#39;ll write about it some time.
+</p>
+
+<p>
+Not only are most languages easier to learn than C++ - they&#39;re easier to use, too.
+Especially the higher-level ones. You can get interesting work done in <i>no time</i>. You&#39;ll think differently about things.
+The meaning of &quot;design&quot; changes. For instance, hardware hackers call <i>the code</i> describing the hardware
+&quot;design&quot;. &quot;Compile the design&quot;. In C++, they usually call the structure of the definitions
+(classes, functions, templates) &quot;design&quot;. At a higher level, you can call the details of how the <i>functionality</i>
+is specified &quot;design&quot;; writing the code and connecting the pieces is easy enough to be called &quot;implementation details&quot;.
+I&#39;m not really good with this sort of terminology, but it&#39;s something like that.
+</p>
+
+<p>
+<a name="faq-6"></a><h2>Why are you writing in such an emotional way?</h2>
+
+<p>
+Am not! This is the sanitized, calm and rational version. Do you have any idea how much editing it took?
+</p>
+
+<p>
+Seriously, let&#39;s examine the breakdown of the potential FQA readers. People who hate C++ will be
+entertained by the rants, which is not the main purpose, but is a good thing. Some of the people who love
+C++ can be offended, but would they really feel otherwise if I used different language? And why do
+they read something having such a title - is this some kind of informational masochism, and
+how am I responsible for it, anyway?
+</p>
+
+<p>
+And now we reach the most important subset of the readers - the ones working with C++ and having
+their doubts. What&#39;s a bigger risk: to scare them with overly aggressive style, or to put them to sleep?
+Note that the thing that really counts is the information, not the style. Yes, sir, that would be always,
+and you ought to learn this or else you&#39;ll go extinct in no time. Therefore some of the people who won&#39;t be able
+to extract the information from the text because of the style have critical flaws in their thinking,
+and I don&#39;t mind losing this part of the audience. Especially considering the fact that any technical
+document is an excellent cure for insomnia, and the people who entertain themselves reading RFCs
+are a tiny minority of the population I&#39;d like to talk to. So the sleeping risk has to be minimized first.
+This is called risk management, as everybody who was forced to study a braindead Methodology-related
+document during their career will readily tell you.
+</p>
+
+<p>
+By the way, <i>have you seen the FAQ</i>? The FQA is way more vegetarian in many aspects. In particular,
+the FAQ labels groups of people as <a href="picture.html#fqa-6.5">techie weenies endangering the interests of their employers</a>,
+and in general talks a lot about the (bogus) business aspect of the issues. As if you can <a href="friend.html#fqa-14.3">cut costs</a>
+by fiddling with syntax and in general have your enterprise thrive by applying a bunch of
+C++ coding tricks. This crosses the red line as far as I&#39;m concerned. As one of my early reviewers
+told me in a private message when I asked about my style, many of the FAQ&#39;s claims are
+close to attempts at brainwashing, and therefore my replies are justified.
+I don&#39;t know if he&#39;s right at the bottom line, but his message has a special place in my heart.
+</p>
+
+<p>
+<a name="faq-7"></a><h2>You are not very objective, are you?</h2>
+
+<p>
+No - it&#39;s your job. Do stuff, read stuff, think and make up your mind. Have you actually
+selected an entity which you think of as &quot;objective&quot;? This is like having a slave port
+in your brain.
+</p>
+
+<p>
+There&#39;s plenty of material praising C++ and covering up its deficiencies
+with unbelievable excuses and broken &quot;solutions&quot;. There aren&#39;t many sources debunking this
+material, and for a good reason - there&#39;s no money in it.
+And then the C++ FAQ, which the FQA is based upon, is not at all objective, either.
+</p>
+
+<p>
+Can anybody explain me <i>why</i> the FQA should be &quot;objective&quot;? And just what does &quot;objective&quot; mean here?
+Should I list a plethora of broken workarounds for each mentioned C++ misfeature? Or should
+I say that many people don&#39;t think it&#39;s a problem each time I raise a problem? I sincerely and honestly don&#39;t get it.
+</p>
+
+<p>
+<a name="faq-8"></a><h2>You don&#39;t know C++ very well, do you?</h2>
+
+<p>
+If you have valid counter arguments, shoot. I don&#39;t feel like demonstrating my C++ skills,
+or anything else for that matter, to strangers who weren&#39;t even taught to be polite.
+</p>
+
+<p>
+If this issue is important to you, browse the FQA. You&#39;ll find out that I&#39;m aware of
+RAII, SFINAE, C++0x and just about every other idiotic C++-related acronym you wish to inform me about.
+</p>
+
+<p>
+<a name="faq-9"></a><h2>You&#39;re clearly into &quot;managed environments&quot;, who cares what you think about C++, which has different goals?</h2>
+
+<p>
+They&#39;ve discovered some time ago that you are supposed to refer to whatever the person says,
+not the person, to make a valid argument.
+</p>
+
+<p>
+I&#39;ve done lots of low-level work. Real time, interrupts, context switching and
+process migration, CPUs with small address spaces, 2-digit numbers of processors with shared
+memory and incoherent caches and local memories, locating and working around hardware bugs, these sorts of things. In C++.
+Yes, I also worked with managed environments, that part is based on my personal experience, too.
+</p>
+
+<p>
+When I say that safe execution
+is safer than unsafe execution, you can trust me. Do you always prefer credentials to logic?
+Pretty risky, that.
+</p>
+
+<p>
+<a name="faq-10"></a><h2>Why do you complain when C++ lets you do bad things? The language is not your nanny.</h2>
+
+<p>
+I don&#39;t really complain about that, you probably took something out of a more complicated context. And check the previous answer, tough guy.
+</p>
+
+<p>
+<a name="faq-11"></a><h2>C++ is just a tool. Have you hurt yourself with a big nasty hammer, little baby?</h2>
+
+<p>
+C++ isn&#39;t just a tool, it&#39;s a language. Languages have <a href="inheritance-multiple.html#fqa-25.3">different dynamics</a> than tools. And I love you, too.
+</p>
+
+<p>
+<a name="faq-12"></a><h2>Are you a troll?</h2>
+
+<p>
+No, I&#39;m a Turing-complete mammal just like you. Trolls are a different species. Biologists
+inform us that trolls are characterized by the use of <i>flame baits</i>. A dictionary further
+enlightens us, explaining that a bait is &quot;food or other lure placed on a hook or in a trap
+and used in the taking of fish, birds, or other animals&quot;.
+</p>
+
+<p>
+Now, the key insight is that for a troll to survive, it has to use cost-effective baits.
+That is, the bait should be significantly cheaper than the food, or else the troll will go bankrupt.
+</p>
+
+<p>
+Of course, your not-so-well-thought-out emotional response counts
+as a medium-sized piece of a fish, a bird, or some other animal.
+But let me assure you, the FQA is way costlier and thus makes a lousy bait. Try doing something like this,
+and you&#39;ll realize that a troll will not pick this path to ensure its survival.
+</p>
+
+<p>
+Oh, and I also sign with my real name. Do you do that, too, or is it <tt>cooluser35</tt>?
+Humans don&#39;t have names like that, you know. And what&#39;s that hair doing on your ears?
+</p>
+
+<p>
+<a name="faq-13"></a><h2>Don&#39;t you know that C++0x will fix all those problems?</h2>
+
+<p>
+I&#39;ve seen TR1, and my expectations are low. Anyway, the FQA doesn&#39;t discuss the future
+of C++, only its present, and even that is mostly limited to the stuff from the C++ FAQ
+(that&#39;s why we don&#39;t talk about implicit casting and overload resolution too much here).
+So you&#39;ll either have to wait for C++0x to materialize
+(I promise to add a special section when it&#39;s adopted), or you can persuade Marshall Cline
+ to add a C++0x section to the FAQ, and I&#39;ll see what I can do.
+</p>
+
+<p>
+<a name="faq-14"></a><h2>But you could do this to any language. Doesn&#39;t it make the whole thing meaningless?</h2>
+
+<p>
+Well, nobody did this to other languages, not on this scale anyhow.
+ The difference in our opinions is that you&#39;re saying that I&#39;m special, and I&#39;m saying C++ is special.
+ There are more programmers than there are programming languages, so statistically my argument
+ has better chances to be correct
+ (not; we don&#39;t know anything about the distribution of anything, so never mind).
+</p>
+
+<p>
+Well, your argument is shaky, too. How about getting some empirical data? Try to write
+  this kind of thing about some other popular language, start with something like &quot;Defective C++&quot; and try to show
+  that whatever you&#39;re trying to do with this language just doesn&#39;t work. I think
+  your argument will fall apart.
+</p>
+
+<p>
+Don&#39;t try to discuss it with me - you have nothing to say about the actual reasoning in the FQA,
+  so it&#39;s all worthless. I&#39;m just trying to trick you into doing some creative writing.
+  Maybe commenters will show up - you&#39;ll discover lots of things about yourself at that point.
+</p>
+
+<p>
+<a name="faq-15"></a><h2>All those C++ users and overlords can&#39;t be wrong, can they? Why should I believe you?</h2>
+
+<p>
+This sort of thinking will get you in trouble, since it&#39;s recursive and it has no termination condition.
+  Very large groups of people with the usual subset of those having impressive credentials are known to have been
+  wrong for very long periods of time (the flat Earth issue comes to mind; these people weren&#39;t stupid, mind you,
+                                       &quot;wrong&quot; and &quot;stupid&quot; is not the same thing).
+  Supposing you are in a group of people who are wrong right now, how do you plan to find it out
+  using your kind of thinking?
+</p>
+
+<p>
+You are not supposed to believe me; you&#39;re supposed to believe what I say, or not, depending
+  on whether it makes sense. If you feel an urge to discuss this, keep in mind that I don&#39;t really care to convince <i>you</i>.
+  I want to talk to people who are likely to start new software projects, with an emphasis on &quot;new&quot;.
+  And I don&#39;t think you can produce anything &quot;new&quot; in any significant sense before you change
+  your attitude, because new things are by definition not backed up by large groups of supporters,
+  so how would you know what to do?
+</p>
+
+<p>
+(<i>John Millikin:</i> Most educated people from Aristotle onward believed Earth to be round, and
+<a href="http://en.wikipedia.org/wiki/Flat_Earth#Classical_Antiquity">Eratosthenes measured its circumference</a> rather accurately.
+Examples in which educated people were wildly incorrect en mass include <a href="http://en.wikipedia.org/wiki/Humorism">Humorism</a>
+ and <a href="http://en.wikipedia.org/wiki/Geocentric_model">Geocentrism</a>.)
+</p>
+
+<p>
+<a name="faq-16"></a><h2>Do you even realize that C++ was shaped by various goals and trade-offs? How can you judge it otherwise?</h2>
+
+<p>
+I&#39;m <a href="picture.html#fqa-6.2">aware</a> of the trade-offs and goals. If you identify with the language designer,
+  that&#39;s very noble of you. I am a language user. I care about getting work done.
+  In other languages, it&#39;s way easier for me than it is in C++, and many people
+  feel that way. Of course you are free to misattribute that to my incompetence in the area of C++,
+  computing in general or whatever, and (independently of that) keep having fun with C++.
+</p>
+
+<p>
+By the way, I don&#39;t try to make you stop
+  using C++, and nowhere in the FQA do I say anything derogatory about people who use C++ in general.
+  Do what you like. People who think this is obvious: sorry. We&#39;re not alone on this planet.
+</p>
+
+<p>
+<a name="faq-17"></a><h2>Why do you use complicated libraries like boost if they don&#39;t make your life easier, and isn&#39;t it your fault?</h2>
+
+<p>
+What makes you think I use them? I have no idea why they keep asking <i>that</i>. It looks like
+  people try to build a model of the personality behind the text instead of a model of what
+  the text says. Is it really that helpful?
+</p>
+
+<p>
+If you try to make your C++ code simple and easy to follow, I might even enjoy working with you some day.
+</p>
+
+<p>
+<a name="faq-18"></a><h2>Why not quit whining and find a better job where there&#39;s no C++?</h2>
+
+<p>
+I find my job very interesting. The programming languages you get to use are not at all the most important
+  part of the job, it&#39;s what you get to do that counts.
+</p>
+
+<p>
+I do try to minimize my use of C++; I try to only deal with it when I help others out of trouble.
+</p>
+
+<p>
+And thanks for your genuine interest in my career! I hope you&#39;re all right, too. This whole line
+  of discussion is of course very relevant to the contents of the FQA.
+</p>
+
+<p>
+<a name="faq-19"></a><h2>Why don&#39;t you get a life?</h2>
+
+<p>
+You typed that at some software weenie Web 2.0 site, didn&#39;t you?
+</p>
+
+<p>
+<a name="faq-20"></a><h2>C++ is already dead, so isn&#39;t the whole purpose of this document to get page views?</h2>
+
+<p>
+<i>Of course</i> I want people to view these pages! People usually write stuff so that other people read it.
+  And what makes your fingers type, may I ask?
+</p>
+
+<p>
+Regarding &quot;C++ is dead&quot;: if you work on businessy apps, it&#39;s possible that you didn&#39;t notice that
+  there&#39;s a huge market of embedded software. C++ only starts to penetrate it <i>now</i>. Also, google
+  for SystemC (hint: it really should have been &quot;SystemC++&quot;). But there&#39;s also lots of new code in C++
+  outside of embedded software or the hardware modeling world. If you use the web to approximate reality, your perspective
+  will be invariably skewed by the people who work with the newest / obscure / most exciting and successful stuff
+  (in random order),
+  since these make the most noise.
+</p>
+
+<p>
+And there&#39;s
+  lots of people who do most of their work in C++ everywhere, some of them with half a year
+  of experience, and refuse to learn new languages. There are even young people who will <i>refuse
+  to take a job</i> unless they&#39;ll get to work in C++.
+</p>
+
+<p>
+I don&#39;t think people would read this if C++ was acknowledged as a language that people don&#39;t
+  write new code in. Would you chase a link to a COBOL FQA?
+</p>
+
+<p>
+C++ is not dead, it just smells funny.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

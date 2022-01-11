@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: FQA errors</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>FQA errors</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a></small><hr>
+
+<p>
+This page lists the factual errors/inaccuracies in the C++ FQA. If you find one, please
+<a href="http://yosefk.com">send me e-mail</a>. If you are right, I&#39;ll publish your correction, either giving
+you the credit or anonymously, according to your choice.
+</p>
+
+<p>
+By &quot;factual errors&quot;, I mean statements which can be proved wrong or refuted by a practically feasible test.
+</p>
+
+<p>
+Positive examples: if I say that C++ compilers may generate slower code from C source than C compilers
+unless exception support is off, and in fact no commercially significant compiler does that, I&#39;m wrong
+(don&#39;t bother with this one - I already checked it). If I say that the C++ grammar is undecidable,
+ and you formally prove it&#39;s decidable, I&#39;m wrong
+ (advice: don&#39;t bother with this one, too).
+</p>
+
+<p>
+Negative examples: if I say templates are mostly applicable to containers, and you know many other
+  ways to use templates, it&#39;s really a qualitative argument. You call this &quot;uses&quot;, I call it <a href="templates.html#fqa-35.2">"abuses"</a>.
+It&#39;s like arguing whether <tt>sed</tt> is <a href="http://sed.sourceforge.net/grabbag/scripts/dc.sed">applicable to numerical computing</a>: it&#39;s a matter of common sense,
+  and we&#39;ll get nowhere - there&#39;s no formal definition of a <a href="http://en.wikipedia.org/wiki/Turing_tarpit">Turing tarpit</a>.
+  If you inform me that I&#39;m &quot;inconsistent&quot; because &quot;sometimes my problem with C++ is that
+  it&#39;s too low-level for high-level work and sometimes I think it&#39;s too high-level for low-level work&quot;,
+  the message will land in the bit bucket, too. I think that doing both low-level and high-level work in C++ is suboptimal
+  (I tried both); you are free to call it &quot;inconsistency&quot;. If you think the fact that C++ is a <a href="picture.html#fqa-6.11">"superset"</a>
+  of C means that C++ can&#39;t be inferior to C, go visit <a href="http://en.wikipedia.org/wiki/Chernobyl">Chernobyl</a> and buy yourself a radioactive cat with 7 legs and
+  a wing (codenamed &quot;cat++&quot;), but don&#39;t expect me to agree.
+</p>
+
+<ul>
+<li><a href="web-vs-fqa.html#correction-1">Sometimes base class constructors must have information on the actual object type</a></li>
+<li><a href="web-vs-fqa.html#correction-2">C++ has <tt>bool</tt>, a built-in type not in C</a></li>
+<li><a href="web-vs-fqa.html#correction-3"><tt>#define private public</tt> is not enough to cancel C++ encapsulation</a></li>
+<li><a href="web-vs-fqa.html#correction-4">The special case when N-dimensional arrays can be allocated dynamically with <tt>new</tt></a></li>
+<li><a href="web-vs-fqa.html#correction-5">Conversions between code and data pointers are common</a></li>
+</ul>
+
+<p>
+<a name="correction-1"></a><h2>Sometimes base class constructors must have information on the actual object type</h2>
+
+<p>
+<i>Eugene Toder:</i> The FQA answer about <a href="inheritance-mother.html#fqa-23.5">the dispatching of virtual functions in constructors</a>
+  is based on the following statement: <i>Base::Base doesn&#39;t know that it&#39;s called in order to ultimately initialize a Derived object</i>.
+This is wrong, since virtual inheritance can&#39;t work that way. In particular, AFAIK, <tt>cfront</tt>, the first C++ compiler,
+  always passed constructors a parameter telling whether it initializes a base class object or a derived class object,
+  no matter what kind of inheritance was involved.
+</p>
+
+<p>
+<i>Yossi:</i> This is an error by itself, and it&#39;s also inconsistent with other information in the FQA. Specifically,
+  the FQA <a href="inheritance-multiple.html#fqa-25.12">mentions</a> (following the FAQ) that with virtual inheritance, the programmer must directly initialize
+  virtual base class objects in the derived classes, even if they are not its &quot;immediate&quot; base classes
+  (that is, it inherits them indirectly). But what if someone derives another class, <tt>Derived2</tt>, from a class <tt>Derived</tt> with virtual
+  base classes? It&#39;s <i>still</i> up to the programmer to initialize the virtual base class objects in <tt>Derived2</tt> - but <tt>Derived</tt>
+   already contains code that does this (and maybe <i>other</i> base classes contain such code, which is
+our problem in the first place). So we <i>don&#39;t</i> want to use the virtual base class initialization code
+  in <tt>Derived</tt>, but we <i>do</i> want to use the other initialization code in <tt>Derived</tt>. Therefore,
+  the constructor of <tt>Derived</tt> must know whether it ultimately initializes a <tt>Derived</tt> object or
+  an object of some child class, such as <tt>Derived2</tt>, in order to conditionally execute
+  some of the initialization code (or the constructor code must be generated twice, which is the same in this context).
+</p>
+
+<p>
+I think that the FQA answer still has its value in the sense that it may actually be more intuitive to
+  C++ programmers. That&#39;s because the FAQ answer basically says, &quot;C++ prevents you from a <i>potential</i> (not certain)
+  error of accessing uninitialized members of a derived class, by silently doing something different than what you
+  thought it would&quot;. This is a very special fact which has to be memorized; normally C++ <i>doesn&#39;t</i> try to prevent
+  access to uninitialized data. The FQA answer says, &quot;C++ does the thing naturally and efficiently following
+  from the underlying implementation: to set up <tt>vptr</tt> to point to the correct <tt>vtable</tt>, you&#39;d have to
+  spend cycles (a tiny amount of them, but C++ is frequently very conservative about run time cost)&quot;.
+  Arguably, this is more consistent with the rest of C++ and is easier to remember. But of course it
+  doesn&#39;t make the erroneous statement in the FQA correct.
+</p>
+
+<p>
+<a name="correction-2"></a><h2>C++ has <tt>bool</tt>, a built-in type not in C</h2>
+
+<p>
+<i>From a Usenet posting</i>
+(in
+<a href="http://groups.google.co.il/group/comp.lang.c++.moderated/tree/browse_frm/thread/870d15c57e831fc5/8396a5eaa8e3452d?hl=en&amp;rnum=41&amp;_done=%2Fgroup%2Fcomp.lang.c%2B%2B.moderated%2Fbrowse_frm%2Fthread%2F870d15c57e831fc5%2F5868fd6e57f6ae2c%3Fhl%3Den%26tvc%3D1%26#doc_1425cc7bbc57bcb8">comp.lang.c++.moderated</a>):
+You said &quot;C++ doesn&#39;t add any built-in types to C.&quot;
+What about <tt>bool</tt>?
+</p>
+
+<p>
+<i>Yossi:</i> This statement is false (wait, that&#39;s not good, I mean the one quoted in the posting).
+The FQA <a href="inheritance-mother.html#fqa-23.5">does mention</a> that C++ adds built-in types which are essentially <a href="ref.html#fqa-8.1">new kinds of pointers</a>
+(references, pointers to members), but it doesn&#39;t say this in Defective C++ where the false assertion
+appears, and it fails to mention <tt>bool</tt> in this context anywhere.
+</p>
+
+<p>
+Unlike the previous item, this error doesn&#39;t invalidate the reasoning in the text where it appears. Specifically, the context
+ of the erroneous statement is the discussion of <i>high-level</i> built-in types, which don&#39;t map directly
+ to C types the way <tt>bool</tt> does, primarily
+ because their sizes are not known at compile time.
+</p>
+
+<p>
+<a name="correction-3"></a><h2><tt>#define private public</tt> is not enough to cancel C++ encapsulation</h2>
+
+<p>
+As Andreas Krey pointed out, you&#39;d also need <tt>#define protected public</tt> and <tt>#define class struct</tt>.
+The latter will fail to work with code like <tt>template&lt;class T&gt; class X {...}</tt>, because the keyword
+<tt>struct</tt> can not be used in template parameter lists. There may be other problems related to
+interactions between access control and name look-up.
+</p>
+
+<p>
+Another thing I failed to mention in <a href="class.html#fqa-7.7">the original context</a>: re-#defining keywords isn&#39;t legal
+C++. It will only work in implementations where preprocessing is a separate pass, which is
+unaware of the keywords and treats them as identifiers. I&#39;ve never worked with an implementation
+doing it differently, but <tt>#define private public</tt> is still illegal C++. It&#39;s only useful for
+debugging (to print private data without changing header files and recompiling for hours),
+and to illustrate that C++ encapsulation is useless for security (the latter was my original point).
+</p>
+
+<p>
+<a name="correction-4"></a><h2>The special case when N-dimensional arrays can be allocated dynamically with <tt>new</tt></h2>
+
+<p>
+When all array dimensions except for the first are known at compile time, you can allocate
+arrays dynamically with <tt>new</tt>. That&#39;s because C++ arrays are flat sequences of objects
+of the same type. In our case, those objects are (N-1)-dimensional arrays. If any of those
+N-1 dimensions weren&#39;t known at compile time, the (N-1)-dimensional array wouldn&#39;t be possible
+to describe with a C++ type. But not knowing the first dimension until run time doesn&#39;t create
+this problem.
+</p>
+
+<p>
+Joe Zbiciak found that <a href="heap.html#fqa-16.16">answer 16.16</a> fails to mention this. <a href="heap.html#fqa-16.20">Answer 16.20</a> does,
+but 16.16 is still incorrect because it says you only have 2 ways to allocate N-dimensional arrays
+dynamically. However, in our special case, you have a third way.
+</p>
+
+<p>
+<a name="correction-5"></a><h2>Conversions between code and data pointers are common</h2>
+
+<p>
+The FQA <a href="function.html#fqa-33.8">says</a> that conversions between function pointers and void pointers are rare (independently of being
+illegal, though supported on many machines). Patrick Walton counters:
+</p>
+
+<p>
+&quot;Actually, this is done all the time for dynamic linking, in <tt>dlsym</tt> on POSIX platforms (returns a <tt>void*</tt>, even for code pointers) and <tt>GetProcAddress</tt> on Windows (returns a <tt>void (*)()</tt>, even for data pointers). Interesting that both platforms violate the standard in opposite ways. In the case of POSIX, there&#39;s a lot of pain involved in making this required interface work on systems where function pointers are longer than data pointers.&quot;
+</p>
+
+<p>
+I wonder why neither Windows nor POSIX defined two functions, one returning a <tt>void*</tt> and one returning a <tt>void (*)()</tt>.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

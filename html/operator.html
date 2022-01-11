@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: Operator overloading</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>Operator overloading</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html">FAQ</a></b><small class="part"> links.</small><hr>
+
+<p>
+This section is about operator overloading - a way to make the code &quot;readable&quot; as long as the reader doesn&#39;t care what the code actually does.
+</p>
+
+<ul>
+<li><a href="operator.html#fqa-13.1">[13.1] What&#39;s the deal with <tt>operator</tt> overloading?</a></li>
+<li><a href="operator.html#fqa-13.2">[13.2] What are the benefits of operator overloading?</a></li>
+<li><a href="operator.html#fqa-13.3">[13.3] What are some examples of operator overloading?</a></li>
+<li><a href="operator.html#fqa-13.4">[13.4] But <tt>operator</tt> overloading makes my class look ugly; isn&#39;t it supposed to make my code clearer?</a></li>
+<li><a href="operator.html#fqa-13.5">[13.5] What operators can/cannot be overloaded?</a></li>
+<li><a href="operator.html#fqa-13.6">[13.6] Can I overload <tt>operator==</tt> so it lets me compare two <tt>char[]</tt> using a string comparison?</a></li>
+<li><a href="operator.html#fqa-13.7">[13.7] Can I create a <tt>operator**</tt> for &quot;to-the-power-of&quot; operations?</a></li>
+<li><a href="operator.html#fqa-13.8">[13.8] Okay, that tells me the operators I <i>can</i> override; which operators <i>should</i> I override?</a></li>
+<li><a href="operator.html#fqa-13.9">[13.9] What are some guidelines / &quot;rules of thumb&quot; for overloading operators?</a></li>
+<li><a href="operator.html#fqa-13.10">[13.10] How do I create a subscript <tt>operator</tt> for a <tt>Matrix</tt> class?</a></li>
+<li><a href="operator.html#fqa-13.11">[13.11] Why shouldn&#39;t my <tt>Matrix</tt> class&#39;s interface look like an array-of-array?</a></li>
+<li><a href="operator.html#fqa-13.12">[13.12] I still don&#39;t get it. Why shouldn&#39;t my <tt>Matrix</tt> class&#39;s interface look like an array-of-array?</a></li>
+<li><a href="operator.html#fqa-13.13">[13.13] Should I design my classes from the outside (interfaces first) or from the inside (data first)?</a></li>
+<li><a href="operator.html#fqa-13.14">[13.14] How can I overload the prefix and postfix forms of operators <tt>++</tt> and <tt>--</tt>?</a></li>
+<li><a href="operator.html#fqa-13.15">[13.15] Which is more efficient: <tt>i++</tt> or <tt>++i</tt>?</a></li>
+</ul>
+
+<a name="fqa-13.1"></a>
+<h2>[13.1] What&#39;s the deal with <tt>operator</tt> overloading?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.1">FAQ:</a></b>
+ Overloaded operators provide an &quot;intuitive interface&quot; for the users of your class. They also allow templates
+to work &quot;equally well&quot; with classes and built-in types.
+</p>
+
+<p>
+The idea is to call functions using the syntax of C++ operators. Such functions can be defined to accept
+parameters of user-defined types, giving the operators user-defined meaning. For example:
+</p>
+
+<pre>
+Matrix add(const Matrix&amp; x, const Matrix&amp; y);
+Matrix operator+(const Matrix&amp; x, const Matrix&amp; y);
+Matrix use_add(const Matrix&amp; a, const Matrix&amp; b, const Matrix&amp; c)
+{
+  return add(a,add(b,c));
+}
+Matrix use_plus(const Matrix&amp; a, const Matrix&amp; b, const Matrix&amp; c)
+{
+  return a + b + c;
+}
+</pre>
+
+<p>
+<b class="FQA">FQA:</b> Operator overloading provides strong source code encryption
+(the time needed to figure out what <tt>a+b</tt> actually means is an exponential
+ function of the number of types, implicit conversions, template specializations and overloaded operator versions involved).
+</p>
+
+<p>
+It is also one way to have <a href="templates.html#fqa-35.1">templates</a> malfunction equally miserably with user-defined and built-in types -
+if <tt>BraindeadPseudoTypeSafeIterator&lt;T&gt;</tt> supports the syntax <tt>*p</tt> and <tt>++p</tt>, it can be used just like the built-in <tt>T*</tt> in a template &quot;algorithm&quot; like <tt>std::for_each</tt>.
+However, it could also work without operator overloading - for example, you can have a global <tt>increment</tt> function
+for all &quot;iterator&quot; types, and implement it for all pointer types using a global template wrapper calling <tt>++p</tt>.
+Which means that operator overloading is pure syntactic sugar even if you don&#39;t consider templates a pile of toxic waste
+you&#39;d rather live without.
+</p>
+
+<p>
+This syntactic sugar can only be added to a language like C++ together with more than a grain of salt. For example,
+what if <tt>a+b</tt> fails? There&#39;s no good way to return an error status, because the language is &quot;strongly typed&quot;,
+so <tt>a+b</tt> always returns objects of the same type, for example, a <tt>Matrix</tt>. There&#39;s no natural &quot;bad matrix value&quot;, and anyway
+the whole point of <tt>a+b</tt> is that you can also write <tt>a+b+c</tt>. If you need to test each addition with an <tt>if</tt> statement,
+<tt>a+b</tt> is not much better than <tt>add(a,b)</tt>. What about throwing an <a href="exceptions.html#fqa-17.1">exception</a> upon error? Not a bad idea, in a language
+<i>supporting</i> exceptions, as opposed to merely providing non-local <tt>goto</tt> using <tt>throw/try/catch</tt> syntax and having <i>you</i>
+care about &quot;exception safety&quot; in each and every bit of code.
+</p>
+
+<p>
+What about the allocation of our result - where does that <tt>Matrix</tt> live? If it&#39;s allocated dynamically with <tt>new</tt> and returned by reference,
+who is supposed to <a href="heap.html#fqa-16.1">clean it up</a>, in particular, who keeps the list of all temporaries created by <tt>a+b+c...</tt>? But if it&#39;s
+returned by value, then the copy constructor is going to copy lots of matrices. Bad if you <a href="ctors.html#fqa-10.9">care about performance</a>.
+And if you don&#39;t,
+you <i>surely</i> wouldn&#39;t mind the smaller run time overhead of <i>garbage collection</i> (not to mention run time boundary checking and other kinds of safety belt),
+so you&#39;d probably choose a different language in the first place.
+</p>
+
+<p>
+Operator overloading is not necessarily a bad idea - if you can actually keep the promise about &quot;readability&quot;.
+To do that, you need at least three things: comprehensible overload resolution rules, easy-to-use exceptions
+and easy-to-use automatic memory management. C++ offers none of those.
+</p>
+
+
+<a name="fqa-13.2"></a>
+<h2>[13.2] What are the benefits of operator overloading?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.2">FAQ:</a></b>
+ You can &quot;exploit the intuition&quot; of the users of your classes. Their code will speak in the language of the problem
+instead of the language of the machine. They&#39;ll learn faster and make less errors.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The keyword in the FAQ&#39;s answer is &quot;exploit&quot;. Your intuition tells you that <tt>a+b</tt> just works - and in the &quot;problem domain&quot;, you are right.
+But in C++, it doesn&#39;t take the machine too long to <a href="inheritance-mother.html#fqa-23.5">raise its ugly iron head</a> and start talking to you in its
+barbaric language, and it has all the means to make you listen.
+</p>
+
+<p>
+If you want to program &quot;in the problem domain&quot;, use a language designed for that problem domain. Prototype numerical
+algorithms in <a href="http://www.mathworks.com/products/matlab/">Matlab</a> or the like, not in C++ with some matrix library. Design hardware in <a href="http://www.verilog.com">Verilog</a> or the like, not <a href="http://www.systemc.org">SystemC</a> (which is C++ with some hardware description primitives library).
+</p>
+
+<p>
+The next best alternative is to use a general-purpose language where operator overloading and other metaprogramming features <a href="operator.html#fqa-13.1">actually work</a>.
+It is typically worse, but may be cheaper - special-purpose tools are used by less people than general-purpose ones,
+so the vendor must charge each user a higher price.
+And it will make you happy if you&#39;re one of those people who think that there&#39;s nothing a special-purpose language
+can do that can&#39;t be done equally well or better using the wonderful metaprogramming facilities of the awesome language X
+(typically <i>wrong</i>, but strong programmers can be very productive operating under this assumption - unless X=C++).
+</p>
+
+<p>
+Operator overloading and other features sure make C++ equally adaptable to any problem domain. This is achieved
+by making it the wrong tool for every job.
+</p>
+
+
+<a name="fqa-13.3"></a>
+<h2>[13.3] What are some examples of operator overloading?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.3">FAQ:</a></b>
+ Here are a few (some real, some hypothetical), there are many more.
+</p>
+
+<ul>
+<li> <tt>str1 + str2</tt> concatenates a couple of <tt>std::string</tt> objects. </li>
+<li> <tt>NapoleonsBirthday++</tt> increments an object of class <tt>Date</tt>. </li>
+<li> <tt>a*b</tt> multiplies two <tt>Number</tt>s. </li>
+<li> <tt>a[i]</tt> accesses the i&#39;th element of a user-defined <tt>Array</tt> class object. </li>
+<li> <tt>x = *p</tt> dereferences a &quot;smart pointer&quot; which actually represents an address of a disk record; the
+dereferencing seeks to that location on the disk and fetches the record into <tt>x</tt>. </li>
+</ul>
+
+<p>
+<b class="FQA">FQA:</b> C++ operator overloading is a bad way to implement all of these things. It&#39;s an equally bad way to implement almost
+everything that comes to mind.
+</p>
+
+<ul>
+<li> <i>Strings</i>: a general purpose high-level language should have a good <a href="picture.html#fqa-6.2">built-in string type</a>, because text processing is a very common task.
+In particular, a string is an extremely
+common type of function parameter, so if you have no built-in string type, each kind of interface will use its own kind
+of string, and the users will have to spend most of their time converting between string types.
+Even <tt>char*</tt> and <tt>std::string</tt>, which are both <i>standard</i> string types (there are <i>lots and lots</i> of non-standard ones),
+have interactions that operator overloading fails to hide. For example, <tt>dir + &quot;/&quot; + file</tt> compiles with <tt>std::string dir</tt>
+and <tt>char* file</tt>, but fails to compile with <tt>char* dir</tt> and <tt>std::string file</tt>, <a href="operator.html#fqa-13.2">"exploiting"</a> the intuition of users. </li>
+<li> <i>Dates</i>: what does <tt>date++</tt> <i>mean</i>? Does it add a day or a minute or a second? This question is especially interesting
+if someone had a severe <a href="io.html#fqa-15.1">modeling-the-universe-using-type-systems</a> attack and defined a <tt>Time</tt> class (incremented by seconds),
+a <tt>Date</tt> class (incremented by days) and implicit conversions between them. And if you know that dates are incremented
+in day intervals, so 1 means &quot;one day&quot;, why not just use <tt>int</tt> instead of <tt>Date</tt>? <a href="class.html#fqa-7.4">"Encapsulation"</a> - of what exactly? </li>
+<li> <i>Numbers</i>: should be built into your language, or you should stop pretending that you&#39;re &quot;programming in the
+problem domain&quot; (both approaches are perfectly legitimate). See the discussion about strings. </li>
+<li> <i>Arrays</i>: should be built into the language, too. And if you use a tricky data structure because
+resizable arrays built into your language are not good enough, making it look like an array is not necessarily a good idea. For
+example, people might want to find the definition of the <tt>operator[]</tt> in <tt>a[i]</tt>. What should they do - search for &quot;[&quot;?
+Oh, they are using an IDE that actually understands 75% of C++ syntax? Now what - select the opening bracket and ask
+for its definition? Never worked for me. </li>
+<li> <i>Smart pointers to disk records</i>: I wish all C++ weenies used an operating system which implements file systems
+using this advanced technique. This way, whenever the &quot;dereferencing&quot; would fail, either the error wouldn&#39;t be reported, or an <a href="exceptions.html#fqa-17.1">exception</a>
+would be mishandled, and the weenies would lose their files, which would be good for everybody. </li>
+</ul>
+
+<p>
+Basically most operator overloading use cases fall into one or more of the following categories:
+</p>
+
+<ul>
+<li> the thing can&#39;t be implemented
+well unless it&#39;s built into the language (arrays, strings, numbers, &quot;smart pointers&quot; doing things like reference counting)</li>
+<li> the thing is tricky and shouldn&#39;t be confused with built-in types, so the interface should be different 
+(&quot;smart pointers&quot; doing things like disk access, complicated data structures)</li>
+<li> the thing is obscure and shouldn&#39;t be implemented at all
+(incrementing dates by unclear amounts of time, <a href="io.html#fqa-15.2">transferring</a> output streams into hexadecimal mode without an option to restore the previous mode)</li>
+</ul>
+
+<p>
+However, it doesn&#39;t mean that operator overloading is never useful - that is, in the languages that can actually <a href="operator.html#fqa-13.1">support</a> it.
+</p>
+
+
+<a name="fqa-13.4"></a>
+<h2>[13.4] But <tt>operator</tt> overloading makes my class look ugly; isn&#39;t it supposed to make my code clearer?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.4">FAQ:</a></b>
+ No - it&#39;s supposed to make the code <i>using</i> your class clearer! For example, you may claim that <tt>T&amp; operator[](int i)</tt>
+is less readable than <tt>T&amp; getAt(int i)</tt>, but surely <tt>arr[i]</tt> is more readable than <tt>arr.getAt(i)</tt>!
+</p>
+
+<p>
+You should realize that &quot;in a reuse-oriented world&quot;, <i>usually</i> (yes, the FAQ says &quot;usually&quot;)
+many people will use your class, but only one writes its code
+(that one person is you). Think about the good of the majority - your users!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Those guys living in the &quot;reuse-oriented&quot; worlds are very noble characters. Too bad we&#39;re stuck on planet Earth,
+which didn&#39;t seem to have any particular &quot;orientation&quot; last time I checked. On this planet, most classes you write
+are used exclusively by yourself, the majority of the rest is used by two or three people, and once in a while
+you get to write a class to be used by N people for N&gt;3 - typically it&#39;s not an array class, but something with
+<i>a little bit less trivial functionality</i>. Here on Earth, this is considered <i>good</i>: the more interaction
+between people and components, the more errors there are likely to be (insert the FAQ&#39;s favorite pseudo-business-oriented statements about
+&quot;defect rate&quot; here).
+</p>
+
+<p>
+Of course this doesn&#39;t mean that <i>the other</i> claims make any sense. For example, users have to figure out
+what your class does before they use it, so its interface must be <a href="ctors.html#fqa-10.18">defined in a readable way</a>, not just look
+readable when used. And your users will probably need to understand your implementation, too, because even
+when your code no longer has bugs (this might take a while), bugs in other pieces of code may end up corrupting <i>your</i> data
+(this is C++), so people will have to <a href="class.html#fqa-7.2">inspect</a> what&#39;s left of that data in order to find the original error.
+So an unreadable and/or complicated implementation is not a very good idea even in a &quot;reuse-oriented&quot; world.
+</p>
+
+<p>
+Last but not least, <tt>arr.getAt(i)</tt> is <i>not that bad</i>.
+</p>
+
+
+<a name="fqa-13.5"></a>
+<h2>[13.5] What operators can/cannot be overloaded?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.5">FAQ:</a></b>
+ Most can be overloaded. You can&#39;t overload the C operators <tt>.</tt> and <tt>?:</tt> (and <tt>sizeof</tt>). And you can&#39;t overload the
+C++ operators <tt>::</tt> and <tt>.*</tt>. You can overload everything else.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> There are other restrictions, for example there can&#39;t be a global <tt>operator[]</tt> overload - you can only overload
+this operator using a class member function. Which is not necessarily bad.
+</p>
+
+
+<a name="fqa-13.6"></a>
+<h2>[13.6] Can I overload <tt>operator==</tt> so it lets me compare two <tt>char[]</tt> using a string comparison?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.6">FAQ:</a></b>
+ No, at least one parameter of an overloaded operator must be a user-defined type.
+</p>
+
+<p>
+But even if you could do it, you shouldn&#39;t - you should use a class like <tt>std::string</tt>. Arrays are <a href="picture.html#fqa-6.15">evil</a>!
+</p>
+
+<p>
+<b class="FQA">FQA:</b> C++ doesn&#39;t let you do it for a good reason - if you could do it, how would you make sure that your
+program is compiled consistently in the sense that your operator is called <i>everywhere</i> - in all contexts
+calling <tt>operator==</tt> on <tt>char[]</tt> arguments? And what if two such operators are defined by two different modules?
+</p>
+
+<p>
+Unfortunately, these problems are almost equally severe with user-defined types. For example, <tt>std::map</tt> doesn&#39;t have
+an overloaded <tt>operator&lt;&lt;</tt> printing it to an <tt>ostream</tt>. You can define one, but <a href="io.html#fqa-15.10">so can I</a>, and then our libraries
+are linked together into a single program. The result is unpredictable, ranging from a link-time error to
+a program printing some maps using your code and some with mine.
+</p>
+
+<p>
+As to the &quot;arrays are evil&quot; mantras - how about chanting them to the authors of the C++ standard library that defined
+an <tt>std::ifstream</tt> constructor accepting <tt>const char*</tt>, but not <tt>std::string</tt>? And they didn&#39;t define an <tt>operator const char*</tt>
+in <tt>std::string</tt>, either. <tt>std::ifstream in((std::string(dir) + &quot;/&quot; + file).c_str());</tt>. Give me a break.
+</p>
+
+<p>
+And why does the FAQ say &quot;a <tt>std::string</tt>-like class&quot;, not just &quot;<tt>std::string</tt>&quot;? Because if it did, the majority
+of the audience stuck with one (or more) of the many, many &quot;string-like&quot; classes developed before one was added to the C++
+standard library would laugh quite bitterly.
+</p>
+
+
+<a name="fqa-13.7"></a>
+<h2>[13.7] Can I create a <tt>operator**</tt> for &quot;to-the-power-of&quot; operations?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.7">FAQ:</a></b>
+ You can&#39;t. You can only overload operators already in C++, without changing the number of arguments, the associativity
+or the precedence. If you think it&#39;s wrong, consider the problem of <tt>a**p</tt>, which means &quot;a times the result of dereferencing p&quot;.
+If you could define <tt>operator**</tt>, you&#39;d make such expressions ambiguous.
+</p>
+
+<p>
+And you know what? Operator overloading is just syntactic sugar. You can always define a function instead. Why not
+overload <tt>pow</tt>?
+</p>
+
+<p>
+Or you could overload <tt>operator^</tt>, which works but has the wrong precedence and associativity.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Sure, there&#39;s lots of grammar in C++, and making an unambiguous addition is
+almost impossible. The fact is that, informally speaking, there&#39;s a finite amount of &quot;good&quot; syntax you can have in your language.
+This is a valid argument if you advocate domain-specific languages (which can make the short, simple syntax map to stuff most useful in that domain),
+or if you argue that &quot;languages should have no syntax&quot; (Lisp, Smalltalk and Forth are examples of languages with almost no syntax).
+However, it&#39;s funny when this argument is used by the C++ FAQ. It is hardly compatible with the
+<a href="operator.html#fqa-13.2">claims that C++ is applicable everywhere</a>.
+And then there&#39;s the <i>huge</i> amount of <i>completely pointless</i> complications in the C++ grammar
+(like the constructor/function declaration <a href="ctors.html#fqa-10.19">puzzle</a>).
+</p>
+
+<p>
+What&#39;s that? &quot;Operator overloading doesn&#39;t provide anything fundamental, it&#39;s just syntactic sugar&quot;? Now you&#39;re talking.
+Make that &quot;syntactic cyanide&quot; and I&#39;m in.
+</p>
+
+<p>
+Overload <tt>pow</tt>? Can somebody tell what&#39;s the <i>point</i> of all this overloading? If you want obfuscation, there are tools
+you can use that allow you to keep the source in the unobfuscated form, which may be very handy at times. Besides,
+isn&#39;t it <tt>std::pow</tt>? AFAIK you are not allowed to add names to the <tt>std</tt> namespace. And if you add a global function
+pow, you&#39;ll lose the precious &quot;transparency&quot; (<tt>std::pow(x,y)</tt> will never call your version of <tt>pow</tt>, only <tt>pow(x,y)</tt> will),
+so what&#39;s the point?
+</p>
+
+<p>
+The idea to overload &quot;bitwise exclusive or&quot; to mean &quot;power&quot; is just stupid. I wonder where they get these ideas.
+It&#39;s as if someone decided to overload &quot;bitwise left shift&quot; to mean &quot;print to file&quot;. Wait a minute - they did that,
+too... Oh well.
+</p>
+
+
+<a name="fqa-13.8"></a>
+<h2>[13.8] Okay, that tells me the operators I <i>can</i> override; which operators <i>should</i> I override?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.8">FAQ:</a></b>
+ You want to help your users, not confuse them. Overload operators if it makes the life of your users easier.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Translation: don&#39;t overload C++ operators. While we&#39;re at it, don&#39;t overload C++ functions, either. C++
+overload resolution <i>always</i> ends up confusing users. And you can&#39;t add error handling without using the horrible
+C++ <a href="exceptions.html#fqa-17.1">exceptions</a>, and you can&#39;t <a href="heap.html#fqa-16.1">allocate objects</a> simply and efficiently.
+</p>
+
+
+<a name="fqa-13.9"></a>
+<h2>[13.9] What are some guidelines / &quot;rules of thumb&quot; for overloading operators?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.9">FAQ:</a></b>
+ 22 (!!) &quot;rules of thumb&quot; are listed (actually 20, 2 just say &quot;use common sense&quot;). Basically, the rules are about
+making overloaded operators behave similarly to built-in operators - if you define +, make it associative and
+don&#39;t change the parameters, etc. The FAQ warns that the list is not exhaustive, nor should it be interpreted as
+strict rules that can&#39;t have exceptions.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Rule of thumb #23: things which have simple functionality but are very hard to get right <i>linguistically</i>
+should be in the compiler.
+</p>
+
+<p>
+Use common sense. Do you have the time for all that thinking when all you get is &quot;syntactic sugar&quot; of questionable taste?
+How about implementing some <a href="class.html#fqa-7.2">user-visible functionality</a> instead? Not only is it what people (customers, employers, colleagues, friends)
+ultimately care about, it&#39;s also much more fun.
+</p>
+
+
+<a name="fqa-13.10"></a>
+<h2>[13.10] How do I create a subscript <tt>operator</tt> for a <tt>Matrix</tt> class?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.10">FAQ:</a></b>
+ Use <tt>operator()</tt> which can get two indexes, i and j. Don&#39;t use <tt>operator[]</tt>, which can only get one index.
+A code listing follows.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Oh, dear. You&#39;re writing a <tt>Matrix</tt> class. My condolences.
+</p>
+
+<p>
+Once you define your subscript operator, be prepared to answer many more questions. How do you <a href="heap.html#fqa-16.1">allocate</a> the result
+of <tt>operator+</tt>? How do you map expressions like <tt>A+B*C</tt> to optimized implementations of several operations (for example, <tt>multiply_add</tt>)?
+Why are you writing a <tt>Matrix</tt> class with overloaded operators instead of prototyping the code in Matlab or the like
+and then implementing the prototype in C so that it runs fast and anybody can tell how and why from the code,
+instead of figuring out how <tt>A+B*C</tt> actually works?
+</p>
+
+
+<a name="fqa-13.11"></a>
+<h2>[13.11] Why shouldn&#39;t my <tt>Matrix</tt> class&#39;s interface look like an array-of-array?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.11">FAQ:</a></b>
+ The &quot;array-of-array&quot; alternative uses <tt>operator[]</tt> to return an array object, which in turn has an <tt>operator[]</tt>
+returning a single element.
+</p>
+
+<p>
+This approach is likely to be worse because of performance issues having to do with the optimal layout of the
+matrix in memory, says the FAQ. Or maybe it says something else similar to it. It talks a lot about the issue.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You can&#39;t implement the array-of-array syntax with a single function call, because C++ has no <tt>operator[][]</tt>.
+You need to return some temporary object with an <tt>operator[]</tt>.
+</p>
+
+<p>
+This means extra work for you, because instead of writing a function you write a whole class and a function returning
+its objects. This also means extra work for the user who has to read all these interfaces. This also means extra
+work for the compiler. The chances of a compiler from planet Earth to optimize out the temporary objects are very close to zero.
+Which means it&#39;s also extra work for the machine running your code.
+</p>
+
+<p>
+And what did you achieve? &quot;Syntactic sugar&quot;. This reasoning can frequently be used to optimize the entire <tt>Matrix</tt> class
+with all its overloaded operators out of your schedule. And it doesn&#39;t depend on performance-related claims about memory layout and stuff.
+</p>
+
+
+<a name="fqa-13.12"></a>
+<h2>[13.12] I still don&#39;t get it. Why shouldn&#39;t my <tt>Matrix</tt> class&#39;s interface look like an array-of-array?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.12">FAQ:</a></b>
+ Because it makes checking the arguments or changing the data structure harder. The FAQ then explains how this
+can still be done, and claims that the compiler will optimize the temporaries out, but doesn&#39;t like the fact that
+it&#39;s a lot of work.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> The FQA primarily doesn&#39;t like the fact that it&#39;s a lot of work. But it would also like to point out that:
+1. The compiler will probably <i>not</i> optimize the temporaries out. 2. Key performance-critical data structures are
+extremely <a href="heap.html#fqa-16.17">costly</a> to change no matter how much &quot;encapsulation&quot; you use, because optimizations depend on the
+representation. 3. Checking the arguments is <i>always</i>
+hard with operator overloading, because what would <tt>operator()</tt> do once an error <i>was</i> found - return -1 (how?), set a global error flag, throw
+a C++ exception? All these options are not really acceptable.
+</p>
+
+<p>
+Anyway, if you want to waste some time without getting useful work done, there are ways to do it that are much more fun than getting <tt>operator[][]</tt>
+sort of work. And this is where the FAQ and the FQA agree.
+</p>
+
+
+<a name="fqa-13.13"></a>
+<h2>[13.13] Should I design my classes from the outside (interfaces first) or from the inside (data first)?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.13">FAQ:</a></b>
+ Outside, of course.
+</p>
+
+<p>
+A long discussion about the accessors one should have in a <tt>LinkedList</tt> class follows. A ground-breaking conclusion
+is reached: you should give accessors to the elements of the list, but not the &quot;infrastructure&quot; (say, the pointer to the first node).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> <i>What?</i> What does this question have to do with operator overloading? And what does the kind of accessors you
+want to have in your class (the final code) have to do with the way you design it (think before you code)?
+</p>
+
+<p>
+There&#39;s no single good way to design classes or any kind of software. Sometimes the interfaces are the important
+thing, sometimes the implementation, and sometimes both. Designing is a kind of thinking. Sometimes you need to think
+about the data in order to figure out what kind of interfaces are ultimately possible to implement efficiently.
+Sometimes you must figure out the interface first to make sure the whole thing is actually useful. Frequently you have to think
+about both and possibly iteratively refine them.
+</p>
+
+<p>
+The idea that implementations are not important (because you can always <a href="operator.html#fqa-13.2">change</a> them or for other reasons)
+may only emerge from implementing boringly trivial things, or from
+doing nothing
+(one way of doing nothing in the software industry is to obsessively seek the best way to spell the iteration over the elements of a list for a living).
+</p>
+
+<p>
+By the way, the FAQ mentions &quot;a billion-line app&quot;. C++ doesn&#39;t scale to many lines of code in the sense that a large monolithic
+C++ application (one where all code runs in a single address space) can hardly be maintainable. This claim
+may be made about other languages as well, but the problem is especially severe with languages assuming <a href="picture.html#fqa-6.5">unmanaged environments</a>,
+where a buffer overflow in module A may silently corrupt the data of module B. If you have lots of unmanaged code,
+breaking it into processes can save several tons of your bacon (of course you have to build the system from the beginning that way - retro-fitting it is extremely expensive).
+</p>
+
+
+<a name="fqa-13.14"></a>
+<h2>[13.14] How can I overload the prefix and postfix forms of operators <tt>++</tt> and <tt>--</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.14">FAQ:</a></b>
+ Like this:
+</p>
+
+<pre>
+Iter&amp; operator++ ();    // ++p
+Iter  operator++ (int); // p++
+</pre>
+
+<p>
+The postfix version should return something equivalent to the copy of <tt>*this</tt> made before the operator call.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Silly syntax, isn&#39;t it? If you do overload operators, please read and follow all the boring rules about their
+syntax and semantics. This will help you soften the blow on your users, or even fall asleep and forget about the
+whole thing if we are lucky.
+</p>
+
+
+<a name="fqa-13.15"></a>
+<h2>[13.15] Which is more efficient: <tt>i++</tt> or <tt>++i</tt>?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/operator-overloading.html#faq-13.15">FAQ:</a></b>
+ It&#39;s the same for built-in types. <tt>++i</tt> may be faster for user-defined types, because there&#39;s no need to create
+a copy that the compiler may fail to optimize out. Most likely the overhead is small, but why not pick the habit of
+using <tt>++i</tt>?
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Oh, suddenly the all-mighty compiler can&#39;t <a href="operator.html#fqa-13.12">optimize out a temporary</a>!
+I actually picked that habit at some point. That was before I picked the even more useful habit of avoiding overloaded C++ operators.
+</p>
+
+<p>
+The <a href="operator.html#fqa-13.10">really interesting questions</a> are about the performance of <tt>A+B*C</tt> compared to <tt>D=B;D*=C;D+=A</tt> compared to
+an optimized <tt>multiply_and_add_matrices(A,B,C)</tt> function.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

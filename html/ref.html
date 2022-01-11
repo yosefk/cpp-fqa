@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<title>C++ FQA Lite: References</title>
+<style type='text/css'>
+<!--
+body { font-family: arial; color: black; background: white }
+h2   { color: black; background-color: #ddeeff }
+h1   { color: black; background-color: #ddeeff }
+h5   { background-color: #eeeeee }
+pre  { background-color: #eeeeee }
+.part{ color: gray }
+.FQA { background-color: blue; color: gold }
+.FAQ { background-color: gold; color: blue }
+.corr{ color: red }
+-->
+</style>
+</head>
+<body>
+<h1>References</h1>
+<small class="part">Part of <a href="index.html">C++ FQA Lite</a>.
+      To see the original answers, follow the </small><b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/references.html">FAQ</a></b><small class="part"> links.</small><hr>
+
+<p>
+This page is about C++ references - a duplicate language feature introduced in order to <a href="ref.html#fqa-8.3">support other duplicate features</a>.
+</p>
+
+<ul>
+<li><a href="ref.html#fqa-8.1">[8.1] What is a reference?</a></li>
+<li><a href="ref.html#fqa-8.2">[8.2] What happens if you assign to a reference?</a></li>
+<li><a href="ref.html#fqa-8.3">[8.3] What happens if you return a reference?</a></li>
+<li><a href="ref.html#fqa-8.4">[8.4] What does <tt>object.method1().method2()</tt> mean?</a></li>
+<li><a href="ref.html#fqa-8.5">[8.5] How can you reseat a reference to make it refer to a different object?</a></li>
+<li><a href="ref.html#fqa-8.6">[8.6] When should I use references, and when should I use pointers?</a></li>
+<li><a href="ref.html#fqa-8.7">[8.7] What is a handle to an object? Is it a pointer? Is it a reference? Is it a pointer-to-a-pointer? What is it?</a></li>
+</ul>
+
+<a name="fqa-8.1"></a>
+<h2>[8.1] What is a reference?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/references.html#faq-8.1">FAQ:</a></b>
+ It&#39;s an alias for an object - another name by which it can be called. The implementation is frequently identical to that of pointers. But don&#39;t think of references as pointers - a reference <i>is</i> the object.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> A C++ reference is like a C++ pointer except for the following differences:
+</p>
+
+<ul>
+<li>You use it as if it were a value: <tt>ref.member</tt>, not <tt>ptr-&gt;member</tt>, etc. (in this sense <tt>ref</tt> behaves like <tt>(*ptr)</tt>).</li>
+<li>It must be initialized to point to an object - otherwise, the code won&#39;t compile.</li>
+<li>After the initialization, you can&#39;t make it point to another object.</li>
+<li>You can&#39;t take the address of a reference like you can with pointers (forming a pointer to a pointer).</li>
+<li>There&#39;s no &quot;reference arithmetics&quot; (but you can take the address of an object pointed by a reference and do pointer arithmetics on it as in <tt>&amp;obj + 5</tt>).</li>
+</ul>
+
+<p>
+Strange phrases like &quot;a reference IS the object&quot; are used quite frequently in the C++ community.
+Such claims are only useful to hide the fact that C++ pointers &amp; references are so similar that having both in the language is an unnecessary complication.
+In other contexts, the claims are simply false. For example, a wide class of bugs comes from accessing <i>dangling references</i> - references to objects which were already destroyed. If a reference is the object,
+or just another name for it, how can that happen? Names of destroyed objects are inaccessible - it takes a previously assigned pointer to access a destroyed object
+(C++ also breaks <i>that</i> rule - you can access a destroyed global object by its name from a destructor of another global object, but that&#39;s <a href="ctors.html#fqa-10.14">a different can of worms</a>).
+</p>
+
+
+<a name="fqa-8.2"></a>
+<h2>[8.2] What happens if you assign to a reference?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/references.html#faq-8.2">FAQ:</a></b>
+ A reference <i>is</i> the object, so of course you assign to the referent object.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Which means that you can&#39;t understand the effect of a statement as simple as <tt>a=b;</tt> without knowing whether <tt>a</tt> is a reference or not. A nice feature complementary to references (which make you wonder what &quot;a&quot; means) is <a href="operator.html#fqa-13.1">operator overloading</a> (which makes you wonder what &quot;=&quot; means). Be careful as you work your way through a quagmire of C++ code.
+</p>
+
+
+<a name="fqa-8.3"></a>
+<h2>[8.3] What happens if you return a reference?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/references.html#faq-8.3">FAQ:</a></b>
+ You can assign to the return value of a function. This is useful for operator overloading, as in <tt>array[index] = value;</tt> where array is an object of a class with overloaded <tt>operator[]</tt> returning a reference.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> Exactly - and <i>that&#39;s</i> why references exist.
+</p>
+
+<p>
+C++ references are essential for supporting C++ <a href="operator.html#fqa-13.1">operator overloading</a>. That&#39;s because C has no facility for assigning to the result of a function call (a function can return a pointer and you can assign to the pointed object, but you need to use an asterisk for dereferencing the pointer, which is different from assigning with the built-in <tt>operator[]</tt>). Some might say that references serve a more generic purpose - they make pointers to objects feel like objects, but for most purposes that can be achieved with <tt>typedef TStruct* T;</tt>.
+</p>
+
+<p>
+Operator overloading, in turn, is useful (though not essential) for <a href="templates.html#fqa-35.1">templates</a> - a duplicate facility solving some of the problems of C macros and creating new, frequently more costly and complicated problems. For example, operator overloading is at the heart of STL - user-defined iterators must have the interface of a C pointer for interoperability with STL algorithms, which can only be achieved with operator overloading.
+</p>
+
+<p>
+Operator overloading is also useful for providing user-defined containers such as strings and vectors, duplicating the functionality of built-in strings and arrays.
+</p>
+
+<p>
+C++ introduces duplicate facilities in order to introduce other duplicate facilities. Then its apologists try to convince everyone that the old facilities are <a href="picture.html#fqa-6.15">"evil"</a>. Then they explain why removing the old facilities is <a href="picture.html#fqa-6.1">"impractical"</a>.
+</p>
+
+
+<a name="fqa-8.4"></a>
+<h2>[8.4] What does <tt>object.method1().method2()</tt> mean?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/references.html#faq-8.4">FAQ:</a></b>
+ This is called method chaining. <tt>method1</tt> returns a reference to an object of a class having <tt>method2</tt>. This is used in iostream - <tt>cout &lt;&lt; a &lt;&lt; endl</tt> is method chaining (the method is <tt>operator&lt;&lt;</tt>). A &quot;slick&quot; way to use method chaining is to simulate &quot;named parameters&quot;: <tt>a.setWidth(x).setHeight(y)</tt>).
+</p>
+
+<p>
+<b class="FQA">FQA:</b> It&#39;s just like <tt>object-&gt;method1()-&gt;method2()</tt>, but with references instead of pointers.
+</p>
+
+<p>
+While method chaining is natural in object-oriented languages, it&#39;s good to be aware of problems related to it. At a &quot;high&quot; level of discussion concerned with  design, method chaining can be a sign of abstraction violation (for example, do we want the user of <tt>object</tt> to be able to do arbitrary operations with the return value of <tt>method1</tt>?). At a &quot;low&quot; level of discussion concerned with coding, <tt>method1</tt> has no way to report an error except for throwing an exception, which is not always desirable. Inferring a rule like &quot;method chaining is evil&quot; from these issues is probably an exaggeration, but an entire <i>design</i> relying on method chaining may raise questions.
+</p>
+
+<p>
+For example, iostream is a library for I/O and formatting, and both are a frequent source of run-time errors. How should those errors be checked in statements like <tt>cout &lt;&lt; a &lt;&lt; b &lt;&lt; c ...</tt>? The method chaining used in iostream also makes formatting quite hard - consider the &quot;I/O manipulators&quot;.
+</p>
+
+<p>
+The &quot;implementation&quot; of named arguments using method chaining is a particularly <a href="ctors.html#fqa-10.18">bad joke</a>.
+</p>
+
+
+<a name="fqa-8.5"></a>
+<h2>[8.5] How can you reseat a reference to make it refer to a different object?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/references.html#faq-8.5">FAQ:</a></b>
+ You can&#39;t. The reference <i>is</i> the object.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> You can&#39;t do it in portable C++. While the reference is probably implemented as a pointer by your compiler, there&#39;s no C++ operator to get the address where that pointer is stored. In particular, <tt>&amp;ref</tt> gives the address of the referent object.
+</p>
+
+<p>
+One has to work around this extremely rarely, but the need can emerge, especially when the source code of parts of a program is unavailable. If the reference is stored inside an object, you can figure out its offset based on the sizes of other members of the class of the hosting object. You can then modify it as if it were a pointer (as in <tt>*(T**)p = &amp;myobj;</tt>). This is severe abstraction violation, and it isn&#39;t portable C++. Make sure you have no other way to achieve your purpose before doing this. In particular, a way involving paying money to the vendor of the code unavailable in source form is frequently a better idea than &quot;clever&quot; hacks like this.
+</p>
+
+
+<a name="fqa-8.6"></a>
+<h2>[8.6] When should I use references, and when should I use pointers?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/references.html#faq-8.6">FAQ:</a></b>
+  Use references unless you can&#39;t, especially in interfaces. In particular, references can&#39;t point to <tt>NULL</tt>, so you can&#39;t have a &quot;sentinel reference&quot;. C programmers may dislike the fact that you can&#39;t tell whether a modified value is local or a reference to something else. But this is a form of <i>information hiding</i>, which is good because you should program in the language of a problem rather than the machine.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> As with most <a href="ctors.html#fqa-10.6">duplicate features</a>, there&#39;s <a href="inline.html#fqa-9.5">no good answer to this question</a>.
+</p>
+
+<p>
+C++ programmers use references to denote &quot;a pointer which can&#39;t be null and points to a single object rather than an array&quot;. Using pointers in these cases confuses people because they assume that pointers are used in the <i>other</i> cases.
+You don&#39;t want to confuse people, so you use references to pass arguments to functions. Then it turns out that sometimes you want to pass a null pointer to those functions, and you change references to pointers throughout the code. C++ code ends up containing loads of pointers and references without an apparent reason for the choice made in each particular case.
+</p>
+
+<p>
+If you choose to use a reference, make sure you don&#39;t need null pointers, pointer arithmetics or <a href="ref.html#fqa-8.5">reseating</a>.
+You can&#39;t have arrays of references, and you can&#39;t store references in container classes, because that would require
+having uninitialized references and/or pointers to references, and you can&#39;t have that.
+Member references in classes/structs must be initialized in constructors using the <a href="ctors.html#fqa-10.6">ridiculous colon syntax</a>.
+This makes it harder to <a href="ctors.html#fqa-10.3">reuse initialization code in different constructors</a>, and the problem propagates to the classes using your class as a member since
+you can&#39;t provide a <a href="ctors.html#fqa-10.4">default constructor</a>. There are &quot;smart pointers&quot;
+(objects with overloaded <tt>-&gt;</tt> and <tt>*</tt> operators), but there are no &quot;smart references&quot;
+(you can&#39;t <a href="inline.html#fqa-9.4">overload the dot</a>), so you won&#39;t be able to easily switch to something &quot;smart&quot; later -
+ but that&#39;s probably rarely bad since smart pointers are rarely good.
+</p>
+
+<p>
+If you choose to use a pointer, make sure you don&#39;t confuse other C++ programmers. Pointers to objects of classes
+ with <a href="operator.html#fqa-13.1">overloaded operators</a> lead to code like <tt>(*parr)[i]</tt>, which gets annoying.
+ In many cases the compiler won&#39;t warn you when a pointer is left uninitialized, which may lead to errors harder to
+ debug than simple null pointer dereferencing (not to mention security holes - but there&#39;s enough other possibilities
+                                               for these in a C++ program to make this a separate issue).
+</p>
+
+<p>
+These problems mean that in many situations, you must choose between two almost equally bad alternatives.
+ While many people successfully use C pointers <i>in C</i>, it doesn&#39;t mean that always choosing pointers over references
+ <i>in C++</i> produces no new problems - C++ has features, and C++ programmers have habits interacting badly with pointers.
+</p>
+
+<p>
+But this, in turn, <i>doesn&#39;t</i> invalidate the argument &quot;pointers are better than references because it&#39;s easy
+ to see whether a side-effect is local or not&quot;. <i>Of course</i> the behavior of references is &quot;information hiding&quot; -
+ but is it the kind of information you would like to be hidden? Isn&#39;t information hiding about making it <i>easy</i>
+ to figure out what a program does? How does hiding side effects, which are a very basic cross-cutting semantical
+ aspect of any imperative language, make the code closer to &quot;the language of the problem&quot;?
+</p>
+
+
+<a name="fqa-8.7"></a>
+<h2>[8.7] What is a handle to an object? Is it a pointer? Is it a reference? Is it a pointer-to-a-pointer? What is it?</h2>
+
+<p>
+<b class="FAQ"><a href="http://www.parashift.com/c++-faq-lite/references.html#faq-8.7">FAQ:</a></b>
+ A &quot;handle&quot; is something identifying and giving access to an object. The term is meant to be vague, omitting implementation details (a handle can be a pointer or an index into an array or a database key, etc.). Handles are often encapsulated in smart pointer classes.
+</p>
+
+<p>
+<b class="FQA">FQA:</b> One very common way to implement handles in C relies on incomplete types and typedefs:
+</p>
+
+<pre>
+typedef struct FooState* Foo;
+</pre>
+
+<p>
+The definition of <tt>struct FooState</tt> is included in the files implementing <tt>Foo</tt>, but not in the files using it.
+This is probably the closest thing to <a href="class.html#fqa-7.4">"encapsulation"</a> you can get in an unmanaged environment.
+In particular, it has important <a href="class.html#fqa-7.5">advantages</a> compared to <a href="class.html#fqa-7.1">C++ classes</a>:
+</p>
+
+<ul>
+<li>When the definition of <tt>FooState</tt> is changed, calling code doesn&#39;t have to be <a href="class.html#fqa-7.4">recompiled</a> (with C++ classes, changing a private member triggers recompilation of user code). This shortens the rebuild cycles and allows to provide stable binary interfaces, simplifying upgrades in many scenarios.</li>
+<li>The module defining <tt>Foo</tt> <a href="ctors.html#fqa-10.1">controls the allocation and deallocation of the objects</a> (with C++ classes, the user is responsible for allocation and must choose between the stack, the global data, the free store and aggregation inside another object). In particular, <tt>FooState</tt> may contain a pointer to the &quot;real&quot; state structure, allowing transparent reallocation of these structures.</li>
+</ul>
+
+<p>
+The C handle technique is also way better than the &quot;smart pointer&quot; tricks in C++. In addition to readability problems posed by operator overloading (is it a bare pointer or a smart pointer?), and the tedious coding involved, smart pointers provide little encapsulation. That&#39;s because overloaded <tt>operator-&gt;</tt> must return either a bare pointer or a smart pointer, which means that the <i>last</i> smart pointer <i>must</i> return a bare pointer, or the compilation will never end (the latter is easy to achieve with templates - like many other not so useful things). So you end up returning a bare pointer to an object of a C++ class, but in a way more convoluted than average C++ code.
+</p>
+
+<p>
+When implementing &quot;heavy&quot; classes (unlike, for example, simple objects representing values like points in a 2-dimensional space), using C-style handles is typically much better than pointers or references to objects of C++ classes. Which is quite surprising considering the fact that supporting OO at the language level is one of the main motivations behind C++.
+</p>
+
+
+<hr>
+<small class="part">Copyright &copy; 2007-2022 <a href="http://yosefk.com">Yossi Kreinin</a><br>
+<tt>revised 11 January 2022</tt></small>
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-11102124-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>
