@@ -5,6 +5,11 @@ import importlib
 
 # import shutil
 
+# test branch
+import warnings
+warnings.simplefilter('always')
+
+
 # f2h = importlib.load_source('f2h','fqa2html.py')
 # h2toc=importlib.load_source('h2toc','toc.py')
 f2h = importlib.machinery.SourceFileLoader("f2h", "fqa2html.py").load_module()
