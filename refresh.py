@@ -54,7 +54,9 @@ doit()
 # mistake leaving one single </p> in index.html and fqa.html
 # DONE: put the backtick immediately after </ul> in index.fqa and in 
 # fqa2html.py
-exec(compile(open("tidy.py", "rb").read(), "tidy.py", "exec"))
+htidy = open("tidy.py", "rb")
+exec(compile(htidy.read(), "tidy.py", "exec"))
+htidy.close()
 
 # RG: move html files to html dir
 html = [f for f in os.listdir(".") if f.endswith(".html")]
